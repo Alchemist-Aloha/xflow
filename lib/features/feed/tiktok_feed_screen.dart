@@ -4,6 +4,7 @@ import '../player/player_pool_provider.dart';
 import 'feed_provider.dart';
 import '../player/widgets/media_container.dart';
 import '../../core/models/tweet.dart';
+import '../settings/settings_screen.dart'; // Add this
 
 class TiktokFeedScreen extends ConsumerStatefulWidget {
   const TiktokFeedScreen({super.key});
@@ -67,25 +68,40 @@ class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
 
     return Scaffold(
       backgroundColor: Colors.black,
-      body: feedAsync.when(
-        data: (tweets) {
-          // Trigger initial warmup
-          WidgetsBinding.instance.addPostFrameCallback((_) => _managePool());
+      body: Stack(
+        children: [
+          feedAsync.when(
+            data: (tweets) {
+              // Trigger initial warmup
+              WidgetsBinding.instance.addPostFrameCallback((_) => _managePool());
 
-          return PageView.builder(
-            controller: _pageController,
-            scrollDirection: Axis.vertical,
-            itemCount: tweets.length,
-            itemBuilder: (context, index) {
-              return TiktokFeedItem(
-                tweet: tweets[index],
-                isVisible: index == _currentIndex,
+              return PageView.builder(
+                controller: _pageController,
+                scrollDirection: Axis.vertical,
+                itemCount: tweets.length,
+                itemBuilder: (context, index) {
+                  return TiktokFeedItem(
+                    tweet: tweets[index],
+                    isVisible: index == _currentIndex,
+                  );
+                },
               );
             },
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, st) => Center(child: Text('Error: $e', style: const TextStyle(color: Colors.white))),
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, st) => Center(child: Text('Error: $e', style: const TextStyle(color: Colors.white))),
+          ),
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 8,
+            right: 16,
+            child: IconButton(
+              icon: const Icon(Icons.settings, color: Colors.white70, size: 28),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (c) => const SettingsScreen()),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
