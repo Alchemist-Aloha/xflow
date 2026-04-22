@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:collection/collection.dart';
 import 'twitter_account.dart';
 import '../models/tweet.dart';
 
 class TwitterClient {
   static const String graphqlSearchTimelineUriPath = '/graphql/nK1dw4oV3k4w5TdtcAdSww/SearchTimeline';
+  static const String graphqlFollowingUriPath = '/graphql/FEcMGoVOUjm0aU9BJrrGZA/Following';
   
   static const Map<String, dynamic> defaultFeatures = {
     'responsive_web_graphql_exclude_directive_enabled': true,
@@ -18,9 +20,68 @@ class TwitterClient {
     'standardized_nudges_misinfo': true,
   };
 
-  Future<List<Tweet>> fetchTrendingMedia({String? cursor}) async {
+  static const Map<String, dynamic> followingFeatures = {
+    "rweb_video_screen_enabled": false,
+    "payments_enabled": false,
+    "profile_label_improvements_pcf_label_in_post_enabled": true,
+    "responsive_web_profile_redirect_enabled": false,
+    "rweb_tipjar_consumption_enabled": true,
+    "verified_phone_label_enabled": false,
+    "creator_subscriptions_tweet_preview_api_enabled": true,
+    "responsive_web_graphql_timeline_navigation_enabled": true,
+    "responsive_web_graphql_skip_user_profile_image_extensions_enabled": false,
+    "premium_content_api_read_enabled": false,
+    "communities_web_enable_tweet_community_results_fetch": true,
+    "c9s_tweet_anatomy_moderator_badge_enabled": true,
+    "responsive_web_grok_analyze_button_fetch_trends_enabled": false,
+    "responsive_web_grok_analyze_post_followups_enabled": true,
+    "responsive_web_jetfuel_frame": true,
+    "responsive_web_grok_share_attachment_enabled": true,
+    "articles_preview_enabled": true,
+    "responsive_web_edit_tweet_api_enabled": true,
+  };
+
+  Future<List<String>> fetchFollowing(String userId) async {
     final variables = {
-      "rawQuery": "filter:media", // Search for media
+      "userId": userId,
+      "count": 100,
+      "includePromotedContent": false,
+      "withGrokTranslatedBio": false
+    };
+
+    final uri = Uri.https('x.com', '/i/api/graphql/FEcMGoVOUjm0aU9BJrrGZA/Following', {
+      'variables': jsonEncode(variables),
+      'features': jsonEncode(followingFeatures),
+    });
+
+    try {
+      final response = await TwitterAccount.fetch(uri);
+      if (response.statusCode != 200) return [];
+
+      final data = json.decode(response.body);
+      final instructions = List.from(data['data']?['user']?['result']?['timeline']?['timeline']?['instructions'] ?? []);
+      final addEntries = instructions.firstWhereOrNull((e) => e['type'] == 'TimelineAddEntries');
+      if (addEntries == null) return [];
+
+      final entries = List.from(addEntries['entries'] ?? []);
+      final screenNames = <String>[];
+      for (final entry in entries) {
+        final userRes = entry['content']?['itemContent']?['user_results']?['result'];
+        if (userRes != null) {
+          final screenName = userRes['legacy']?['screen_name'];
+          if (screenName != null) screenNames.add(screenName);
+        }
+      }
+      return screenNames;
+    } catch (e) {
+      debugPrint('Error fetching following: $e');
+      return [];
+    }
+  }
+
+  Future<List<Tweet>> fetchTrendingMedia({String? cursor, String? query}) async {
+    final variables = {
+      "rawQuery": query ?? "filter:media",
       "count": "20",
       "product": "Latest",
       "withDownvotePerspective": false,
@@ -28,9 +89,7 @@ class TwitterClient {
       "withReactionsPerspective": false
     };
 
-    if (cursor != null) {
-      variables['cursor'] = cursor;
-    }
+    if (cursor != null) variables['cursor'] = cursor;
 
     final uri = Uri.https('api.x.com', graphqlSearchTimelineUriPath, {
       'variables': jsonEncode(variables),
@@ -39,10 +98,7 @@ class TwitterClient {
 
     try {
       final response = await TwitterAccount.fetch(uri);
-      if (response.statusCode != 200) {
-        debugPrint('Error fetching trending media: ${response.statusCode} - ${response.body}');
-        return [];
-      }
+      if (response.statusCode != 200) return [];
 
       final result = json.decode(response.body);
       final timeline = result?['data']?['search_by_raw_query']?['search_timeline'];
@@ -55,16 +111,28 @@ class TwitterClient {
     }
   }
 
+  Future<List<Tweet>> fetchSubscribedMedia({String? cursor}) async {
+    final currentAccount = TwitterAccount.currentAccount;
+    if (currentAccount == null || currentAccount.restId.isEmpty) {
+      return fetchTrendingMedia(cursor: cursor);
+    }
+
+    final following = await fetchFollowing(currentAccount.restId);
+    if (following.isEmpty) return fetchTrendingMedia(cursor: cursor);
+
+    // X search query limit is around 500 characters, so we'll take first 10-15 users
+    final users = following.take(15).map((s) => 'from:$s').join(' OR ');
+    final query = "($users) filter:media";
+
+    return fetchTrendingMedia(cursor: cursor, query: query);
+  }
+
   List<Tweet> _parseTweets(Map<String, dynamic> timeline) {
     final tweets = <Tweet>[];
     final instructions = List.from(timeline['timeline']?['instructions'] ?? []);
     if (instructions.isEmpty) return [];
 
-    final addEntries = instructions.firstWhere(
-      (e) => e['type'] == 'TimelineAddEntries',
-      orElse: () => null,
-    );
-
+    final addEntries = instructions.firstWhereOrNull((e) => e['type'] == 'TimelineAddEntries');
     if (addEntries == null) return [];
 
     final entries = List.from(addEntries['entries'] ?? []);
@@ -92,7 +160,6 @@ class TwitterClient {
           if (m['type'] == 'video' || m['type'] == 'animated_gif') {
             isVideo = true;
             final variants = List.from(m['video_info']?['variants'] ?? []);
-            // Find highest quality mp4
             final bestVariant = variants
                 .where((v) => v['content_type'] == 'video/mp4')
                 .toList()
@@ -119,7 +186,6 @@ class TwitterClient {
         debugPrint('Error parsing tweet entry $entryId: $e');
       }
     }
-
     return tweets;
   }
 }

@@ -8,6 +8,7 @@
       "version": "1.0.0+1",
       "dependencies": [
         "cached_network_image",
+        "collection",
         "crypto",
         "dart_twitter_api",
         "ffcache",
@@ -113,6 +114,11 @@
         "test_api",
         "vector_math"
       ]
+    },
+    {
+      "name": "collection",
+      "version": "1.19.1",
+      "dependencies": []
     },
     {
       "name": "crypto",
@@ -549,11 +555,6 @@
       "dependencies": [
         "typed_data"
       ]
-    },
-    {
-      "name": "collection",
-      "version": "1.19.1",
-      "dependencies": []
     },
     {
       "name": "built_value",

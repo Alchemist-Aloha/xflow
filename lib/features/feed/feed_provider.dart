@@ -9,7 +9,7 @@ final feedProvider = FutureProvider<List<Tweet>>((ref) async {
   final client = ref.watch(twitterClientProvider);
   final settings = ref.watch(settingsProvider);
   
-  var tweets = await client.fetchTrendingMedia();
+  var tweets = await client.fetchSubscribedMedia();
 
   // Apply Filter
   if (settings.filter == MediaFilter.videoOnly) {

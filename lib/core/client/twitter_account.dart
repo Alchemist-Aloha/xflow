@@ -6,6 +6,8 @@ import '../database/repository.dart';
 class TwitterAccount {
   static Account? _currentAccount;
 
+  static Account? get currentAccount => _currentAccount;
+
   static Future<void> init() async {
     final accounts = await Repository.getAccounts();
     if (accounts.isNotEmpty) {

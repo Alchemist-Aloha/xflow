@@ -37,7 +37,6 @@ class _LoginScreenState extends State<LoginScreen> {
               )).toString();
               
               if (screenName == '' || screenName == 'null') {
-                 // Try another way to get screen name or just wait
                  return;
               }
               screenName = screenName.replaceAll('"', '');
@@ -55,9 +54,33 @@ class _LoginScreenState extends State<LoginScreen> {
                 "x-csrf-token": ct0Cookie.value,
               };
 
+              // Fetch rest_id using screenName
+              final profileUri = Uri.https('x.com', '/i/api/graphql/oUZZZ8Oddwxs8Cd3iW3UEA/UserByScreenName', {
+                'variables': jsonEncode({
+                  'screen_name': screenName,
+                  'withHighlightedLabel': true,
+                  'withSafetyModeUserFields': true,
+                  'withSuperFollowsUserFields': true
+                }),
+                'features': jsonEncode(TwitterClient.defaultFeatures)
+              });
+
+              final profileRes = await http.get(profileUri, headers: {
+                ...authHeader,
+                'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Mobile Safari/537.3',
+                'Content-Type': 'application/json',
+              });
+
+              String restId = '';
+              if (profileRes.statusCode == 200) {
+                final profileData = json.decode(profileRes.body);
+                restId = profileData['data']?['user']?['result']?['rest_id'] ?? '';
+              }
+
               final account = Account(
                 id: ct0Cookie.value,
                 screenName: screenName,
+                restId: restId,
                 authHeader: json.encode(authHeader),
               );
 
