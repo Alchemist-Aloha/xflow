@@ -122,6 +122,13 @@
       ]
     },
     {
+      "name": "quiver",
+      "version": "3.2.2",
+      "dependencies": [
+        "matcher"
+      ]
+    },
+    {
       "name": "ffcache",
       "version": "1.1.0",
       "dependencies": [
@@ -157,6 +164,16 @@
       "version": "2.0.17",
       "dependencies": [
         "flutter"
+      ]
+    },
+    {
+      "name": "webview_flutter",
+      "version": "4.13.1",
+      "dependencies": [
+        "flutter",
+        "webview_flutter_android",
+        "webview_flutter_platform_interface",
+        "webview_flutter_wkwebview"
       ]
     },
     {
@@ -658,6 +675,18 @@
       ]
     },
     {
+      "name": "idb_shim",
+      "version": "2.8.5+2",
+      "dependencies": [
+        "collection",
+        "meta",
+        "path",
+        "sembast",
+        "synchronized",
+        "web"
+      ]
+    },
+    {
       "name": "sqflite_common",
       "version": "2.5.6",
       "dependencies": [
@@ -699,11 +728,48 @@
       ]
     },
     {
+      "name": "webview_flutter_wkwebview",
+      "version": "3.24.5",
+      "dependencies": [
+        "flutter",
+        "meta",
+        "path",
+        "webview_flutter_platform_interface"
+      ]
+    },
+    {
+      "name": "webview_flutter_platform_interface",
+      "version": "2.15.1",
+      "dependencies": [
+        "flutter",
+        "meta",
+        "plugin_platform_interface"
+      ]
+    },
+    {
+      "name": "webview_flutter_android",
+      "version": "4.11.0",
+      "dependencies": [
+        "flutter",
+        "meta",
+        "webview_flutter_platform_interface"
+      ]
+    },
+    {
       "name": "oauth1",
       "version": "2.1.0",
       "dependencies": [
         "crypto",
         "http"
+      ]
+    },
+    {
+      "name": "intl",
+      "version": "0.20.2",
+      "dependencies": [
+        "clock",
+        "meta",
+        "path"
       ]
     },
     {
@@ -1099,6 +1165,15 @@
       ]
     },
     {
+      "name": "sembast",
+      "version": "3.8.6",
+      "dependencies": [
+        "meta",
+        "path",
+        "synchronized"
+      ]
+    },
+    {
       "name": "platform",
       "version": "3.1.6",
       "dependencies": []
@@ -1290,81 +1365,6 @@
         "ffi",
         "meta",
         "path"
-      ]
-    },
-    {
-      "name": "webview_flutter",
-      "version": "4.13.1",
-      "dependencies": [
-        "flutter",
-        "webview_flutter_android",
-        "webview_flutter_platform_interface",
-        "webview_flutter_wkwebview"
-      ]
-    },
-    {
-      "name": "quiver",
-      "version": "3.2.2",
-      "dependencies": [
-        "matcher"
-      ]
-    },
-    {
-      "name": "intl",
-      "version": "0.20.2",
-      "dependencies": [
-        "clock",
-        "meta",
-        "path"
-      ]
-    },
-    {
-      "name": "webview_flutter_platform_interface",
-      "version": "2.15.1",
-      "dependencies": [
-        "flutter",
-        "meta",
-        "plugin_platform_interface"
-      ]
-    },
-    {
-      "name": "webview_flutter_wkwebview",
-      "version": "3.24.5",
-      "dependencies": [
-        "flutter",
-        "meta",
-        "path",
-        "webview_flutter_platform_interface"
-      ]
-    },
-    {
-      "name": "webview_flutter_android",
-      "version": "4.11.0",
-      "dependencies": [
-        "flutter",
-        "meta",
-        "webview_flutter_platform_interface"
-      ]
-    },
-    {
-      "name": "idb_shim",
-      "version": "2.8.5+2",
-      "dependencies": [
-        "collection",
-        "meta",
-        "path",
-        "sembast",
-        "synchronized",
-        "web"
-      ]
-    },
-    {
-      "name": "sembast",
-      "version": "3.8.6",
-      "dependencies": [
-        "meta",
-        "path",
-        "synchronized"
       ]
     }
   ],

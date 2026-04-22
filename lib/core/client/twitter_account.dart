@@ -39,4 +39,10 @@ class TwitterAccount {
   static void setCurrentAccount(Account account) {
     _currentAccount = account;
   }
+
+  static Future<void> logout() async {
+    final db = await Repository.database;
+    await db.delete(tableAccounts);
+    _currentAccount = null;
+  }
 }
