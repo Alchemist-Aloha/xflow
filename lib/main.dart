@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:media_kit/media_kit.dart';
+import 'features/feed/tiktok_feed_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,13 +16,13 @@ class XFlowApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'XFlow',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
         colorSchemeSeed: Colors.blue,
+        brightness: Brightness.dark,
       ),
-      home: const Scaffold(
-        body: Center(child: Text('XFlow Initialized')),
-      ),
+      home: const TiktokFeedScreen(),
     );
   }
 }
