@@ -4,7 +4,9 @@ import '../player/player_pool_provider.dart';
 import 'feed_provider.dart';
 import '../player/widgets/media_container.dart';
 import '../../core/models/tweet.dart';
-import '../settings/settings_screen.dart'; // Add this
+import '../settings/settings_screen.dart';
+import '../auth/login_screen.dart'; // Add this
+import '../../core/client/twitter_account.dart'; // Add this
 
 class TiktokFeedScreen extends ConsumerStatefulWidget {
   const TiktokFeedScreen({super.key});
@@ -21,6 +23,14 @@ class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
   void initState() {
     super.initState();
     _pageController.addListener(_handleScroll);
+    _initAuth(); // Initialize auth
+  }
+
+  Future<void> _initAuth() async {
+    await TwitterAccount.init();
+    if (mounted) {
+      ref.invalidate(feedProvider); // Refresh feed after auth init
+    }
   }
 
   @override
@@ -72,6 +82,10 @@ class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
         children: [
           feedAsync.when(
             data: (tweets) {
+              if (tweets.isEmpty) {
+                return _buildNoItemsState();
+              }
+              
               // Trigger initial warmup
               WidgetsBinding.instance.addPostFrameCallback((_) => _managePool());
 
@@ -88,7 +102,7 @@ class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, st) => Center(child: Text('Error: $e', style: const TextStyle(color: Colors.white))),
+            error: (e, st) => _buildErrorState(e),
           ),
           Positioned(
             top: MediaQuery.of(context).padding.top + 8,
@@ -104,6 +118,52 @@ class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildNoItemsState() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('No media found.', style: TextStyle(color: Colors.white70)),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () => _goToLogin(),
+            child: const Text('Login to X'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState(Object e) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('Error: $e', style: const TextStyle(color: Colors.white70), textAlign: TextAlign.center),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () => _goToLogin(),
+            child: const Text('Login to X'),
+          ),
+          TextButton(
+            onPressed: () => ref.invalidate(feedProvider),
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _goToLogin() async {
+    final success = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (c) => const LoginScreen()),
+    );
+    if (success == true) {
+      ref.invalidate(feedProvider);
+    }
   }
 }
 
