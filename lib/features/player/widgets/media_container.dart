@@ -45,6 +45,52 @@ class TiktokMediaContainer extends ConsumerWidget {
       instance.player.pause();
     }
 
-    return Video(controller: instance.controller);
+    return StreamBuilder(
+      stream: instance.player.stream.error,
+      builder: (context, snapshot) {
+        if (snapshot.hasData) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white70, size: 48),
+                const SizedBox(height: 16),
+                Text('Video Error: ${snapshot.data}', style: const TextStyle(color: Colors.white70)),
+              ],
+            ),
+          );
+        }
+        return Stack(
+          children: [
+            GestureDetector(
+              onTap: () {
+                if (instance.player.state.playing) {
+                  instance.player.pause();
+                } else {
+                  instance.player.play();
+                }
+              },
+              child: AbsorbPointer(
+                child: Video(
+                  controller: instance.controller,
+                  controls: NoVideoControls,
+                ),
+              ),
+            ),
+            // Custom Full Screen Button
+            Positioned(
+              right: 8,
+              bottom: 100, // Above the text overlay
+              child: IconButton(
+                icon: const Icon(Icons.fullscreen, color: Colors.white, size: 32),
+                onPressed: () {
+                  enterFullscreen(context);
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 }

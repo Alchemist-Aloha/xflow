@@ -33,7 +33,7 @@ class _SubscriptionImportScreenState extends State<SubscriptionImportScreen> {
       _streamController?.add(0);
       final client = TwitterClient();
       
-      final user = await client.fetchUserByScreenName(_fromScreenName!);
+      final user = await client.fetchProfile(_fromScreenName!);
       if (user == null) {
         throw Exception('User not found');
       }

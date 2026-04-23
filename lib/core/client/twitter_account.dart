@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../database/entities.dart';
 import '../database/repository.dart';
@@ -25,8 +26,18 @@ class TwitterAccount {
     }
 
     final combinedHeaders = <String, String>{
-      'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-      'Content-Type': 'application/json',
+      'accept': '*/*',
+      'accept-language': 'en-US,en;q=0.9',
+      'authorization': 'Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA',
+      'cache-control': 'no-cache',
+      'content-type': 'application/json',
+      'pragma': 'no-cache',
+      'referer': 'https://x.com',
+      'origin': 'https://x.com',
+      'user-agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Mobile Safari/537.3',
+      'x-twitter-active-user': 'yes',
+      'x-twitter-client-language': 'en',
+      'x-twitter-auth-type': 'OAuth2Session',
       ...?headers,
     };
 
@@ -35,7 +46,21 @@ class TwitterAccount {
       combinedHeaders.addAll(authHeaders);
     }
 
-    return http.get(uri, headers: combinedHeaders);
+    // Try to get x-client-transaction-id
+    try {
+      final transactionUri = Uri.http('x-client-transaction-id-generator.xyz', '/generate-x-client-transaction-id', {'path': uri.path});
+      final transactionResponse = await http.get(transactionUri).timeout(const Duration(seconds: 2));
+      if (transactionResponse.statusCode == 200) {
+        final transactionId = jsonDecode(transactionResponse.body)['x-client-transaction-id'];
+        if (transactionId != null) {
+          combinedHeaders['x-client-transaction-id'] = transactionId;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error generating x-client-transaction-id: $e');
+    }
+
+    return http.get(uri, headers: combinedHeaders).timeout(const Duration(seconds: 15));
   }
   
   static void setCurrentAccount(Account account) {

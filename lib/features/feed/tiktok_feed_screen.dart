@@ -7,6 +7,7 @@ import '../../core/models/tweet.dart';
 import '../settings/settings_screen.dart';
 import '../auth/login_screen.dart'; // Add this
 import '../../core/client/twitter_account.dart'; // Add this
+import '../profile/user_details_screen.dart';
 
 class TiktokFeedScreen extends ConsumerStatefulWidget {
   const TiktokFeedScreen({super.key});
@@ -48,21 +49,31 @@ class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
         _currentIndex = page;
       });
       _managePool();
+
+      // Check if we need to fetch more
+      final feedAsync = ref.read(feedNotifierProvider);
+      if (feedAsync.hasValue) {
+        final tweets = feedAsync.value!.tweets;
+        if (page >= tweets.length - 3) {
+          ref.read(feedNotifierProvider.notifier).fetchMore();
+        }
+      }
     }
   }
 
   void _managePool() {
-    final feedAsync = ref.read(feedProvider);
-    final feed = feedAsync.value;
-    if (feed == null) return;
+    final feedAsync = ref.read(feedNotifierProvider);
+    final state = feedAsync.value;
+    if (state == null) return;
+    final tweets = state.tweets;
 
     // Warmup next items
     final pool = ref.read(playerPoolProvider.notifier);
     final activeIds = <String>{};
 
     for (int i = _currentIndex - 1; i <= _currentIndex + 2; i++) {
-      if (i >= 0 && i < feed.length) {
-        final tweet = feed[i];
+      if (i >= 0 && i < tweets.length) {
+        final tweet = tweets[i];
         activeIds.add(tweet.id);
         if (tweet.isVideo) {
           pool.warmup(tweet.id, tweet.mediaUrls.first);
@@ -74,20 +85,21 @@ class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final feedAsync = ref.watch(feedProvider);
+    final feedAsync = ref.watch(feedNotifierProvider);
 
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         children: [
           feedAsync.when(
-            data: (tweets) {
+            data: (state) {
+              final tweets = state.tweets;
               if (tweets.isEmpty) {
                 return _buildNoItemsState();
               }
               
-              // Trigger initial warmup
-              WidgetsBinding.instance.addPostFrameCallback((_) => _managePool());
+              // Trigger pool management on build
+              _managePool();
 
               return PageView.builder(
                 controller: _pageController,
@@ -178,12 +190,12 @@ class TiktokFeedItem extends StatelessWidget {
     return Stack(
       children: [
         TiktokMediaContainer(tweet: tweet, isVisible: isVisible),
-        _buildUIOverlay(),
+        _buildUIOverlay(context),
       ],
     );
   }
 
-  Widget _buildUIOverlay() {
+  Widget _buildUIOverlay(BuildContext context) {
     return Positioned(
       bottom: 20,
       left: 16,
@@ -191,9 +203,20 @@ class TiktokFeedItem extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            tweet.userHandle,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+          GestureDetector(
+            onTap: () {
+              final handle = tweet.userHandle.replaceFirst('@', '');
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => UserDetailsScreen(screenName: handle),
+                ),
+              );
+            },
+            child: Text(
+              tweet.userHandle,
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+            ),
           ),
           const SizedBox(height: 8),
           Text(

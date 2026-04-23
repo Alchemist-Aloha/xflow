@@ -9,6 +9,9 @@ class PlayerInstance {
   PlayerInstance(this.player, this.controller);
 
   void dispose() {
+    // Media-kit documentation says VideoController might not need explicit dispose 
+    // if Player is disposed, but it's safer to check and follow best practices 
+    // especially for native resources.
     player.dispose();
   }
 }

@@ -33,12 +33,18 @@ class Subscription {
   final String screenName;
   final String name;
   final String? profileImageUrl;
+  final String? description;
+  final int? followersCount;
+  final int? followingCount;
 
   Subscription({
     required this.id,
     required this.screenName,
     required this.name,
     this.profileImageUrl,
+    this.description,
+    this.followersCount,
+    this.followingCount,
   });
 
   Map<String, dynamic> toMap() => {
@@ -46,6 +52,9 @@ class Subscription {
     'screen_name': screenName,
     'name': name,
     'profile_image_url': profileImageUrl,
+    'description': description,
+    'followers_count': followersCount,
+    'following_count': followingCount,
   };
 
   factory Subscription.fromMap(Map<String, dynamic> map) {
@@ -54,6 +63,9 @@ class Subscription {
       screenName: map['screen_name'],
       name: map['name'],
       profileImageUrl: map['profile_image_url'],
+      description: map['description'],
+      followersCount: map['followers_count'],
+      followingCount: map['following_count'],
     );
   }
 }
