@@ -7,6 +7,7 @@ import '../database/repository.dart';
 import '../utils/app_logger.dart';
 import '../utils/date_utils.dart';
 import '../../features/settings/settings_provider.dart';
+import 'package:flutter/foundation.dart';
 
 class TweetResponse {
   final List<Tweet> tweets;
@@ -384,6 +385,9 @@ class TwitterClient {
       filters: {}, // All content
     );
   }
+
+  @visibleForTesting
+  TweetResponse parseTweetsForTesting(Map<String, dynamic> timeline) => _parseTweets(timeline);
 
   TweetResponse _parseTweets(Map<String, dynamic> timeline) {
     final tweets = <Tweet>[];
