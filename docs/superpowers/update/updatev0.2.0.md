@@ -1,47 +1,50 @@
 # XFlow — Update v0.2.0
 
-A concise release note for the changes represented by the repository state at version 0.2.0.
-
 ## Summary
 
-This release updates the project to version 0.2.0 and includes player improvements, caching and performance upgrades, and profile-related tweaks observed in the current codebase.
+This release marks the project version `0.2.0` and bundles several player, feed, caching, and profile improvements focused on rendering reliability, media prefetching, and developer tooling.
 
 ## Highlights
 
-- **Version:** pubspec updated to `0.2.0` ([pubspec.yaml](pubspec.yaml#L1-L8)).
-- **Player improvements:** Continued work on video player pool management and rendering in `lib/features/player/` ([lib/features/player](lib/features/player/)).
-- **Caching & performance:** Project uses `ffcache` and `cached_network_image` to improve media caching and reduce network requests (see [pubspec.yaml](pubspec.yaml#L9-L30) and the README). See implementation references in [README.md](README.md#L13-L22).
-- **Profile improvements:** Feature flags for profile label improvements added in `lib/core/client/twitter_client.dart` ([twitter_client.dart](lib/core/client/twitter_client.dart#L50-L60)).
-- **Core features present:** TikTok-style infinite feed, subscription management, profile grid views, and state preservation are implemented across `lib/features/feed/`, `lib/features/subscriptions/`, and `lib/features/profile/` ([lib/features](lib/features/)).
+- **Rendering & player:** Improved video rendering (wrapped `TiktokMediaContainer` in `RepaintBoundary`) and stabilized the player pool and prefetch logic (`lib/features/player/`, `lib/features/feed/`).
+- **Feed & parsing:** Added timeline fetching helpers and improved tweet/date parsing to support more robust feed display and overlays.
+- **Caching & performance:** Aggressive media and response caching using `ffcache`, `cached_network_image`, and local caching strategies to reduce buffering and network usage.
+- **Profile & subscriptions:** Enhanced profile media display, feature flags for profile label improvements, subscription import and management screens.
+- **Developer & CI:** Added `AppLogger` and `LogViewerScreen` for diagnostics and a GitHub Actions workflow for automated APK builds.
 
-## Notable files changed / referenced
+## Changelog (selected commits)
 
-- `pubspec.yaml` — dependency updates and version bump ([pubspec.yaml](pubspec.yaml#L1-L40)).
-- `lib/core/client/twitter_client.dart` — profile-related feature flags ([lib/core/client/twitter_client.dart](lib/core/client/twitter_client.dart#L1-L120)).
-- `lib/features/player/` — player implementations ([lib/features/player](lib/features/player/)).
-- `docs/superpowers/update/updatev0.1.0.md` — initial release notes for context ([docs/superpowers/update/updatev0.1.0.md](docs/superpowers/update/updatev0.1.0.md#L1-L40)).
+- c3ef2d5 — feat: wrap TiktokMediaContainer in RepaintBoundary for improved rendering
+- a82febe — feat: add high-resolution avatar URL support for tweets and profiles
+- e8bbeae — feat: add fetchUserTimelineByScreenName method and enhance tweet prefetching logic
+- 272d4eb — feat: implement caching in fetch method and enhance feed with media warmup
+- 15209d4 — feat: add player pool and prefetch logic
+- c835425 — feat: implement AppLogger and LogViewerScreen for diagnostics
+- ba23ebc — feat: add GitHub Actions workflow for building and releasing APKs
+- cd6f7ab — feat: update project version to 0.2.0 and add release notes
 
-## Bugfixes & TODOs
+Full recent history is available in the git log for the repository if you want an exhaustive list.
 
-- The codebase still includes several `TODO` markers and non-blocking issues (see `squawker_source/lib/profile/` TODO comments). These should be addressed in subsequent patch releases.
+## Notable files referenced
 
-## Migration / Testing Notes
+- `pubspec.yaml` — version bump and dependency list
+- `lib/features/player/` — player pool and rendering components
+- `lib/features/feed/` — TikTok-style feed, warmup/prefetch logic
+- `lib/core/client/twitter_client.dart` — Twitter/X client flags and fetch logic
+- `squawker_source/` — upstream auth/data-layer reference
 
-- To test this release locally:
+## Known issues & TODOs
 
-```
+- The codebase contains several `TODO` comments within `squawker_source/` and profile-related code; these are non-blocking but worth addressing in follow-up patches.
+
+## Testing / Local verification
+
+Run locally:
+
+```bash
 flutter pub get
 flutter run
 ```
 
-- No breaking migrations were detected in the scanned files; however, updating platform SDKs and running full integration tests is recommended.
+Run unit/widget tests and CI workflows where available to validate platform-specific builds.
 
-## Acknowledgements
-
-Thanks to the upstream Squawker source used in `squawker_source/` for the authentication and data layer foundations.
-
----
-
-If you'd like, I can:
-- run a deeper scan for recent commit messages (requires Git access in the environment),
-- or expand the release notes with exact code diffs and contributor attribution.
