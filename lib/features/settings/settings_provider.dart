@@ -9,20 +9,23 @@ class SettingsState {
   final Set<MediaFilter> filters;
   final bool autoplay;
   final bool isListView;
+  final int mediaCacheSizeMB;
 
   SettingsState({
     this.sort = FeedSort.latest,
     this.filters = const {},
     this.autoplay = true,
     this.isListView = false,
+    this.mediaCacheSizeMB = 500,
   });
 
-  SettingsState copyWith({FeedSort? sort, Set<MediaFilter>? filters, bool? autoplay, bool? isListView}) {
+  SettingsState copyWith({FeedSort? sort, Set<MediaFilter>? filters, bool? autoplay, bool? isListView, int? mediaCacheSizeMB}) {
     return SettingsState(
       sort: sort ?? this.sort,
       filters: filters ?? this.filters,
       autoplay: autoplay ?? this.autoplay,
       isListView: isListView ?? this.isListView,
+      mediaCacheSizeMB: mediaCacheSizeMB ?? this.mediaCacheSizeMB,
     );
   }
 }
@@ -53,18 +56,25 @@ class SettingsNotifier extends Notifier<SettingsState> {
         .toSet();
 
     final isListView = _prefs.getBool('isListView') ?? false;
+    final mediaCacheSizeMB = _prefs.getInt('mediaCacheSizeMB') ?? 500;
 
     state = SettingsState(
       sort: sortIdx < FeedSort.values.length ? FeedSort.values[sortIdx] : FeedSort.latest,
       filters: filters,
       autoplay: _prefs.getBool('autoplay') ?? true,
       isListView: isListView,
+      mediaCacheSizeMB: mediaCacheSizeMB,
     );
   }
 
   void updateSort(FeedSort sort) {
     state = state.copyWith(sort: sort);
     _prefs.setInt('sort', sort.index);
+  }
+
+  void updateMediaCacheSize(int megabytes) {
+    state = state.copyWith(mediaCacheSizeMB: megabytes);
+    _prefs.setInt('mediaCacheSizeMB', megabytes);
   }
 
   void toggleFilter(MediaFilter filter) {
