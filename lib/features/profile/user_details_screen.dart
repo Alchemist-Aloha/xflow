@@ -25,6 +25,7 @@ class UserDetailsScreen extends ConsumerWidget {
             return const Center(child: Text('User not found'));
           }
           return CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
               SliverAppBar(
                 leading: IconButton(
@@ -38,6 +39,8 @@ class UserDetailsScreen extends ConsumerWidget {
                   ),
                 ],
                 floating: true,
+                pinned: true,
+                snap: true,
               ),
               SliverToBoxAdapter(
                 child: Padding(
@@ -120,13 +123,17 @@ class UserDetailsScreen extends ConsumerWidget {
 
                   return SliverMainAxisGroup(
                     slivers: [
-                      if (isRefreshing)
-                        const SliverToBoxAdapter(
-                          child: LinearProgressIndicator(
-                            backgroundColor: Colors.transparent,
-                            minHeight: 2,
-                          ),
+                      SliverToBoxAdapter(
+                        child: SizedBox(
+                          height: 2,
+                          child: isRefreshing
+                              ? const LinearProgressIndicator(
+                                  backgroundColor: Colors.transparent,
+                                  minHeight: 2,
+                                )
+                              : const SizedBox.shrink(),
                         ),
+                      ),
                       if (tweets.isEmpty && isRefreshing)
                         const SliverToBoxAdapter(
                           child: Center(
@@ -153,6 +160,7 @@ class UserDetailsScreen extends ConsumerWidget {
                               }
                               final tweet = tweets[index];
                               return ListTile(
+                                key: ValueKey(tweet.id),
                                 leading: tweet.mediaUrls.isNotEmpty 
                                   ? SizedBox(
                                       width: 50,
@@ -161,6 +169,8 @@ class UserDetailsScreen extends ConsumerWidget {
                                         cacheManager: CustomMediaCacheManager.getInstance(),
                                         imageUrl: tweet.thumbnailUrl ?? tweet.mediaUrls.first,
                                         fit: BoxFit.cover,
+                                        memCacheWidth: 150,
+                                        memCacheHeight: 150,
                                       ),
                                     )
                                   : const Icon(Icons.text_fields),
@@ -192,6 +202,7 @@ class UserDetailsScreen extends ConsumerWidget {
 
                                 final tweet = tweets[index];
                                 return GestureDetector(
+                                  key: ValueKey(tweet.id),
                                   onTap: () {
                                     ref.read(navigationProvider.notifier).openUserMedia(screenName, index);
                                   },
