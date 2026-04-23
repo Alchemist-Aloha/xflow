@@ -2,24 +2,27 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 enum FeedSort { latest, popular, oldest, random, trending }
-enum MediaFilter { video, image, gif, text }
+enum MediaFilter { video, image, text }
 
 class SettingsState {
   final FeedSort sort;
   final Set<MediaFilter> filters;
   final bool autoplay;
+  final bool isListView;
 
   SettingsState({
     this.sort = FeedSort.latest,
     this.filters = const {},
     this.autoplay = true,
+    this.isListView = false,
   });
 
-  SettingsState copyWith({FeedSort? sort, Set<MediaFilter>? filters, bool? autoplay}) {
+  SettingsState copyWith({FeedSort? sort, Set<MediaFilter>? filters, bool? autoplay, bool? isListView}) {
     return SettingsState(
       sort: sort ?? this.sort,
       filters: filters ?? this.filters,
       autoplay: autoplay ?? this.autoplay,
+      isListView: isListView ?? this.isListView,
     );
   }
 }
@@ -49,10 +52,13 @@ class SettingsNotifier extends Notifier<SettingsState> {
         .whereType<MediaFilter>()
         .toSet();
 
+    final isListView = _prefs.getBool('isListView') ?? false;
+
     state = SettingsState(
       sort: sortIdx < FeedSort.values.length ? FeedSort.values[sortIdx] : FeedSort.latest,
       filters: filters,
       autoplay: _prefs.getBool('autoplay') ?? true,
+      isListView: isListView,
     );
   }
 
@@ -75,6 +81,11 @@ class SettingsNotifier extends Notifier<SettingsState> {
   void toggleAutoplay(bool value) {
     state = state.copyWith(autoplay: value);
     _prefs.setBool('autoplay', value);
+  }
+
+  void toggleListView(bool value) {
+    state = state.copyWith(isListView: value);
+    _prefs.setBool('isListView', value);
   }
 }
 

@@ -20,6 +20,7 @@ class TwitterClient {
   static const String graphqlSearchTimelineUriPath = '/graphql/nK1dw4oV3k4w5TdtcAdSww/SearchTimeline';
   static const String graphqlFollowingUriPath = '/graphql/FEcMGoVOUjm0aU9BJrrGZA/Following';
   static const String graphqlUserByScreenNameUriPath = '/graphql/oUZZZ8Oddwxs8Cd3iW3UEA/UserByScreenName';
+  static const String graphqlUserTweetsUriPath = '/graphql/rIIwMe1ObkGh_ByBtTCtRQ/UserTweets';
 
   static const Map<String, dynamic> defaultFeatures = {
     'android_ad_formats_media_component_render_overlay_enabled': false,
@@ -239,19 +240,16 @@ class TwitterClient {
           case MediaFilter.image:
             filterQueries.add("filter:images");
             break;
-          case MediaFilter.gif:
-            filterQueries.add("filter:consumer_video");
-            break;
           case MediaFilter.text:
-            filterQueries.add("-filter:media");
+            filterQueries.add("-filter:images -filter:videos");
             break;
         }
       }
       final combinedFilter = "(${filterQueries.join(' OR ')})";
       finalQuery = finalQuery.isEmpty ? combinedFilter : "$finalQuery $combinedFilter";
     } else if (query == null) {
-      // Default "All" case if no specific query provided
-      finalQuery = "filter:media OR -filter:media";
+      // Default "All" case: empty query means no extra filters
+      finalQuery = "";
     }
 
     if (sort == FeedSort.popular) {
@@ -346,12 +344,49 @@ class TwitterClient {
     return response;
   }
 
+  Future<TweetResponse> fetchUserTimeline(String userId, {String? cursor}) async {
+    final variables = {
+      "userId": userId,
+      "count": 20,
+      "includePromotedContent": false,
+      "withQuickPromoteEligibilityTweetFields": true,
+      "withVoice": true,
+      "withV2Timeline": true
+    };
+
+    if (cursor != null) variables['cursor'] = cursor;
+
+    final uri = Uri.https('x.com', '/i/api$graphqlUserTweetsUriPath', {
+      'variables': jsonEncode(variables),
+      'features': jsonEncode(defaultFeatures),
+      'fieldToggles': jsonEncode({'withArticlePlainText': false})
+    });
+
+    try {
+      final response = await TwitterAccount.fetch(uri);
+      if (response.statusCode != 200) return TweetResponse(tweets: []);
+
+      final data = json.decode(response.body);
+      final timeline = data['data']?['user']?['result']?['timeline_v2']?['timeline'];
+      if (timeline == null) return TweetResponse(tweets: []);
+
+      return _parseTweets(timeline);
+    } catch (e) {
+      debugPrint('Error fetching user timeline: $e');
+      return TweetResponse(tweets: []);
+    }
+  }
+
   TweetResponse _parseTweets(Map<String, dynamic> timeline) {
     final tweets = <Tweet>[];
-    final instructions = List.from(timeline['timeline']?['instructions'] ?? []);
+    final instructions = List.from(timeline['instructions'] ?? timeline['timeline']?['instructions'] ?? []);
     
     final addEntries = instructions.firstWhereOrNull((e) => e['type'] == 'TimelineAddEntries' || e['__typename'] == 'TimelineAddEntries');
-    if (addEntries == null) return TweetResponse(tweets: []);
+    if (addEntries == null) {
+      // Try to find instructions in a different place
+      debugPrint('No TimelineAddEntries found in instructions: ${instructions.map((e) => e['type'] ?? e['__typename'])}');
+      return TweetResponse(tweets: []);
+    }
 
     final entries = List.from(addEntries['entries'] ?? []);
     String? cursorTop;
@@ -361,9 +396,9 @@ class TwitterClient {
       final entryId = entry['entryId'] as String? ?? '';
       
       if (entryId.startsWith('cursor-top-') || entryId.startsWith('sq-cursor-top-')) {
-        cursorTop = entry['content']?['value'];
+        cursorTop = entry['content']?['value'] ?? entry['content']?['cursorType'];
       } else if (entryId.startsWith('cursor-bottom-') || entryId.startsWith('sq-cursor-bottom-')) {
-        cursorBottom = entry['content']?['value'];
+        cursorBottom = entry['content']?['value'] ?? entry['content']?['cursorType'];
       }
 
       try {

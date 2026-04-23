@@ -17,12 +17,13 @@ class UserMediaNotifier extends FamilyAsyncNotifier<FeedState, String> {
   @override
   FutureOr<FeedState> build(String arg) async {
     final client = TwitterClient();
-    final settings = ref.watch(settingsProvider);
-    final response = await client.fetchUserTweets(
-      arg,
-      sort: settings.sort,
-      filters: {}, // Force all content on profile page
-    );
+    final profile = await ref.watch(userProfileProvider(arg).future);
+    
+    if (profile == null || profile.id.isEmpty) {
+      return FeedState(tweets: []);
+    }
+
+    final response = await client.fetchUserTimeline(profile.id);
     
     return FeedState(
       tweets: response.tweets,
@@ -37,16 +38,16 @@ class UserMediaNotifier extends FamilyAsyncNotifier<FeedState, String> {
       return;
     }
 
-    final settings = ref.read(settingsProvider);
+    final profile = await ref.read(userProfileProvider(screenName).future);
+    if (profile == null || profile.id.isEmpty) return;
+
     state = AsyncData(currentState.copyWith(isLoadingMore: true));
 
     try {
       final client = TwitterClient();
-      final response = await client.fetchUserTweets(
-        screenName,
+      final response = await client.fetchUserTimeline(
+        profile.id,
         cursor: currentState.cursorBottom,
-        sort: settings.sort,
-        filters: {}, // Force all content on profile page
       );
       
       final newTweets = response.tweets;

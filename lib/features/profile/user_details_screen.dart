@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/navigation/navigation_provider.dart';
+import '../settings/settings_provider.dart';
 import 'profile_provider.dart';
 
 class UserDetailsScreen extends ConsumerWidget {
@@ -13,6 +14,8 @@ class UserDetailsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(userProfileProvider(screenName));
     final tweetsAsync = ref.watch(userMediaNotifierProvider(screenName));
+    final settings = ref.watch(settingsProvider);
+    final settingsNotifier = ref.read(settingsProvider.notifier);
 
     return Scaffold(
       body: profileAsync.when(
@@ -27,6 +30,12 @@ class UserDetailsScreen extends ConsumerWidget {
                   icon: const Icon(Icons.arrow_back),
                   onPressed: () => ref.read(navigationProvider.notifier).back(),
                 ),
+                actions: [
+                  IconButton(
+                    icon: Icon(settings.isListView ? Icons.grid_view : Icons.view_list),
+                    onPressed: () => settingsNotifier.toggleListView(!settings.isListView),
+                  ),
+                ],
                 floating: true,
               ),
               SliverToBoxAdapter(
@@ -97,6 +106,38 @@ class UserDetailsScreen extends ConsumerWidget {
                       child: Center(child: Text('No tweets found')),
                     );
                   }
+
+                  if (settings.isListView) {
+                    return SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          if (index == tweets.length - 1) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              ref.read(userMediaNotifierProvider(screenName).notifier).fetchMore();
+                            });
+                          }
+                          final tweet = tweets[index];
+                          return ListTile(
+                            leading: tweet.mediaUrls.isNotEmpty 
+                              ? SizedBox(
+                                  width: 50,
+                                  height: 50,
+                                  child: CachedNetworkImage(
+                                    imageUrl: tweet.thumbnailUrl ?? tweet.mediaUrls.first,
+                                    fit: BoxFit.cover,
+                                  ),
+                                )
+                              : const Icon(Icons.text_fields),
+                            title: Text(tweet.text, maxLines: 2, overflow: TextOverflow.ellipsis),
+                            subtitle: Text(tweet.createdAt?.toString().split('.').first ?? ''),
+                            onTap: () => ref.read(navigationProvider.notifier).openUserMedia(screenName, index),
+                          );
+                        },
+                        childCount: tweets.length,
+                      ),
+                    );
+                  }
+
                   return SliverPadding(
                     padding: const EdgeInsets.symmetric(horizontal: 2),
                     sliver: SliverGrid(
