@@ -172,7 +172,7 @@ class TwitterClient {
         });
 
         debugPrint('Fetching following with cursor: $currentCursor (Found so far: ${allSubs.length})');
-        final response = await TwitterAccount.fetch(uri);
+        final response = await TwitterAccount.fetch(uri, cacheDuration: const Duration(hours: 1));
         if (response.statusCode != 200) {
           debugPrint('fetchFollowing Error: ${response.statusCode} ${response.body}');
           break;

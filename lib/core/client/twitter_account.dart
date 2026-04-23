@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:ffcache/ffcache.dart';
 import '../database/entities.dart';
 import '../database/repository.dart';
 
 class TwitterAccount {
   static Account? _currentAccount;
+  static final FFCache _cache = FFCache();
 
   static Account? get currentAccount => _currentAccount;
 
@@ -20,7 +22,15 @@ class TwitterAccount {
     return _currentAccount != null;
   }
 
-  static Future<http.Response> fetch(Uri uri, {Map<String, String>? headers}) async {
+  static Future<http.Response> fetch(Uri uri, {Map<String, String>? headers, Duration? cacheDuration}) async {
+    final cacheKey = uri.toString();
+    if (cacheDuration != null) {
+      final cachedBody = await _cache.getString(cacheKey);
+      if (cachedBody != null) {
+        return http.Response(cachedBody, 200);
+      }
+    }
+
     if (_currentAccount == null) {
       await init();
     }
@@ -60,7 +70,11 @@ class TwitterAccount {
       debugPrint('Error generating x-client-transaction-id: $e');
     }
 
-    return http.get(uri, headers: combinedHeaders).timeout(const Duration(seconds: 15));
+    final response = await http.get(uri, headers: combinedHeaders).timeout(const Duration(seconds: 15));
+    if (response.statusCode == 200 && cacheDuration != null) {
+      await _cache.setStringWithTimeout(cacheKey, response.body, cacheDuration);
+    }
+    return response;
   }
   
   static void setCurrentAccount(Account account) {

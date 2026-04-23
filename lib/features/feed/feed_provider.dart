@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/client/twitter_client.dart';
 import '../../core/models/tweet.dart';
 import '../settings/settings_provider.dart';
+import '../player/player_pool_provider.dart';
 
 final twitterClientProvider = Provider((ref) => TwitterClient());
 
@@ -33,6 +34,14 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
       sort: settings.sort,
       filter: settings.filter,
     );
+    
+    final pool = ref.read(playerPoolProvider.notifier);
+    for (int i = 0; i < response.tweets.length && i < 3; i++) {
+      final tweet = response.tweets[i];
+      if (tweet.isVideo && tweet.mediaUrls.isNotEmpty) {
+        pool.warmup(tweet.id, tweet.mediaUrls.first);
+      }
+    }
     
     return FeedState(
       tweets: response.tweets,
