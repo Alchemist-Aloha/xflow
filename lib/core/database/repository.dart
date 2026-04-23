@@ -5,6 +5,7 @@ import 'entities.dart';
 
 const String tableAccounts = 'accounts';
 const String tableSubscriptions = 'subscriptions';
+const String tableCachedMedia = 'cached_media';
 
 class Repository {
   static Database? _database;
@@ -19,7 +20,7 @@ class Repository {
     String path = join(await getDatabasesPath(), 'xflow.db');
     return await openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: (db, version) async {
         await db.execute(
           'CREATE TABLE $tableAccounts (id TEXT PRIMARY KEY, screen_name TEXT, rest_id TEXT, auth_header TEXT)',
@@ -27,6 +28,21 @@ class Repository {
         await db.execute(
           'CREATE TABLE $tableSubscriptions (id TEXT PRIMARY KEY, screen_name TEXT, name TEXT, profile_image_url TEXT, description TEXT, followers_count INTEGER, following_count INTEGER)',
         );
+        await db.execute('''
+          CREATE TABLE $tableCachedMedia (
+            id TEXT PRIMARY KEY,
+            text TEXT,
+            user_handle TEXT,
+            user_avatar_url TEXT,
+            media_urls TEXT,
+            thumbnail_url TEXT,
+            is_video INTEGER,
+            created_at INTEGER,
+            played_count INTEGER DEFAULT 0,
+            last_played_at INTEGER,
+            duration_watched INTEGER DEFAULT 0
+          )
+        ''');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -41,6 +57,23 @@ class Repository {
           await db.execute('ALTER TABLE $tableSubscriptions ADD COLUMN description TEXT');
           await db.execute('ALTER TABLE $tableSubscriptions ADD COLUMN followers_count INTEGER');
           await db.execute('ALTER TABLE $tableSubscriptions ADD COLUMN following_count INTEGER');
+        }
+        if (oldVersion < 5) {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS $tableCachedMedia (
+              id TEXT PRIMARY KEY,
+              text TEXT,
+              user_handle TEXT,
+              user_avatar_url TEXT,
+              media_urls TEXT,
+              thumbnail_url TEXT,
+              is_video INTEGER,
+              created_at INTEGER,
+              played_count INTEGER DEFAULT 0,
+              last_played_at INTEGER,
+              duration_watched INTEGER DEFAULT 0
+            )
+          ''');
         }
       },
     );
@@ -92,5 +125,80 @@ class Repository {
   static Future<void> clearSubscriptions() async {
     final db = await database;
     await db.delete(tableSubscriptions);
+  }
+
+  static Future<void> insertCachedMedia(List<Tweet> tweets) async {
+    final db = await database;
+    final batch = db.batch();
+    for (var tweet in tweets) {
+      batch.insert(
+        tableCachedMedia,
+        {
+          'id': tweet.id,
+          'text': tweet.text,
+          'user_handle': tweet.userHandle,
+          'user_avatar_url': tweet.userAvatarUrl,
+          'media_urls': jsonEncode(tweet.mediaUrls),
+          'thumbnail_url': tweet.thumbnailUrl,
+          'is_video': tweet.isVideo ? 1 : 0,
+          'created_at': tweet.createdAt?.millisecondsSinceEpoch,
+        },
+        conflictAlgorithm: ConflictAlgorithm.ignore, // Don't overwrite play counts if already exists
+      );
+    }
+    await batch.commit(noResult: true);
+  }
+
+  static Future<List<Tweet>> getUnplayedCachedMedia(int limit) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      tableCachedMedia,
+      where: 'played_count = ?',
+      whereArgs: [0],
+      orderBy: 'created_at DESC',
+      limit: limit,
+    );
+
+    return List.generate(maps.length, (i) {
+      return Tweet(
+        id: maps[i]['id'] as String,
+        text: maps[i]['text'] as String,
+        userHandle: maps[i]['user_handle'] as String,
+        userAvatarUrl: maps[i]['user_avatar_url'] as String?,
+        mediaUrls: List<String>.from(jsonDecode(maps[i]['media_urls'] as String)),
+        thumbnailUrl: maps[i]['thumbnail_url'] as String?,
+        isVideo: (maps[i]['is_video'] as int) == 1,
+        createdAt: maps[i]['created_at'] != null ? DateTime.fromMillisecondsSinceEpoch(maps[i]['created_at'] as int) : null,
+      );
+    });
+  }
+
+  static Future<void> markMediaAsPlayed(String id) async {
+    final db = await database;
+    await db.rawUpdate('''
+      UPDATE $tableCachedMedia 
+      SET played_count = played_count + 1, last_played_at = ? 
+      WHERE id = ?
+    ''', [DateTime.now().millisecondsSinceEpoch, id]);
+  }
+
+  static Future<void> pruneCachedMedia() async {
+    final db = await database;
+    final countSq = await db.rawQuery('SELECT COUNT(*) as count FROM $tableCachedMedia');
+    final count = countSq.first['count'] as int;
+
+    if (count > 50000) {
+      // Delete the oldest watched items
+      final deleteCount = count - 50000;
+      await db.execute('''
+        DELETE FROM $tableCachedMedia 
+        WHERE id IN (
+          SELECT id FROM $tableCachedMedia 
+          WHERE played_count > 0 
+          ORDER BY last_played_at ASC 
+          LIMIT ?
+        )
+      ''', [deleteCount]);
+    }
   }
 }
