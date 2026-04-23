@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/navigation/navigation_provider.dart';
 import '../player/player_pool_provider.dart';
 import 'profile_provider.dart';
 import '../player/widgets/media_container.dart';
@@ -119,7 +120,7 @@ class _UserMediaFeedScreenState extends ConsumerState<UserMediaFeedScreen> {
               backgroundColor: Colors.black54,
               child: IconButton(
                 icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => ref.read(navigationProvider.notifier).back(),
               ),
             ),
           ),

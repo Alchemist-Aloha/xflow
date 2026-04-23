@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import '../../../core/models/tweet.dart';
-import '../../profile/user_details_screen.dart';
+import '../../../core/navigation/navigation_provider.dart';
 
-class TweetTextOverlay extends StatefulWidget {
+class TweetTextOverlay extends ConsumerStatefulWidget {
   final Tweet tweet;
 
   const TweetTextOverlay({super.key, required this.tweet});
 
   @override
-  State<TweetTextOverlay> createState() => _TweetTextOverlayState();
+  ConsumerState<TweetTextOverlay> createState() => _TweetTextOverlayState();
 }
 
-class _TweetTextOverlayState extends State<TweetTextOverlay> {
+class _TweetTextOverlayState extends ConsumerState<TweetTextOverlay> {
   bool _isExpanded = false;
 
   @override
@@ -59,12 +60,7 @@ class _TweetTextOverlayState extends State<TweetTextOverlay> {
     return GestureDetector(
       onTap: () {
         final handle = widget.tweet.userHandle.replaceFirst('@', '');
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => UserDetailsScreen(screenName: handle),
-          ),
-        );
+        ref.read(navigationProvider.notifier).selectUser(handle);
       },
       child: Row(
         children: [

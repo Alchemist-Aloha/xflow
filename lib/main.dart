@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:media_kit/media_kit.dart';
 import 'features/feed/tiktok_feed_screen.dart';
+import 'features/subscriptions/subscription_list_screen.dart';
+import 'features/profile/user_details_screen.dart';
+import 'features/profile/user_media_feed_screen.dart';
+import 'core/navigation/navigation_provider.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,7 +26,63 @@ class XFlowApp extends StatelessWidget {
         colorSchemeSeed: Colors.blue,
         brightness: Brightness.dark,
       ),
-      home: const TiktokFeedScreen(),
+      home: const MainScaffold(),
+    );
+  }
+}
+
+class MainScaffold extends ConsumerWidget {
+  const MainScaffold({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final nav = ref.watch(navigationProvider);
+    final navNotifier = ref.read(navigationProvider.notifier);
+
+    Widget body;
+    if (nav.selectedUser != null) {
+      if (nav.userMediaInitialIndex != null) {
+        body = UserMediaFeedScreen(
+          screenName: nav.selectedUser!,
+          initialIndex: nav.userMediaInitialIndex!,
+        );
+      } else {
+        body = UserDetailsScreen(screenName: nav.selectedUser!);
+      }
+    } else {
+      body = nav.currentTab == MainTab.media
+          ? const TiktokFeedScreen()
+          : const SubscriptionListScreen(isStandalone: false);
+    }
+
+    // Handle back button
+    return PopScope(
+      canPop: nav.selectedUser == null,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          navNotifier.back();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: body,
+        bottomNavigationBar: BottomNavigationBar(
+          currentIndex: nav.currentTab.index,
+          onTap: (index) {
+            navNotifier.setTab(MainTab.values[index]);
+            if (index == 1) {
+              ref.invalidate(subscriptionListProvider);
+            }
+          },
+          backgroundColor: Colors.black,
+          selectedItemColor: Colors.white,
+          unselectedItemColor: Colors.white54,
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.video_library), label: 'Media'),
+            BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Subscriptions'),
+          ],
+        ),
+      ),
     );
   }
 }

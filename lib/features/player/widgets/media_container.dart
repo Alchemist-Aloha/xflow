@@ -119,7 +119,39 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
                 },
               ),
             ),
+            // Progress Bar at the very bottom
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: _buildProgressBar(instance),
+            ),
           ],
+        );
+      },
+    );
+  }
+
+  Widget _buildProgressBar(PlayerInstance instance) {
+    return StreamBuilder<Duration>(
+      stream: instance.player.stream.position,
+      builder: (context, snapshot) {
+        final position = snapshot.data ?? Duration.zero;
+        final duration = instance.player.state.duration;
+        
+        if (duration == Duration.zero) return const SizedBox.shrink();
+        
+        final progress = position.inMilliseconds / duration.inMilliseconds;
+        
+        return Container(
+          height: 2,
+          width: double.infinity,
+          color: Colors.white12,
+          child: FractionallySizedBox(
+            alignment: Alignment.centerLeft,
+            widthFactor: progress.clamp(0.0, 1.0),
+            child: Container(color: Colors.white),
+          ),
         );
       },
     );

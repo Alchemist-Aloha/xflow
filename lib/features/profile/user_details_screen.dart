@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/database/entities.dart';
 import '../../core/models/tweet.dart';
+import '../../core/navigation/navigation_provider.dart';
 import 'profile_provider.dart';
 import 'user_media_feed_screen.dart';
 
@@ -24,8 +25,12 @@ class UserDetailsScreen extends ConsumerWidget {
           }
           return CustomScrollView(
             slivers: [
-              SliverAppBar.large(
-                title: Text('@${profile.screenName}'),
+              SliverAppBar(
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => ref.read(navigationProvider.notifier).back(),
+                ),
+                floating: true,
               ),
               SliverToBoxAdapter(
                 child: Padding(
@@ -116,15 +121,7 @@ class UserDetailsScreen extends ConsumerWidget {
                           final tweet = tweets[index];
                           return GestureDetector(
                             onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => UserMediaFeedScreen(
-                                    screenName: screenName,
-                                    initialIndex: index,
-                                  ),
-                                ),
-                              );
+                              ref.read(navigationProvider.notifier).openUserMedia(screenName, index);
                             },
                             child: Stack(
                               fit: StackFit.expand,

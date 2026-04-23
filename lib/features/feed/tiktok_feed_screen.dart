@@ -21,7 +21,6 @@ class TiktokFeedScreen extends ConsumerStatefulWidget {
 class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
   final PageController _pageController = PageController();
   int _currentIndex = 0;
-  int _navigationIndex = 0;
 
   @override
   void initState() {
@@ -33,7 +32,7 @@ class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
   Future<void> _initAuth() async {
     await TwitterAccount.init();
     if (mounted) {
-      ref.invalidate(feedProvider);
+      ref.invalidate(feedNotifierProvider);
     }
   }
 
@@ -86,83 +85,46 @@ class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildTopPanel(),
-            Expanded(
-              child: IndexedStack(
-                index: _navigationIndex,
-                children: [
-                  _buildMediaFeed(),
-                  const SubscriptionListScreen(),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _navigationIndex,
-        onTap: (index) {
-          setState(() {
-            _navigationIndex = index;
-          });
-          if (index == 1) {
-             ref.invalidate(subscriptionListProvider);
-          }
-        },
-        backgroundColor: Colors.black,
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white54,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.video_library), label: 'Media'),
-          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Subscriptions'),
-        ],
-      ),
+    return Column(
+      children: [
+        _buildTopPanel(),
+        Expanded(child: _buildMediaFeed()),
+      ],
     );
   }
 
   Widget _buildTopPanel() {
-    String title = "Subscriptions";
-    if (_navigationIndex == 1) {
-      title = "My Subscriptions";
-    }
-
-    return Container(
-      height: 56,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: const BoxDecoration(
-        color: Colors.black,
-        border: Border(bottom: BorderSide(color: Colors.white10, width: 0.5)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white70),
-            onPressed: () {
-              if (_navigationIndex == 0) {
+    return SafeArea(
+      bottom: false,
+      child: Container(
+        height: 56,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: const BoxDecoration(
+          color: Colors.black,
+          border: Border(bottom: BorderSide(color: Colors.white10, width: 0.5)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.refresh, color: Colors.white70),
+              onPressed: () {
                 ref.invalidate(feedNotifierProvider);
-              } else {
-                ref.invalidate(subscriptionListProvider);
-              }
-            },
-          ),
-          Text(
-            title,
-            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings, color: Colors.white70),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (c) => const SettingsScreen()),
+              },
             ),
-          ),
-        ],
+            const Text(
+              "Subscriptions",
+              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            IconButton(
+              icon: const Icon(Icons.settings, color: Colors.white70),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (c) => const SettingsScreen()),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
