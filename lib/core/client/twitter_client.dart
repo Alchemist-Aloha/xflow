@@ -1,11 +1,11 @@
 import 'dart:convert';
 import 'package:collection/collection.dart';
-import 'package:intl/intl.dart';
 import 'twitter_account.dart';
 import '../models/tweet.dart';
 import '../database/entities.dart';
 import '../database/repository.dart';
 import '../utils/app_logger.dart';
+import '../utils/date_utils.dart';
 import '../../features/settings/settings_provider.dart';
 
 class TweetResponse {
@@ -516,13 +516,7 @@ class TwitterClient {
 
       DateTime? createdAt;
       if (legacy['created_at'] != null) {
-        try {
-          // X format: "Wed Apr 24 12:34:56 +0000 2024"
-          final format = DateFormat("EEE MMM dd HH:mm:ss Z yyyy", "en_US");
-          createdAt = format.parse(legacy['created_at']);
-        } catch (e) {
-          AppLogger.log('XFLOW: Error parsing date ${legacy['created_at']}: $e');
-        }
+        createdAt = parseTwitterDateTime(legacy['created_at'].toString());
       } else if (legacy['created_at_ms'] != null) {
         try {
           final ms = int.tryParse(legacy['created_at_ms'].toString());
