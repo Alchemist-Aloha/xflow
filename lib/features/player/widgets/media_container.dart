@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:media_kit_video/media_kit_video_controls/media_kit_video_controls.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/models/tweet.dart';
 import '../player_pool_provider.dart';
 
-class TiktokMediaContainer extends ConsumerWidget {
+class TiktokMediaContainer extends ConsumerStatefulWidget {
   final Tweet tweet;
   final bool isVisible;
 
@@ -16,30 +18,30 @@ class TiktokMediaContainer extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (!tweet.mediaUrls.isNotEmpty) {
+  ConsumerState<TiktokMediaContainer> createState() => _TiktokMediaContainerState();
+}
+
+class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
+  final GlobalKey<VideoState> _videoKey = GlobalKey<VideoState>();
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.tweet.mediaUrls.isEmpty) {
       return const Center(child: Text('No Media'));
     }
 
-    if (!tweet.isVideo) {
-      return CachedNetworkImage(
-        imageUrl: tweet.mediaUrls.first,
-        fit: BoxFit.contain,
-        placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
-        errorWidget: (context, url, error) => const Icon(Icons.error),
-      );
+    if (!widget.tweet.isVideo) {
+      return _buildImageGallery();
     }
 
     final pool = ref.watch(playerPoolProvider);
-    final instance = pool[tweet.id];
+    final instance = pool[widget.tweet.id];
 
     if (instance == null) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    // Handle play/pause logic based on visibility
-    // Note: In a real app, we'd use a more robust way to trigger this to avoid re-playing on every build
-    if (isVisible) {
+    if (widget.isVisible) {
       instance.player.play();
     } else {
       instance.player.pause();
@@ -60,6 +62,12 @@ class TiktokMediaContainer extends ConsumerWidget {
             ),
           );
         }
+
+        // Determine orientation based on current player state
+        final width = instance.player.state.width;
+        final height = instance.player.state.height;
+        final isLandscape = (width ?? 0) > (height ?? 0);
+
         return Stack(
           children: [
             GestureDetector(
@@ -71,9 +79,23 @@ class TiktokMediaContainer extends ConsumerWidget {
                 }
               },
               child: AbsorbPointer(
-                child: Video(
-                  controller: instance.controller,
-                  controls: NoVideoControls,
+                child: SizedBox.expand(
+                  child: Center(
+                    child: Video(
+                      key: _videoKey,
+                      controller: instance.controller,
+                      controls: (state) => state.isFullscreen 
+                          ? const MaterialVideoControls() 
+                          : const SizedBox.shrink(),
+                      configuration: VideoConfiguration(
+                        fullscreen: VideoFullscreenConfiguration(
+                          preferredOrientations: isLandscape
+                              ? [DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]
+                              : [DeviceOrientation.portraitUp],
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -84,11 +106,43 @@ class TiktokMediaContainer extends ConsumerWidget {
               child: IconButton(
                 icon: const Icon(Icons.fullscreen, color: Colors.white, size: 32),
                 onPressed: () {
-                  enterFullscreen(context);
+                  _videoKey.currentState?.enterFullscreen();
                 },
               ),
             ),
           ],
+        );
+      },
+    );
+  }
+
+  Widget _buildImageGallery() {
+    if (widget.tweet.mediaUrls.length == 1) {
+      return SizedBox.expand(
+        child: Center(
+          child: CachedNetworkImage(
+            imageUrl: widget.tweet.mediaUrls.first,
+            fit: BoxFit.contain,
+            placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
+            errorWidget: (context, url, error) => const Icon(Icons.error),
+          ),
+        ),
+      );
+    }
+
+    return PageView.builder(
+      scrollDirection: Axis.horizontal,
+      itemCount: widget.tweet.mediaUrls.length,
+      itemBuilder: (context, index) {
+        return SizedBox.expand(
+          child: Center(
+            child: CachedNetworkImage(
+              imageUrl: widget.tweet.mediaUrls[index],
+              fit: BoxFit.contain,
+              placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
+              errorWidget: (context, url, error) => const Icon(Icons.error),
+            ),
+          ),
         );
       },
     );

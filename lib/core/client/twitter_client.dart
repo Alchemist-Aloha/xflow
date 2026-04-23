@@ -143,52 +143,79 @@ class TwitterClient {
     return fetchTrendingMedia(query: "from:$screenName filter:media", cursor: cursor);
   }
 
-  Future<List<Subscription>> fetchFollowing(String userId) async {
-    final variables = {
-      "userId": userId,
-      "count": 100,
-      "includePromotedContent": false,
-      "withGrokTranslatedBio": false
-    };
-
-    final uri = Uri.https('x.com', '/i/api/graphql/FEcMGoVOUjm0aU9BJrrGZA/Following', {
-      'variables': jsonEncode(variables),
-      'features': jsonEncode(followingFeatures),
-    });
+  Future<List<Subscription>> fetchFollowing(String userId, {int maxCount = 1000}) async {
+    final allSubs = <Subscription>[];
+    String? currentCursor;
 
     try {
-      final response = await TwitterAccount.fetch(uri);
-      if (response.statusCode != 200) {
-        debugPrint('fetchFollowing Error: ${response.statusCode} ${response.body}');
-        return [];
-      }
+      while (allSubs.length < maxCount) {
+        final variables = {
+          "userId": userId,
+          "count": 100,
+          "includePromotedContent": false,
+          "withGrokTranslatedBio": false
+        };
+        if (currentCursor != null) {
+          variables["cursor"] = currentCursor;
+        }
 
-      final data = json.decode(response.body);
-      final instructions = List.from(data['data']?['user']?['result']?['timeline']?['timeline']?['instructions'] ?? []);
-      
-      final subs = <Subscription>[];
-      for (final instruction in instructions) {
-        if (instruction["type"] != "TimelineAddEntries" || instruction["entries"] == null) continue;
+        final uri = Uri.https('x.com', '/i/api/graphql/FEcMGoVOUjm0aU9BJrrGZA/Following', {
+          'variables': jsonEncode(variables),
+          'features': jsonEncode(followingFeatures),
+        });
+
+        debugPrint('Fetching following with cursor: $currentCursor (Found so far: ${allSubs.length})');
+        final response = await TwitterAccount.fetch(uri);
+        if (response.statusCode != 200) {
+          debugPrint('fetchFollowing Error: ${response.statusCode} ${response.body}');
+          break;
+        }
+
+        final data = json.decode(response.body);
+        final instructions = List.from(data['data']?['user']?['result']?['timeline']?['timeline']?['instructions'] ?? []);
         
-        for (final entry in instruction["entries"]) {
+        if (instructions.isEmpty) break;
+
+        final addEntries = instructions.firstWhereOrNull((e) => e['type'] == 'TimelineAddEntries' || e['__typename'] == 'TimelineAddEntries');
+        if (addEntries == null) break;
+
+        final entries = List.from(addEntries['entries'] ?? []);
+        if (entries.isEmpty) break;
+
+        String? nextCursor;
+        int newFound = 0;
+
+        for (final entry in entries) {
+          final entryId = entry['entryId'] as String? ?? '';
+          if (entryId.startsWith('cursor-bottom-') || entryId.startsWith('sq-cursor-bottom-')) {
+            nextCursor = entry['content']?['value'];
+            continue;
+          }
+
           final userResult = entry["content"]?["itemContent"]?["user_results"]?["result"];
           if (userResult == null) continue;
           
           final legacy = userResult["core"]?["screen_name"] != null ? userResult["core"] : userResult["legacy"];
           if (legacy == null) continue;
 
-          subs.add(Subscription(
+          allSubs.add(Subscription(
             id: userResult["rest_id"],
             screenName: legacy["screen_name"],
             name: legacy["name"] ?? '',
             profileImageUrl: userResult["avatar"]?["image_url"] ?? legacy["profile_image_url_https"],
           ));
+          newFound++;
         }
+
+        if (newFound == 0 || nextCursor == null || nextCursor == currentCursor) {
+          break;
+        }
+        currentCursor = nextCursor;
       }
-      return subs;
+      return allSubs;
     } catch (e) {
       debugPrint('Error fetching following: $e');
-      return [];
+      return allSubs;
     }
   }
 
@@ -407,7 +434,13 @@ class TwitterClient {
       if (allMedia.isEmpty) return;
 
       final mediaUrls = <String>[];
+      String? thumbnailUrl;
       bool isVideo = false;
+
+      // Use the first media's thumbnail as the tweet thumbnail
+      if (allMedia.isNotEmpty && allMedia.first['media_url_https'] != null) {
+        thumbnailUrl = allMedia.first['media_url_https'];
+      }
 
       for (final m in allMedia) {
         if (m['type'] == 'video' || m['type'] == 'animated_gif') {
@@ -440,6 +473,7 @@ class TwitterClient {
           text: legacy['full_text'] ?? legacy['text'] ?? '',
           userHandle: '@$screenName',
           mediaUrls: mediaUrls,
+          thumbnailUrl: thumbnailUrl,
           isVideo: isVideo,
         ));
       }

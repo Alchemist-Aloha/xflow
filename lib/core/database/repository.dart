@@ -19,13 +19,13 @@ class Repository {
     String path = join(await getDatabasesPath(), 'xflow.db');
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: (db, version) async {
         await db.execute(
           'CREATE TABLE $tableAccounts (id TEXT PRIMARY KEY, screen_name TEXT, rest_id TEXT, auth_header TEXT)',
         );
         await db.execute(
-          'CREATE TABLE $tableSubscriptions (id TEXT PRIMARY KEY, screen_name TEXT, name TEXT, profile_image_url TEXT)',
+          'CREATE TABLE $tableSubscriptions (id TEXT PRIMARY KEY, screen_name TEXT, name TEXT, profile_image_url TEXT, description TEXT, followers_count INTEGER, following_count INTEGER)',
         );
       },
       onUpgrade: (db, oldVersion, newVersion) async {
@@ -36,6 +36,11 @@ class Repository {
           await db.execute(
             'CREATE TABLE IF NOT EXISTS $tableSubscriptions (id TEXT PRIMARY KEY, screen_name TEXT, name TEXT, profile_image_url TEXT)',
           );
+        }
+        if (oldVersion < 4) {
+          await db.execute('ALTER TABLE $tableSubscriptions ADD COLUMN description TEXT');
+          await db.execute('ALTER TABLE $tableSubscriptions ADD COLUMN followers_count INTEGER');
+          await db.execute('ALTER TABLE $tableSubscriptions ADD COLUMN following_count INTEGER');
         }
       },
     );

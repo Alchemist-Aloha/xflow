@@ -3,6 +3,7 @@ class Tweet {
   final String text;
   final String userHandle;
   final List<String> mediaUrls;
+  final String? thumbnailUrl;
   final bool isVideo;
 
   Tweet({
@@ -10,6 +11,7 @@ class Tweet {
     required this.text,
     required this.userHandle,
     required this.mediaUrls,
+    this.thumbnailUrl,
     this.isVideo = false,
   });
 }

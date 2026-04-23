@@ -5,9 +5,10 @@ import 'feed_provider.dart';
 import '../player/widgets/media_container.dart';
 import '../../core/models/tweet.dart';
 import '../settings/settings_screen.dart';
-import '../auth/login_screen.dart'; // Add this
-import '../../core/client/twitter_account.dart'; // Add this
+import '../auth/login_screen.dart';
+import '../../core/client/twitter_account.dart';
 import '../profile/user_details_screen.dart';
+import '../subscriptions/subscription_list_screen.dart';
 
 class TiktokFeedScreen extends ConsumerStatefulWidget {
   const TiktokFeedScreen({super.key});
@@ -19,18 +20,19 @@ class TiktokFeedScreen extends ConsumerStatefulWidget {
 class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
   final PageController _pageController = PageController();
   int _currentIndex = 0;
+  int _navigationIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _pageController.addListener(_handleScroll);
-    _initAuth(); // Initialize auth
+    _initAuth();
   }
 
   Future<void> _initAuth() async {
     await TwitterAccount.init();
     if (mounted) {
-      ref.invalidate(feedProvider); // Refresh feed after auth init
+      ref.invalidate(feedProvider);
     }
   }
 
@@ -50,7 +52,6 @@ class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
       });
       _managePool();
 
-      // Check if we need to fetch more
       final feedAsync = ref.read(feedNotifierProvider);
       if (feedAsync.hasValue) {
         final tweets = feedAsync.value!.tweets;
@@ -67,7 +68,6 @@ class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
     if (state == null) return;
     final tweets = state.tweets;
 
-    // Warmup next items
     final pool = ref.read(playerPoolProvider.notifier);
     final activeIds = <String>{};
 
@@ -85,50 +85,110 @@ class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final feedAsync = ref.watch(feedNotifierProvider);
-
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          feedAsync.when(
-            data: (state) {
-              final tweets = state.tweets;
-              if (tweets.isEmpty) {
-                return _buildNoItemsState();
-              }
-              
-              // Trigger pool management on build
-              _managePool();
-
-              return PageView.builder(
-                controller: _pageController,
-                scrollDirection: Axis.vertical,
-                itemCount: tweets.length,
-                itemBuilder: (context, index) {
-                  return TiktokFeedItem(
-                    tweet: tweets[index],
-                    isVisible: index == _currentIndex,
-                  );
-                },
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, st) => _buildErrorState(e),
-          ),
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 8,
-            right: 16,
-            child: IconButton(
-              icon: const Icon(Icons.settings, color: Colors.white70, size: 28),
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (c) => const SettingsScreen()),
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildTopPanel(),
+            Expanded(
+              child: IndexedStack(
+                index: _navigationIndex,
+                children: [
+                  _buildMediaFeed(),
+                  const SubscriptionListScreen(),
+                ],
               ),
+            ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _navigationIndex,
+        onTap: (index) {
+          setState(() {
+            _navigationIndex = index;
+          });
+          if (index == 1) {
+             ref.invalidate(subscriptionListProvider);
+          }
+        },
+        backgroundColor: Colors.black,
+        selectedItemColor: Colors.white,
+        unselectedItemColor: Colors.white54,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.video_library), label: 'Media'),
+          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Subscriptions'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTopPanel() {
+    String title = "Subscriptions";
+    if (_navigationIndex == 1) {
+      title = "My Subscriptions";
+    }
+
+    return Container(
+      height: 56,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: const BoxDecoration(
+        color: Colors.black,
+        border: Border(bottom: BorderSide(color: Colors.white10, width: 0.5)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white70),
+            onPressed: () {
+              if (_navigationIndex == 0) {
+                ref.invalidate(feedNotifierProvider);
+              } else {
+                ref.invalidate(subscriptionListProvider);
+              }
+            },
+          ),
+          Text(
+            title,
+            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings, color: Colors.white70),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (c) => const SettingsScreen()),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildMediaFeed() {
+    final feedAsync = ref.watch(feedNotifierProvider);
+    return feedAsync.when(
+      data: (state) {
+        final tweets = state.tweets;
+        if (tweets.isEmpty) {
+          return _buildNoItemsState();
+        }
+        _managePool();
+        return PageView.builder(
+          controller: _pageController,
+          scrollDirection: Axis.vertical,
+          itemCount: tweets.length,
+          itemBuilder: (context, index) {
+            return TiktokFeedItem(
+              tweet: tweets[index],
+              isVisible: index == _currentIndex,
+            );
+          },
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, st) => _buildErrorState(e),
     );
   }
 
@@ -160,7 +220,7 @@ class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
             child: const Text('Login to X'),
           ),
           TextButton(
-            onPressed: () => ref.invalidate(feedProvider),
+            onPressed: () => ref.invalidate(feedNotifierProvider),
             child: const Text('Retry'),
           ),
         ],
@@ -174,7 +234,7 @@ class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
       MaterialPageRoute(builder: (c) => const LoginScreen()),
     );
     if (success == true) {
-      ref.invalidate(feedProvider);
+      ref.invalidate(feedNotifierProvider);
     }
   }
 }

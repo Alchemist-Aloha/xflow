@@ -130,7 +130,7 @@ class UserDetailsScreen extends ConsumerWidget {
                               fit: StackFit.expand,
                               children: [
                                 CachedNetworkImage(
-                                  imageUrl: tweet.mediaUrls.first,
+                                  imageUrl: tweet.thumbnailUrl ?? tweet.mediaUrls.first,
                                   fit: BoxFit.cover,
                                   placeholder: (context, url) => Container(color: Colors.black12),
                                   errorWidget: (context, url, error) => const Icon(Icons.error),
