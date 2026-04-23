@@ -54,6 +54,7 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
       );
 
       debugPrint('XFLOW: Local pool size: ${tweets.length}');
+      tweets.shuffle(); // Break database clumping
 
       // 2. If DB is empty, we MUST fetch from API now to avoid blank screen on first launch
       if (tweets.isEmpty) {
@@ -194,9 +195,13 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
       } else {
         finalNewTweets = newTweetsFromCache.take(settings.loadBatchSize).toList();
       }
+      
+      finalNewTweets.shuffle(); // Diversify before appending
+      var combined = [...currentTweets, ...finalNewTweets];
+      combined = DiscoveryEngine.applySaturation(combined, threshold: settings.saturationThreshold);
 
       state = AsyncData(currentState.copyWith(
-        tweets: [...currentTweets, ...finalNewTweets],
+        tweets: combined,
         cursorBottom: nextCursor,
         isLoadingMore: false,
       ));

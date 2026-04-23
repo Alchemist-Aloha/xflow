@@ -30,8 +30,8 @@ void main() {
     await db.delete('subscriptions');
   });
 
-  group('UserMediaNotifier Tests', () {
-    test('loads local data immediately and then updates from API', () async {
+  group('UserMediaNotifier Tests (Online Only Initial Load)', () {
+    test('loads from API directly and ignores initial cache', () async {
       final localTweet = Tweet(
         id: 'local_1',
         text: 'Local Tweet',
@@ -51,7 +51,7 @@ void main() {
       await Repository.insertCachedMedia([localTweet]);
 
       when(mockClient.fetchUserTimelineByScreenName(
-        any,
+        testHandle,
         cursor: anyNamed('cursor'),
         cooldownMinutes: anyNamed('cooldownMinutes'),
       )).thenAnswer((_) async => TweetResponse(
@@ -66,23 +66,20 @@ void main() {
         ],
       );
 
-      // Initial read - should be local data
-      // Await future to ensure build() completes
-      await container.read(userMediaNotifierProvider(testHandle).future);
+      // Initial read - should be API data directly, bypassing local cache
+      final state = await container.read(userMediaNotifierProvider(testHandle).future);
       
-      final state1 = container.read(userMediaNotifierProvider(testHandle));
-      expect(state1.value?.tweets.length, 1);
-      expect(state1.value?.tweets.first.id, 'local_1');
+      expect(state.tweets.length, 1);
+      expect(state.tweets.first.id, 'api_1');
+      expect(state.cursorBottom, 'new_cursor');
+      expect(state.isRefreshing, isFalse);
 
-      // Wait for refresh
-      await Future.delayed(const Duration(milliseconds: 200));
-
-      final state2 = container.read(userMediaNotifierProvider(testHandle));
-      expect(state2.value?.tweets.length, 2);
-      expect(state2.value?.cursorBottom, 'new_cursor');
+      // Verify it saved to DB
+      final dbItems = await Repository.getUserCachedMedia(testHandle, 10);
+      expect(dbItems.any((t) => t.id == 'api_1'), isTrue);
     });
 
-    test('updates only cursor if no new tweets found', () async {
+    test('falls back to cache on API error', () async {
       final localTweet = Tweet(
         id: 'local_1',
         text: 'Local Tweet',
@@ -97,10 +94,7 @@ void main() {
         any,
         cursor: anyNamed('cursor'),
         cooldownMinutes: anyNamed('cooldownMinutes'),
-      )).thenAnswer((_) async => TweetResponse(
-        tweets: [localTweet],
-        cursorBottom: 'updated_cursor',
-      ));
+      )).thenThrow(Exception('API Down'));
 
       final container = ProviderContainer(
         overrides: [
@@ -109,40 +103,49 @@ void main() {
         ],
       );
 
-      await container.read(userMediaNotifierProvider(testHandle).future);
-      await Future.delayed(const Duration(milliseconds: 200));
-
-      final state = container.read(userMediaNotifierProvider(testHandle));
-      expect(state.value?.tweets.length, 1);
-      expect(state.value?.cursorBottom, 'updated_cursor');
+      final state = await container.read(userMediaNotifierProvider(testHandle).future);
+      
+      // Should fallback to local cache
+      expect(state.tweets.length, 1);
+      expect(state.tweets.first.id, 'local_1');
     });
+
    group('Infinite Scroll Tests', () {
     test('fetchMore appends to state and saves to DB', () async {
-      final existingTweet = Tweet(
-        id: '1',
-        text: 'Exist',
+      final apiTweet1 = Tweet(
+        id: 'api_1',
+        text: 'API 1',
         userHandle: '@$testHandle',
         mediaUrls: ['u1'],
         isVideo: true,
       );
 
-      final moreTweet = Tweet(
-        id: '2',
-        text: 'More',
+      final apiTweet2 = Tweet(
+        id: 'api_2',
+        text: 'API 2',
         userHandle: '@$testHandle',
         mediaUrls: ['u2'],
         isVideo: true,
       );
 
-      await Repository.insertCachedMedia([existingTweet]);
-
+      // Build calls this for first load
       when(mockClient.fetchUserTimelineByScreenName(
-        any,
-        cursor: anyNamed('cursor'),
+        testHandle,
+        cursor: null,
         cooldownMinutes: anyNamed('cooldownMinutes'),
       )).thenAnswer((_) async => TweetResponse(
-        tweets: [moreTweet],
-        cursorBottom: 'next_cursor',
+        tweets: [apiTweet1],
+        cursorBottom: 'cursor_1',
+      ));
+
+      // fetchMore calls this
+      when(mockClient.fetchUserTimelineByScreenName(
+        testHandle,
+        cursor: 'cursor_1',
+        cooldownMinutes: anyNamed('cooldownMinutes'),
+      )).thenAnswer((_) async => TweetResponse(
+        tweets: [apiTweet2],
+        cursorBottom: 'cursor_2',
       ));
 
       final container = ProviderContainer(
@@ -154,22 +157,17 @@ void main() {
 
       final notifier = container.read(userMediaNotifierProvider(testHandle).notifier);
       
-      // Wait for initial build to finish
+      // Initial build
       await container.read(userMediaNotifierProvider(testHandle).future);
-      // Wait for background refresh
-      await Future.delayed(const Duration(milliseconds: 200));
       
       // Now fetch more
       await notifier.fetchMore();
 
       final state = container.read(userMediaNotifierProvider(testHandle));
       expect(state.value?.tweets.length, 2);
-      expect(state.value?.tweets.last.id, '2');
-      expect(state.value?.cursorBottom, 'next_cursor');
-
-      // Verify DB
-      final dbItems = await Repository.getUserCachedMedia(testHandle, 10);
-      expect(dbItems.any((t) => t.id == '2'), isTrue);
+      expect(state.value?.tweets.first.id, 'api_1');
+      expect(state.value?.tweets.last.id, 'api_2');
+      expect(state.value?.cursorBottom, 'cursor_2');
     });
   });
   });

@@ -31,7 +31,7 @@ class SettingsState {
     this.isListView = false,
     this.mediaCacheSizeMB = 500,
     this.syncInterval = 15,
-    this.syncBatchSize = 5,
+    this.syncBatchSize = 10,
     this.loadBatchSize = 20,
     this.cooldownDuration = 15,
     this.pruneThreshold = 50000,

@@ -42,23 +42,40 @@ void main() {
   });
 
   group('DiscoveryEngine.applySaturation', () {
-    test('enforces saturation threshold by swapping items', () {
+    test('enforces saturation threshold and avoids consecutive repeats', () {
       final tweets = [
         Tweet(id: '1', userHandle: 'user_a', text: '', mediaUrls: []),
         Tweet(id: '2', userHandle: 'user_a', text: '', mediaUrls: []),
-        Tweet(id: '3', userHandle: 'user_a', text: '', mediaUrls: []), // Third one from user_a
+        Tweet(id: '3', userHandle: 'user_a', text: '', mediaUrls: []),
         Tweet(id: '4', userHandle: 'user_b', text: '', mediaUrls: []),
       ];
       
       final result = DiscoveryEngine.applySaturation(tweets, threshold: 2);
       
       expect(result[0].userHandle, 'user_a');
-      expect(result[1].userHandle, 'user_a');
-      expect(result[2].userHandle, 'user_b'); // Swapped with user_b
-      expect(result[3].userHandle, 'user_a'); // The third user_a item pushed to the end
+      expect(result[1].userHandle, 'user_b'); // Swapped to avoid consecutive user_a
+      expect(result[2].userHandle, 'user_a'); 
+      expect(result[3].userHandle, 'user_a'); // Two user_a at the end is okay because no one left to swap
     });
 
-    test('does nothing if under threshold', () {
+    test('handles clumps by spreading them out', () {
+      final tweets = [
+        Tweet(id: '1', userHandle: '@A', text: '', mediaUrls: []),
+        Tweet(id: '2', userHandle: '@A', text: '', mediaUrls: []),
+        Tweet(id: '3', userHandle: '@B', text: '', mediaUrls: []),
+        Tweet(id: '4', userHandle: '@B', text: '', mediaUrls: []),
+        Tweet(id: '5', userHandle: '@C', text: '', mediaUrls: []),
+        Tweet(id: '6', userHandle: '@C', text: '', mediaUrls: []),
+      ];
+      
+      final result = DiscoveryEngine.applySaturation(tweets, threshold: 1);
+      
+      for (int i = 0; i < result.length - 1; i++) {
+        expect(result[i].userHandle, isNot(result[i+1].userHandle), reason: 'Failed at index $i');
+      }
+    });
+
+    test('does nothing if under threshold and not consecutive', () {
       final tweets = [
         Tweet(id: '1', userHandle: 'user_a', text: '', mediaUrls: []),
         Tweet(id: '2', userHandle: 'user_b', text: '', mediaUrls: []),

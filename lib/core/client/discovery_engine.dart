@@ -43,30 +43,58 @@ class DiscoveryEngine {
     return freshSource.any((t) => t.id == tweet.id);
   }
 
-  /// Swaps items to prevent the same user from appearing more than [threshold] times
-  /// within a sliding window of 10 items.
   static List<Tweet> applySaturation(List<Tweet> tweets, {int threshold = 2}) {
     if (tweets.isEmpty) return tweets;
     final result = List<Tweet>.from(tweets);
     const windowSize = 10;
     
-    // Safety: don't loop forever.
-    for (int i = 0; i < result.length; i++) {
-      final start = (i - windowSize + 1).clamp(0, result.length);
-      final window = result.sublist(start, i + 1);
+    int totalSwaps = 0;
+    const maxTotalSwaps = 1000;
+
+    for (int i = 0; i < result.length && totalSwaps < maxTotalSwaps; i++) {
       final handle = result[i].userHandle;
-      
+      final start = (i - windowSize + 1).clamp(0, result.length);
+      final window = result.sublist(start, i);
       final count = window.where((t) => t.userHandle == handle).length;
 
-      if (count > threshold) {
-        // Find a candidate to swap with from further down
+      final isConsecutive = i > 0 && result[i-1].userHandle == handle;
+
+      if (count >= threshold || isConsecutive) {
         int swapIdx = -1;
+        
+        // Try to find someone who is NOT the same as previous AND doesn't violate saturation
         for (int j = i + 1; j < result.length; j++) {
-          if (result[j].userHandle != handle) {
-            // Check if swapping would violate saturation for the candidate at its new position
-            // For simplicity, we just swap with the first different user we find.
-            swapIdx = j;
-            break;
+          final candHandle = result[j].userHandle;
+          final prevHandle = i > 0 ? result[i-1].userHandle : null;
+          
+          if (candHandle != handle && candHandle != prevHandle) {
+            final candCount = window.where((t) => t.userHandle == candHandle).length;
+            if (candCount < threshold) {
+              swapIdx = j;
+              break;
+            }
+          }
+        }
+
+        // Fallback: anyone different from current AND previous
+        if (swapIdx == -1) {
+          for (int j = i + 1; j < result.length; j++) {
+            final candHandle = result[j].userHandle;
+            final prevHandle = i > 0 ? result[i-1].userHandle : null;
+            if (candHandle != handle && candHandle != prevHandle) {
+              swapIdx = j;
+              break;
+            }
+          }
+        }
+
+        // Last resort: anyone different from current
+        if (swapIdx == -1) {
+          for (int j = i + 1; j < result.length; j++) {
+            if (result[j].userHandle != handle) {
+              swapIdx = j;
+              break;
+            }
           }
         }
 
@@ -74,8 +102,36 @@ class DiscoveryEngine {
           final temp = result[i];
           result[i] = result[swapIdx];
           result[swapIdx] = temp;
-          // We don't i-- here to avoid potential infinite loops if threshold is too low.
-          // The next iteration will check i+1.
+          totalSwaps++;
+          i--; 
+        } else if (isConsecutive || count >= threshold) {
+          // TRAPPED! No candidates forward. Try to find a spot backwards that won't break things.
+          for (int k = i - 1; k > 0; k--) {
+            final targetHandle = result[k].userHandle;
+            if (targetHandle != handle) {
+              // Can we swap result[i] and result[k]?
+              // New result[k] would be handle (@A)
+              // Check if result[k-1] and result[k+1] are @A
+              final prevOk = result[k-1].userHandle != handle;
+              final nextOk = k + 1 < result.length && result[k+1].userHandle != handle;
+              
+              if (prevOk && nextOk) {
+                // Also check saturation at k
+                final kStart = (k - windowSize + 1).clamp(0, result.length);
+                final kWindow = result.sublist(kStart, k);
+                final kCount = kWindow.where((t) => t.userHandle == handle).length;
+                
+                if (kCount < threshold) {
+                  final temp = result[i];
+                  result[i] = result[k];
+                  result[k] = temp;
+                  totalSwaps++;
+                  // Don't i-- here as it might cause loops, but the swap fixed i's consecutive/count usually
+                  break;
+                }
+              }
+            }
+          }
         }
       }
     }

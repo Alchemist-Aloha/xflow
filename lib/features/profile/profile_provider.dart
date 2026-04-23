@@ -22,82 +22,44 @@ class UserMediaNotifier extends FamilyAsyncNotifier<FeedState, String> {
     // Normalize handle: API and lookup prefer raw handle
     final screenName = arg.startsWith('@') ? arg.substring(1) : arg;
 
-    debugPrint('XFLOW: Building UserMediaNotifier for $screenName');
+    debugPrint('XFLOW: Building UserMediaNotifier for $screenName (Online Only)');
     
-    // 1. Load local items immediately for responsiveness
-    final localTweets = await Repository.getUserCachedMedia(
-      screenName, 
-      settings.loadBatchSize,
-      filters: settings.filters,
-    );
-    debugPrint('XFLOW: Found ${localTweets.length} local tweets for $screenName');
-
-    // 2. Trigger background refresh from API
-    _refreshInBackground(screenName, localTweets.map((t) => t.id).toSet());
-
-    return FeedState(
-      tweets: localTweets,
-      cursorBottom: null,
-      isRefreshing: true,
-    );
-  }
-
-  Future<void> _refreshInBackground(String screenName, Set<String> seenIds) async {
-    final client = ref.read(twitterClientProvider);
-    final settings = ref.read(settingsProvider);
-
+    // We start with an empty state and mark it as refreshing immediately
+    // In build(), returning a Future will make the UI show the loading state.
+    // However, the user wants it to actually FETCH now.
+    
     try {
-      debugPrint('XFLOW: Refreshing user media from API for $screenName');
       final response = await client.fetchUserTimelineByScreenName(
         screenName,
         cooldownMinutes: settings.cooldownDuration,
       );
-      
-      debugPrint('XFLOW: API returned ${response.tweets.length} tweets for $screenName');
+
+      debugPrint('XFLOW: Initial online fetch for $screenName returned ${response.tweets.length} tweets');
 
       if (response.tweets.isNotEmpty) {
+        // Save to cache for other screens, but we return the fresh results directly
         await Repository.insertCachedMedia(response.tweets);
-        
-        final hasNew = response.tweets.any((t) => !seenIds.contains(t.id));
-        
-        if (hasNew || (state.value?.tweets.isEmpty ?? true)) {
-          final allTweets = await Repository.getUserCachedMedia(
-            screenName, 
-            settings.loadBatchSize,
-            filters: settings.filters,
-          );
-          state = AsyncData(FeedState(
-            tweets: allTweets,
-            cursorBottom: response.cursorBottom,
-            isRefreshing: false,
-          ));
-        } else {
-          final current = state.value;
-          if (current != null) {
-            state = AsyncData(current.copyWith(
-              cursorBottom: response.cursorBottom,
-              isRefreshing: false,
-            ));
-          }
-        }
-      } else if (state.value != null) {
-        state = AsyncData(state.value!.copyWith(
-          cursorBottom: response.cursorBottom,
-          isRefreshing: false,
-        ));
       }
+
+      return FeedState(
+        tweets: response.tweets,
+        cursorBottom: response.cursorBottom,
+        isRefreshing: false,
+      );
     } catch (e, st) {
-      debugPrint('XFLOW: Background user media refresh error: $e\n$st');
-      if (state.value != null) {
-        state = AsyncData(state.value!.copyWith(isRefreshing: false));
-      }
+      debugPrint('XFLOW: User media fetch error for $screenName: $e\n$st');
+      // Fallback to cache ONLY on error if available, or empty
+      final cached = await Repository.getUserCachedMedia(screenName, settings.loadBatchSize);
+      return FeedState(
+        tweets: cached,
+        isRefreshing: false,
+      );
     }
   }
 
   Future<void> fetchMore() async {
     final currentState = state.value;
-    final rawArg = arg;
-    final screenName = rawArg.startsWith('@') ? rawArg.substring(1) : rawArg;
+    final screenName = arg.startsWith('@') ? arg.substring(1) : arg;
     
     if (currentState == null || currentState.isLoadingMore) {
       return;
