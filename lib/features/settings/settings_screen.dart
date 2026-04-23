@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'settings_provider.dart';
 import '../../core/client/twitter_account.dart';
-import '../../core/client/twitter_client.dart';
 import '../../core/database/repository.dart';
 import '../feed/feed_provider.dart';
+import '../subscriptions/subscription_import_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -14,50 +14,6 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  final _importController = TextEditingController();
-  bool _isImporting = false;
-
-  @override
-  void dispose() {
-    _importController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _importFromUser() async {
-    final screenName = _importController.text.trim();
-    if (screenName.isEmpty) return;
-
-    setState(() => _isImporting = true);
-    try {
-      final client = TwitterClient();
-      final user = await client.fetchUserByScreenName(screenName);
-      if (user != null) {
-        final following = await client.fetchFollowing(user.id);
-        if (following.isNotEmpty) {
-          await Repository.insertSubscriptions(following);
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Imported ${following.length} accounts from @$screenName')),
-            );
-            ref.invalidate(feedProvider);
-          }
-        } else {
-          throw Exception('No following accounts found or failed to fetch.');
-        }
-      } else {
-        throw Exception('User @$screenName not found.');
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isImporting = false);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
@@ -100,40 +56,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const Divider(),
           const ListTile(
             title: Text('Subscriptions', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
-            subtitle: Text('Import accounts to populate your feed'),
+            subtitle: Text('Manage accounts to populate your feed'),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _importController,
-                        decoration: const InputDecoration(
-                          hintText: 'X Screen Name (e.g. elonmusk)',
-                          border: OutlineInputBorder(),
-                          isDense: true,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    _isImporting
-                        ? const CircularProgressIndicator()
-                        : ElevatedButton(
-                            onPressed: _importFromUser,
-                            child: const Text('Import'),
-                          ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'This will fetch the "Following" list of the specified user and add them to your subscriptions.',
-                  style: TextStyle(fontSize: 12, color: Colors.white60),
-                ),
-              ],
-            ),
+          ListTile(
+            leading: const Icon(Icons.import_export),
+            title: const Text('Import Subscriptions'),
+            subtitle: const Text('Import from an existing X account'),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (c) => const SubscriptionImportScreen()),
+              );
+            },
           ),
           ListTile(
             leading: const Icon(Icons.delete_sweep, color: Colors.orange),
