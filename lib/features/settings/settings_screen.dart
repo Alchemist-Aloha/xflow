@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'settings_provider.dart';
 import '../../core/client/twitter_account.dart';
 import '../../core/database/repository.dart';
+import '../../core/utils/media_cache_manager.dart';
 import '../feed/feed_provider.dart';
 import '../subscriptions/subscription_import_screen.dart';
 import 'log_viewer_screen.dart';
@@ -15,6 +16,26 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  int _metadataCount = 0;
+  double _cacheSizeMB = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStats();
+  }
+
+  Future<void> _loadStats() async {
+    final count = await Repository.getCachedMediaCount();
+    final sizeBytes = await CustomMediaCacheManager.getCacheSize();
+    if (mounted) {
+      setState(() {
+        _metadataCount = count;
+        _cacheSizeMB = sizeBytes / (1024 * 1024);
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
@@ -137,6 +158,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             subtitle: Text('Current quota: ${settings.mediaCacheSizeMB} MB'),
           ),
           Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('• Cached Metadata: $_metadataCount items', style: const TextStyle(color: Colors.white70)),
+                Text('• Media Storage Used: ${_cacheSizeMB.toStringAsFixed(2)} MB', style: const TextStyle(color: Colors.white70)),
+              ],
+            ),
+          ),
+          Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Row(
               children: [
@@ -153,6 +184,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
               ],
             ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.cleaning_services, color: Colors.orange),
+            title: const Text('Clear Media Cache', style: TextStyle(color: Colors.orange)),
+            onTap: () async {
+              final scaffoldMessenger = ScaffoldMessenger.of(context);
+              await CustomMediaCacheManager.clearCache();
+              await _loadStats();
+              if (mounted) {
+                scaffoldMessenger.showSnackBar(
+                  const SnackBar(content: Text('Media cache cleared')),
+                );
+              }
+            },
           ),
         ],
       ),

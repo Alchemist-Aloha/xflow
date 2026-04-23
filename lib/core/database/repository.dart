@@ -184,6 +184,12 @@ class Repository {
     ''', [DateTime.now().millisecondsSinceEpoch, id]);
   }
 
+  static Future<int> getCachedMediaCount() async {
+    final db = await database;
+    final countSq = await db.rawQuery('SELECT COUNT(*) as count FROM $tableCachedMedia');
+    return countSq.first['count'] as int;
+  }
+
   static Future<void> pruneCachedMedia() async {
     final db = await database;
     final countSq = await db.rawQuery('SELECT COUNT(*) as count FROM $tableCachedMedia');
