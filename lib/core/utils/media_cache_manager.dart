@@ -5,17 +5,15 @@ class CustomMediaCacheManager {
   static CacheManager? _instance;
 
   static CacheManager getInstance() {
-    if (_instance == null) {
-      _instance = CacheManager(
-        Config(
-          key,
-          stalePeriod: const Duration(days: 7),
-          maxNrOfCacheObjects: 200, // Safe upper bound, actual limit is bytes
-          repo: JsonCacheInfoRepository(databaseName: key),
-          fileService: HttpFileService(),
-        ),
-      );
-    }
+    _instance ??= CacheManager(
+      Config(
+        key,
+        stalePeriod: const Duration(days: 7),
+        maxNrOfCacheObjects: 200, // Safe upper bound, actual limit is bytes
+        repo: JsonCacheInfoRepository(databaseName: key),
+        fileService: HttpFileService(),
+      ),
+    );
     return _instance!;
   }
 }

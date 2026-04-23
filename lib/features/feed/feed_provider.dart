@@ -67,22 +67,25 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
       return;
     }
 
+    final currentTweets = currentState.tweets;
+    final currentCursor = currentState.cursorBottom;
+
     final settings = ref.read(settingsProvider);
     state = AsyncData(currentState.copyWith(isLoadingMore: true));
 
     try {
       // 1. Try to fetch from DB that aren't already in the current state
       final allUnplayed = await Repository.getUnplayedCachedMedia(100);
-      final seenIds = currentState.tweets.map((t) => t.id).toSet();
+      final seenIds = currentTweets.map((t) => t.id).toSet();
       var newTweets = allUnplayed.where((t) => !seenIds.contains(t.id)).take(20).toList();
 
-      String? nextCursor = currentState.cursorBottom;
+      String? nextCursor = currentCursor;
 
       // 2. If no new local tweets, trigger an API fetch
       if (newTweets.isEmpty) {
         final client = ref.read(twitterClientProvider);
         final response = await client.fetchSubscribedMedia(
-          cursor: currentState.cursorBottom,
+          cursor: currentCursor,
           sort: settings.sort,
           filters: settings.filters,
         );
@@ -93,7 +96,7 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
       }
 
       state = AsyncData(currentState.copyWith(
-        tweets: [...currentState.tweets, ...newTweets],
+        tweets: [...currentTweets, ...newTweets],
         cursorBottom: nextCursor,
         isLoadingMore: false,
       ));
