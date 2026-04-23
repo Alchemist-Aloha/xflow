@@ -33,7 +33,7 @@ class PlayerPoolNotifier extends Notifier<Map<String, PlayerInstance>> {
     final player = Player();
     final controller = VideoController(
       player,
-      configuration: VideoControllerConfiguration(
+      configuration: const VideoControllerConfiguration(
         enableHardwareAcceleration: true,
       ),
     );

@@ -72,7 +72,7 @@ class MainScaffold extends ConsumerWidget {
     // Handle back button
     return PopScope(
       canPop: nav.selectedUser == null,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, result) {
         if (!didPop) {
           navNotifier.back();
         }

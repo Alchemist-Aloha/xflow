@@ -22,6 +22,7 @@
         "media_kit",
         "media_kit_libs_video",
         "media_kit_video",
+        "path",
         "path_provider",
         "quiver",
         "shared_preferences",
@@ -115,6 +116,11 @@
         "test_api",
         "vector_math"
       ]
+    },
+    {
+      "name": "path",
+      "version": "1.9.1",
+      "dependencies": []
     },
     {
       "name": "collection",
@@ -378,11 +384,6 @@
       "dependencies": [
         "collection"
       ]
-    },
-    {
-      "name": "path",
-      "version": "1.9.1",
-      "dependencies": []
     },
     {
       "name": "meta",

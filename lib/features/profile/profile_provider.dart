@@ -6,8 +6,6 @@ import '../../core/database/entities.dart';
 import '../../core/models/tweet.dart';
 import '../feed/feed_provider.dart'; // For FeedState
 
-import '../settings/settings_provider.dart';
-
 final userProfileProvider = FutureProvider.family<Subscription?, String>((ref, screenName) async {
   final client = TwitterClient();
   return client.fetchProfile(screenName);
@@ -58,7 +56,7 @@ class UserMediaNotifier extends FamilyAsyncNotifier<FeedState, String> {
       } else {
         state = AsyncData(currentState.copyWith(isLoadingMore: false));
       }
-    } catch (e, st) {
+    } catch (e) {
       debugPrint('Error fetching more user media: $e');
       state = AsyncData(currentState.copyWith(isLoadingMore: false));
     }

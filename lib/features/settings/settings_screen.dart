@@ -88,10 +88,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             leading: const Icon(Icons.delete_sweep, color: Colors.orange),
             title: const Text('Clear Subscriptions', style: TextStyle(color: Colors.orange)),
             onTap: () async {
+              final scaffoldMessenger = ScaffoldMessenger.of(context);
               await Repository.clearSubscriptions();
               ref.invalidate(feedNotifierProvider);
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                scaffoldMessenger.showSnackBar(
                   const SnackBar(content: Text('All subscriptions cleared')),
                 );
               }
@@ -106,10 +107,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             leading: const Icon(Icons.logout, color: Colors.red),
             title: const Text('Logout', style: TextStyle(color: Colors.red)),
             onTap: () async {
+              final navigator = Navigator.of(context);
               await TwitterAccount.logout();
               ref.invalidate(feedNotifierProvider);
-              if (context.mounted) {
-                Navigator.pop(context);
+              if (mounted) {
+                navigator.pop();
               }
             },
           ),

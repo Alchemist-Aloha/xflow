@@ -81,7 +81,7 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
       } else {
         state = AsyncData(currentState.copyWith(isLoadingMore: false));
       }
-    } catch (e, st) {
+    } catch (e) {
       debugPrint('Error fetching more: $e');
       state = AsyncData(currentState.copyWith(isLoadingMore: false));
     }

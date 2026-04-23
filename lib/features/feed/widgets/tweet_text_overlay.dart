@@ -31,9 +31,9 @@ class _TweetTextOverlayState extends ConsumerState<TweetTextOverlay> {
             end: Alignment.bottomCenter,
             colors: [
               Colors.transparent,
-              Colors.black.withOpacity(0.3),
-              Colors.black.withOpacity(0.7),
-              Colors.black.withOpacity(0.9),
+              Colors.black.withValues(alpha: 0.3),
+              Colors.black.withValues(alpha: 0.7),
+              Colors.black.withValues(alpha: 0.9),
             ],
             stops: const [0.0, 0.4, 0.7, 1.0],
           ),

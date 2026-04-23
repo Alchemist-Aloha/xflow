@@ -32,6 +32,7 @@ dependencies:
   quiver: ^3.1.0
   crypto: ^3.0.3
   collection: ^1.18.0
+  path: ^1.9.1
 
 dev_dependencies:
   flutter_test:
