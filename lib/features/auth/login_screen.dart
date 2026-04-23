@@ -76,7 +76,10 @@ class _LoginScreenState extends State<LoginScreen> {
               String restId = '';
               if (profileRes.statusCode == 200) {
                 final profileData = json.decode(profileRes.body);
-                restId = profileData['data']?['user']?['result']?['rest_id'] ?? '';
+                final userResult = profileData['data']?['user']?['result'];
+                if (userResult != null) {
+                  restId = userResult['rest_id'] ?? '';
+                }
               }
 
               final account = Account(

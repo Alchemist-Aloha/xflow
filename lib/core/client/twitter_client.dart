@@ -48,6 +48,12 @@ class TwitterClient {
     "responsive_web_twitter_article_tweet_consumption_enabled": true,
     "tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled": true,
     "standardized_nudges_misinfo": true,
+    "longform_notetweets_rich_text_read_enabled": true,
+    "longform_notetweets_inline_media_enabled": true,
+    "responsive_web_grok_image_annotation_enabled": true,
+    "responsive_web_grok_imagine_annotation_enabled": true,
+    "responsive_web_grok_community_note_auto_translation_is_enabled": false,
+    "responsive_web_enhance_cards_enabled": false
   };
 
   Future<Subscription?> fetchUserByScreenName(String screenName) async {
@@ -71,11 +77,12 @@ class TwitterClient {
       final userRes = data['data']?['user']?['result'];
       if (userRes == null) return null;
 
+      final legacy = userRes['legacy'];
       return Subscription(
         id: userRes['rest_id'],
-        screenName: userRes['legacy']?['screen_name'] ?? screenName,
-        name: userRes['legacy']?['name'] ?? screenName,
-        profileImageUrl: userRes['legacy']?['profile_image_url_https'],
+        screenName: legacy?['screen_name'] ?? screenName,
+        name: legacy?['name'] ?? screenName,
+        profileImageUrl: legacy?['profile_image_url_https'],
       );
     } catch (e) {
       debugPrint('Error fetching user by screen name: $e');
@@ -98,27 +105,31 @@ class TwitterClient {
 
     try {
       final response = await TwitterAccount.fetch(uri);
-      if (response.statusCode != 200) return [];
+      if (response.statusCode != 200) {
+        debugPrint('fetchFollowing Error: ${response.statusCode} ${response.body}');
+        return [];
+      }
 
       final data = json.decode(response.body);
       final instructions = List.from(data['data']?['user']?['result']?['timeline']?['timeline']?['instructions'] ?? []);
-      final addEntries = instructions.firstWhereOrNull((e) => e['type'] == 'TimelineAddEntries');
-      if (addEntries == null) return [];
-
-      final entries = List.from(addEntries['entries'] ?? []);
+      
       final subs = <Subscription>[];
-      for (final entry in entries) {
-        final userRes = entry['content']?['itemContent']?['user_results']?['result'];
-        if (userRes != null && userRes['__typename'] == 'User') {
-          final legacy = userRes['legacy'];
-          if (legacy != null) {
-            subs.add(Subscription(
-              id: userRes['rest_id'],
-              screenName: legacy['screen_name'],
-              name: legacy['name'] ?? '',
-              profileImageUrl: legacy['profile_image_url_https'],
-            ));
-          }
+      for (final instruction in instructions) {
+        if (instruction["type"] != "TimelineAddEntries" || instruction["entries"] == null) continue;
+        
+        for (final entry in instruction["entries"]) {
+          final userResult = entry["content"]?["itemContent"]?["user_results"]?["result"];
+          if (userResult == null) continue;
+          
+          final legacy = userResult["core"]?["screen_name"] != null ? userResult["core"] : userResult["legacy"];
+          if (legacy == null) continue;
+
+          subs.add(Subscription(
+            id: userResult["rest_id"],
+            screenName: legacy["screen_name"],
+            name: legacy["name"] ?? '',
+            profileImageUrl: userResult["avatar"]?["image_url"] ?? legacy["profile_image_url_https"],
+          ));
         }
       }
       return subs;
@@ -161,11 +172,9 @@ class TwitterClient {
   }
 
   Future<List<Tweet>> fetchSubscribedMedia({String? cursor}) async {
-    // Try to load subscriptions from DB
     var subs = await Repository.getSubscriptions();
     
     if (subs.isEmpty) {
-      // If empty, try auto-detect from current account
       final currentAccount = TwitterAccount.currentAccount;
       if (currentAccount != null && currentAccount.restId.isNotEmpty) {
         subs = await fetchFollowing(currentAccount.restId);
@@ -179,7 +188,7 @@ class TwitterClient {
       return fetchTrendingMedia(cursor: cursor);
     }
 
-    // Shuffle and pick 10 users to randomize the feed a bit
+    // Pick a subset of users to query
     final pickedSubs = (subs.toList()..shuffle()).take(10);
     final users = pickedSubs.map((s) => 'from:${s.screenName}').join(' OR ');
     final query = "($users) filter:media";
@@ -207,7 +216,8 @@ class TwitterClient {
         final legacy = tweetResult['legacy'] ?? tweetResult['tweet']?['legacy'];
         if (legacy == null) continue;
 
-        final userResults = tweetResult['core']?['user_results']?['result'] ?? tweetResult['tweet']?['core']?['user_results']?['result'];
+        final core = tweetResult['core'] ?? tweetResult['tweet']?['core'];
+        final userResults = core?['user_results']?['result'];
         final screenName = userResults?['legacy']?['screen_name'] ?? 'Unknown';
 
         final media = List.from(legacy['entities']?['media'] ?? []);
