@@ -29,11 +29,21 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
   @override
   Widget build(BuildContext context) {
     if (widget.tweet.mediaUrls.isEmpty) {
-      return TextTweetCard(text: widget.tweet.text);
+      return Stack(
+        children: [
+          TextTweetCard(text: widget.tweet.text),
+          if (widget.overlay != null) widget.overlay!,
+        ],
+      );
     }
 
     if (!widget.tweet.isVideo) {
-      return _buildImageGallery();
+      return Stack(
+        children: [
+          _buildImageGallery(),
+          if (widget.overlay != null) widget.overlay!,
+        ],
+      );
     }
 
     final pool = ref.watch(playerPoolProvider);
