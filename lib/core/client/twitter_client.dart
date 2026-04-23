@@ -3,11 +3,14 @@ import 'package:flutter/foundation.dart';
 import 'package:collection/collection.dart';
 import 'twitter_account.dart';
 import '../models/tweet.dart';
+import '../database/entities.dart';
+import '../database/repository.dart';
 
 class TwitterClient {
   static const String graphqlSearchTimelineUriPath = '/graphql/nK1dw4oV3k4w5TdtcAdSww/SearchTimeline';
   static const String graphqlFollowingUriPath = '/graphql/FEcMGoVOUjm0aU9BJrrGZA/Following';
-  
+  static const String graphqlUserByScreenNameUriPath = '/graphql/oUZZZ8Oddwxs8Cd3iW3UEA/UserByScreenName';
+
   static const Map<String, dynamic> defaultFeatures = {
     'responsive_web_graphql_exclude_directive_enabled': true,
     'responsive_web_graphql_skip_user_profile_image_extensions_enabled': false,
@@ -39,9 +42,48 @@ class TwitterClient {
     "responsive_web_grok_share_attachment_enabled": true,
     "articles_preview_enabled": true,
     "responsive_web_edit_tweet_api_enabled": true,
+    "graphql_is_translatable_rweb_tweet_is_translatable_enabled": true,
+    "view_counts_everywhere_api_enabled": true,
+    "longform_notetweets_consumption_enabled": true,
+    "responsive_web_twitter_article_tweet_consumption_enabled": true,
+    "tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled": true,
+    "standardized_nudges_misinfo": true,
   };
 
-  Future<List<String>> fetchFollowing(String userId) async {
+  Future<Subscription?> fetchUserByScreenName(String screenName) async {
+    if (screenName.startsWith('@')) screenName = screenName.substring(1);
+    
+    final uri = Uri.https('x.com', '/i/api/graphql/oUZZZ8Oddwxs8Cd3iW3UEA/UserByScreenName', {
+      'variables': jsonEncode({
+        'screen_name': screenName,
+        'withHighlightedLabel': true,
+        'withSafetyModeUserFields': true,
+        'withSuperFollowsUserFields': true
+      }),
+      'features': jsonEncode(defaultFeatures)
+    });
+
+    try {
+      final response = await TwitterAccount.fetch(uri);
+      if (response.statusCode != 200) return null;
+
+      final data = json.decode(response.body);
+      final userRes = data['data']?['user']?['result'];
+      if (userRes == null) return null;
+
+      return Subscription(
+        id: userRes['rest_id'],
+        screenName: userRes['legacy']?['screen_name'] ?? screenName,
+        name: userRes['legacy']?['name'] ?? screenName,
+        profileImageUrl: userRes['legacy']?['profile_image_url_https'],
+      );
+    } catch (e) {
+      debugPrint('Error fetching user by screen name: $e');
+      return null;
+    }
+  }
+
+  Future<List<Subscription>> fetchFollowing(String userId) async {
     final variables = {
       "userId": userId,
       "count": 100,
@@ -64,15 +106,22 @@ class TwitterClient {
       if (addEntries == null) return [];
 
       final entries = List.from(addEntries['entries'] ?? []);
-      final screenNames = <String>[];
+      final subs = <Subscription>[];
       for (final entry in entries) {
         final userRes = entry['content']?['itemContent']?['user_results']?['result'];
-        if (userRes != null) {
-          final screenName = userRes['legacy']?['screen_name'];
-          if (screenName != null) screenNames.add(screenName);
+        if (userRes != null && userRes['__typename'] == 'User') {
+          final legacy = userRes['legacy'];
+          if (legacy != null) {
+            subs.add(Subscription(
+              id: userRes['rest_id'],
+              screenName: legacy['screen_name'],
+              name: legacy['name'] ?? '',
+              profileImageUrl: legacy['profile_image_url_https'],
+            ));
+          }
         }
       }
-      return screenNames;
+      return subs;
     } catch (e) {
       debugPrint('Error fetching following: $e');
       return [];
@@ -112,16 +161,27 @@ class TwitterClient {
   }
 
   Future<List<Tweet>> fetchSubscribedMedia({String? cursor}) async {
-    final currentAccount = TwitterAccount.currentAccount;
-    if (currentAccount == null || currentAccount.restId.isEmpty) {
+    // Try to load subscriptions from DB
+    var subs = await Repository.getSubscriptions();
+    
+    if (subs.isEmpty) {
+      // If empty, try auto-detect from current account
+      final currentAccount = TwitterAccount.currentAccount;
+      if (currentAccount != null && currentAccount.restId.isNotEmpty) {
+        subs = await fetchFollowing(currentAccount.restId);
+        if (subs.isNotEmpty) {
+          await Repository.insertSubscriptions(subs);
+        }
+      }
+    }
+
+    if (subs.isEmpty) {
       return fetchTrendingMedia(cursor: cursor);
     }
 
-    final following = await fetchFollowing(currentAccount.restId);
-    if (following.isEmpty) return fetchTrendingMedia(cursor: cursor);
-
-    // X search query limit is around 500 characters, so we'll take first 10-15 users
-    final users = following.take(15).map((s) => 'from:$s').join(' OR ');
+    // Shuffle and pick 10 users to randomize the feed a bit
+    final pickedSubs = (subs.toList()..shuffle()).take(10);
+    final users = pickedSubs.map((s) => 'from:${s.screenName}').join(' OR ');
     final query = "($users) filter:media";
 
     return fetchTrendingMedia(cursor: cursor, query: query);
