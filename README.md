@@ -1,17 +1,59 @@
-# xflow
+# XFlow
 
-A new Flutter project.
+XFlow is a Flutter-based application that reimagines how you consume media from Twitter/X. It provides a seamless, TikTok-style infinite scrolling experience specifically tailored for browsing videos, images, and GIFs from the platform. 
 
-## Getting Started
+By leveraging the robust authentication and data layers originally built for the [Squawker](https://github.com/j-fb/squawker) project, XFlow allows you to securely log in, view media from your subscriptions, and explore trending content in a highly optimized, full-screen player environment.
 
-This project is a starting point for a Flutter application.
+## ✨ Features
 
-A few resources to get you started if this is your first Flutter project:
+* **TikTok-Style Media Feed:** Infinite vertical scrolling through full-screen media content.
+* **Smart Pre-caching:** Automatically warms up the next few videos in your feed so playback starts instantly without buffering.
+* **Subscription Management:** Easily manage your X/Twitter subscriptions and view a dedicated feed of their media.
+* **Profile & Media Grid:** View user profiles and lazily-loaded grids of their media uploads. 
+* **Optimized Caching:** Implements `ffcache` and `cached_network_image` to aggressively cache API responses and media assets, dramatically reducing network requests and improving load times.
+* **State Preservation:** Keeps your place in the infinite scroll feed even when navigating deep into user profiles or switching tabs.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## 🚀 Getting Started
+
+### Prerequisites
+* Flutter SDK (>=3.0.0 <4.0.0)
+* Dart SDK
+* Android Studio / Xcode (for emulation/deployment)
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/your-username/xflow.git
+   cd xflow
+   ```
+
+2. Get the Flutter dependencies:
+   ```bash
+   flutter pub get
+   ```
+
+3. Run the app:
+   ```bash
+   flutter run
+   ```
+
+## 📁 Project Structure
+
+* `lib/core/` - Core infrastructure including the database, navigation, and the modified Twitter/X client.
+* `lib/features/auth/` - Webview-based login implementation.
+* `lib/features/feed/` - The core TikTok-style infinite scrolling feed and associated providers.
+* `lib/features/player/` - Video player pool management and rendering.
+* `lib/features/profile/` - User profile details and media grid views.
+* `lib/features/subscriptions/` - Subscription list management.
+* `lib/features/settings/` - App settings and preferences.
+* `squawker_source/` - Original source code from Squawker, used as a reference/dependency for the data layer.
+
+## 🤝 Contributing
+
+Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/your-username/xflow/issues).
+
+## 📝 License
+
+This project is currently marked as `publish_to: 'none'`. Please refer to the repository for specific licensing information regarding the utilized Squawker source components.

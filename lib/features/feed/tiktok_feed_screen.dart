@@ -7,8 +7,7 @@ import '../../core/models/tweet.dart';
 import '../settings/settings_screen.dart';
 import '../auth/login_screen.dart';
 import '../../core/client/twitter_account.dart';
-import '../profile/user_details_screen.dart';
-import '../subscriptions/subscription_list_screen.dart';
+import '../../core/navigation/navigation_provider.dart';
 import 'widgets/tweet_text_overlay.dart';
 
 class TiktokFeedScreen extends ConsumerStatefulWidget {
@@ -131,6 +130,9 @@ class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
 
   Widget _buildMediaFeed() {
     final feedAsync = ref.watch(feedNotifierProvider);
+    final nav = ref.watch(navigationProvider);
+    final isScreenActive = nav.selectedUser == null && nav.currentTab == MainTab.media;
+
     return feedAsync.when(
       data: (state) {
         final tweets = state.tweets;
@@ -145,7 +147,7 @@ class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
           itemBuilder: (context, index) {
             return TiktokFeedItem(
               tweet: tweets[index],
-              isVisible: index == _currentIndex,
+              isVisible: index == _currentIndex && isScreenActive,
             );
           },
         );

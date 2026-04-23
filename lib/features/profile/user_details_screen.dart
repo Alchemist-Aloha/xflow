@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../../core/database/entities.dart';
-import '../../core/models/tweet.dart';
 import '../../core/navigation/navigation_provider.dart';
 import 'profile_provider.dart';
-import 'user_media_feed_screen.dart';
 
 class UserDetailsScreen extends ConsumerWidget {
   final String screenName;

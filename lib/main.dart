@@ -39,21 +39,35 @@ class MainScaffold extends ConsumerWidget {
     final nav = ref.watch(navigationProvider);
     final navNotifier = ref.read(navigationProvider.notifier);
 
-    Widget body;
+    final mainScreens = IndexedStack(
+      index: nav.currentTab.index,
+      children: const [
+        TiktokFeedScreen(),
+        SubscriptionListScreen(isStandalone: false),
+      ],
+    );
+
+    Widget? overlayScreen;
     if (nav.selectedUser != null) {
       if (nav.userMediaInitialIndex != null) {
-        body = UserMediaFeedScreen(
+        overlayScreen = UserMediaFeedScreen(
           screenName: nav.selectedUser!,
           initialIndex: nav.userMediaInitialIndex!,
         );
       } else {
-        body = UserDetailsScreen(screenName: nav.selectedUser!);
+        overlayScreen = UserDetailsScreen(screenName: nav.selectedUser!);
       }
-    } else {
-      body = nav.currentTab == MainTab.media
-          ? const TiktokFeedScreen()
-          : const SubscriptionListScreen(isStandalone: false);
     }
+
+    final body = Stack(
+      children: [
+        Offstage(
+          offstage: overlayScreen != null,
+          child: mainScreens,
+        ),
+        if (overlayScreen != null) overlayScreen,
+      ],
+    );
 
     // Handle back button
     return PopScope(
