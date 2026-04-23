@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:collection/collection.dart';
 import 'twitter_account.dart';
@@ -21,6 +22,47 @@ class TwitterClient {
   static const String graphqlFollowingUriPath = '/graphql/FEcMGoVOUjm0aU9BJrrGZA/Following';
   static const String graphqlUserByScreenNameUriPath = '/graphql/oUZZZ8Oddwxs8Cd3iW3UEA/UserByScreenName';
   static const String graphqlUserTweetsUriPath = '/graphql/rIIwMe1ObkGh_ByBtTCtRQ/UserTweets';
+
+  // Rate limiting prevention
+  static bool _isRequestInProgress = false;
+  static DateTime? _rateLimitResetTime;
+  static final List<Completer<void>> _requestQueue = [];
+
+  static Future<void> _waitForTurn() async {
+    if (_rateLimitResetTime != null) {
+      final now = DateTime.now();
+      if (now.isBefore(_rateLimitResetTime!)) {
+        final waitTime = _rateLimitResetTime!.difference(now);
+        AppLogger.log('Rate limit active. Waiting ${waitTime.inSeconds}s...');
+        await Future.delayed(waitTime);
+        _rateLimitResetTime = null;
+      }
+    }
+
+    if (!_isRequestInProgress) {
+      _isRequestInProgress = true;
+      return;
+    }
+
+    final completer = Completer<void>();
+    _requestQueue.add(completer);
+    await completer.future;
+  }
+
+  static void _releaseTurn() {
+    if (_requestQueue.isNotEmpty) {
+      final next = _requestQueue.removeAt(0);
+      next.complete();
+    } else {
+      _isRequestInProgress = false;
+    }
+  }
+
+  static void _handleRateLimit() {
+    // Standard X search rate limit is usually 15 minutes
+    _rateLimitResetTime = DateTime.now().add(const Duration(minutes: 15));
+    AppLogger.log('429 Rate Limit Exceeded. Pausing requests for 15 minutes.');
+  }
 
   static const Map<String, dynamic> defaultFeatures = {
     'android_ad_formats_media_component_render_overlay_enabled': false,
@@ -173,7 +215,15 @@ class TwitterClient {
         });
 
         AppLogger.log('Fetching following with cursor: $currentCursor (Found so far: ${allSubs.length})');
+        
+        await _waitForTurn();
         final response = await TwitterAccount.fetch(uri, cacheDuration: const Duration(hours: 1));
+        _releaseTurn();
+
+        if (response.statusCode == 429) {
+          _handleRateLimit();
+          break;
+        }
         if (response.statusCode != 200) {
           AppLogger.log('fetchFollowing Error: ${response.statusCode} ${response.body}');
           break;
@@ -275,7 +325,15 @@ class TwitterClient {
 
     try {
       AppLogger.log('Fetching media with query: $finalQuery and cursor: $cursor, sort: $sort');
+      
+      await _waitForTurn();
       final response = await TwitterAccount.fetch(uri).timeout(const Duration(seconds: 15));
+      _releaseTurn();
+
+      if (response.statusCode == 429) {
+        _handleRateLimit();
+        return TweetResponse(tweets: []);
+      }
       if (response.statusCode != 200) {
         AppLogger.log('Error status: ${response.statusCode} body: ${response.body}');
         return TweetResponse(tweets: []);
@@ -317,7 +375,7 @@ class TwitterClient {
       return fetchTrendingMedia(cursor: cursor, sort: sort, filters: filters);
     }
 
-    final pickedSubs = (subs.toList()..shuffle()).take(20);
+    final pickedSubs = (subs.toList()..shuffle()).take(10);
     final users = pickedSubs.map((s) => 'from:${s.screenName}').join(' OR ');
     String query = "include:nativeretweets ($users) -filter:replies";
     
@@ -363,7 +421,14 @@ class TwitterClient {
     });
 
     try {
+      await _waitForTurn();
       final response = await TwitterAccount.fetch(uri);
+      _releaseTurn();
+
+      if (response.statusCode == 429) {
+        _handleRateLimit();
+        return TweetResponse(tweets: []);
+      }
       if (response.statusCode != 200) return TweetResponse(tweets: []);
 
       final data = json.decode(response.body);

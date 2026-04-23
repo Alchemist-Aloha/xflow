@@ -10,8 +10,8 @@ class BackgroundSync {
   static void start(TwitterClient client) {
     if (_syncTimer != null) return;
     
-    // Check every 5 minutes
-    _syncTimer = Timer.periodic(const Duration(minutes: 5), (_) => _sync(client));
+    // Check every 15 minutes (aligns with standard X rate limit window)
+    _syncTimer = Timer.periodic(const Duration(minutes: 15), (_) => _sync(client));
     
     // Prune DB 1 minute after start
     Future.delayed(const Duration(minutes: 1), () {
@@ -32,9 +32,9 @@ class BackgroundSync {
       final subs = await Repository.getSubscriptions();
       if (subs.isEmpty) return;
 
-      // Pick a random subset of 10 subs to avoid huge queries
+      // Pick a random subset of 5 subs (reduced from 10)
       subs.shuffle();
-      final targets = subs.take(10);
+      final targets = subs.take(5);
       final usersQuery = targets.map((s) => 'from:${s.screenName}').join(' OR ');
       final query = "include:nativeretweets ($usersQuery) -filter:replies";
 

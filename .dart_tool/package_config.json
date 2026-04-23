@@ -116,6 +116,12 @@
       "languageVersion": "3.9"
     },
     {
+      "name": "code_builder",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/code_builder-4.11.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.7"
+    },
+    {
       "name": "collection",
       "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/collection-1.19.1",
       "packageUri": "lib/",
@@ -410,6 +416,12 @@
       "languageVersion": "3.2"
     },
     {
+      "name": "mockito",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/mockito-5.6.4",
+      "packageUri": "lib/",
+      "languageVersion": "3.7"
+    },
+    {
       "name": "native_toolchain_c",
       "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/native_toolchain_c-0.17.6",
       "packageUri": "lib/",
@@ -674,6 +686,12 @@
       "languageVersion": "3.8"
     },
     {
+      "name": "sqflite_common_ffi",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/sqflite_common_ffi-2.4.0+3",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
       "name": "sqflite_darwin",
       "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/sqflite_darwin-2.4.2",
       "packageUri": "lib/",
@@ -684,6 +702,12 @@
       "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/sqflite_platform_interface-2.4.0",
       "packageUri": "lib/",
       "languageVersion": "3.5"
+    },
+    {
+      "name": "sqlite3",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/sqlite3-3.3.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.9"
     },
     {
       "name": "stack_trace",

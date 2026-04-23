@@ -131,6 +131,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               );
             },
           ),
+          const Divider(),
+          ListTile(
+            title: const Text('Storage', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
+            subtitle: Text('Current quota: ${settings.mediaCacheSizeMB} MB'),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Row(
+              children: [
+                const Icon(Icons.storage, size: 20),
+                Expanded(
+                  child: Slider(
+                    value: settings.mediaCacheSizeMB.toDouble(),
+                    min: 100,
+                    max: 2000,
+                    divisions: 19,
+                    label: '${settings.mediaCacheSizeMB} MB',
+                    onChanged: (v) => notifier.updateMediaCacheSize(v.round()),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

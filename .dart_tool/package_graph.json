@@ -35,7 +35,9 @@
         "build_runner",
         "flutter_lints",
         "flutter_test",
-        "json_serializable"
+        "json_serializable",
+        "mockito",
+        "sqflite_common_ffi"
       ]
     },
     {
@@ -1368,6 +1370,60 @@
         "ffi",
         "meta",
         "path"
+      ]
+    },
+    {
+      "name": "mockito",
+      "version": "5.6.4",
+      "dependencies": [
+        "analyzer",
+        "build",
+        "code_builder",
+        "collection",
+        "dart_style",
+        "matcher",
+        "meta",
+        "path",
+        "source_gen",
+        "test_api"
+      ]
+    },
+    {
+      "name": "code_builder",
+      "version": "4.11.1",
+      "dependencies": [
+        "built_collection",
+        "built_value",
+        "collection",
+        "matcher",
+        "meta"
+      ]
+    },
+    {
+      "name": "sqflite_common_ffi",
+      "version": "2.4.0+3",
+      "dependencies": [
+        "meta",
+        "path",
+        "sqflite_common",
+        "sqlite3",
+        "synchronized"
+      ]
+    },
+    {
+      "name": "sqlite3",
+      "version": "3.3.1",
+      "dependencies": [
+        "code_assets",
+        "collection",
+        "crypto",
+        "ffi",
+        "hooks",
+        "meta",
+        "native_toolchain_c",
+        "path",
+        "typed_data",
+        "web"
       ]
     }
   ],
