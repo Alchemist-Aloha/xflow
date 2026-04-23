@@ -13,14 +13,26 @@ class FeedState {
   final List<Tweet> tweets;
   final String? cursorBottom;
   final bool isLoadingMore;
+  final bool isRefreshing;
 
-  FeedState({required this.tweets, this.cursorBottom, this.isLoadingMore = false});
+  FeedState({
+    required this.tweets, 
+    this.cursorBottom, 
+    this.isLoadingMore = false,
+    this.isRefreshing = false,
+  });
 
-  FeedState copyWith({List<Tweet>? tweets, String? cursorBottom, bool? isLoadingMore}) {
+  FeedState copyWith({
+    List<Tweet>? tweets, 
+    String? cursorBottom, 
+    bool? isLoadingMore,
+    bool? isRefreshing,
+  }) {
     return FeedState(
       tweets: tweets ?? this.tweets,
       cursorBottom: cursorBottom ?? this.cursorBottom,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      isRefreshing: isRefreshing ?? this.isRefreshing,
     );
   }
 }
@@ -32,7 +44,10 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
     final settings = ref.watch(settingsProvider);
     
     // 1. Try to get unplayed media from local DB
-    List<Tweet> initialTweets = await Repository.getUnplayedCachedMedia(settings.loadBatchSize);
+    List<Tweet> initialTweets = await Repository.getUnplayedCachedMedia(
+      settings.loadBatchSize,
+      filters: settings.filters,
+    );
 
     String? cursorBottom;
 
@@ -78,7 +93,10 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
 
     try {
       // 1. Try to fetch from DB that aren't already in the current state
-      final allUnplayed = await Repository.getUnplayedCachedMedia(settings.loadBatchSize * 2);
+      final allUnplayed = await Repository.getUnplayedCachedMedia(
+        settings.loadBatchSize * 2,
+        filters: settings.filters,
+      );
       final seenIds = currentTweets.map((t) => t.id).toSet();
       var newTweets = allUnplayed.where((t) => !seenIds.contains(t.id)).take(settings.loadBatchSize).toList();
 

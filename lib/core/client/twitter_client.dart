@@ -474,11 +474,12 @@ class TwitterClient {
     }
   }
 
-  Future<TweetResponse> fetchUserTimelineByScreenName(String screenName, {String? cursor}) async {
+  Future<TweetResponse> fetchUserTimelineByScreenName(String screenName, {String? cursor, int cooldownMinutes = 15}) async {
     return fetchTrendingMedia(
       query: "from:$screenName",
       cursor: cursor,
       filters: {}, // All content
+      cooldownMinutes: cooldownMinutes,
     );
   }
 

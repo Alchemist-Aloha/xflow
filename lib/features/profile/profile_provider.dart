@@ -3,80 +3,111 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/client/twitter_client.dart';
 import '../../core/database/entities.dart';
+import '../../core/database/repository.dart';
 import '../../core/models/tweet.dart';
 import '../feed/feed_provider.dart'; // For FeedState
+import '../settings/settings_provider.dart';
 
 final userProfileProvider = FutureProvider.family<Subscription?, String>((ref, screenName) async {
-  final client = TwitterClient();
+  final client = ref.watch(twitterClientProvider);
   return client.fetchProfile(screenName);
 });
 
 class UserMediaNotifier extends FamilyAsyncNotifier<FeedState, String> {
   @override
   FutureOr<FeedState> build(String arg) async {
-    final client = TwitterClient();
+    final client = ref.watch(twitterClientProvider);
     final settings = ref.watch(settingsProvider);
     
+    // Normalize handle: API and lookup prefer raw handle
+    final screenName = arg.startsWith('@') ? arg.substring(1) : arg;
+
+    debugPrint('XFLOW: Building UserMediaNotifier for $screenName');
+    
     // 1. Load local items immediately for responsiveness
-    final localTweets = await Repository.getUserCachedMedia(arg, settings.loadBatchSize);
+    final localTweets = await Repository.getUserCachedMedia(
+      screenName, 
+      settings.loadBatchSize,
+      filters: settings.filters,
+    );
+    debugPrint('XFLOW: Found ${localTweets.length} local tweets for $screenName');
 
     // 2. Trigger background refresh from API
-    // We don't await this immediately so the local data shows up fast
-    _refreshInBackground(arg, localTweets.map((t) => t.id).toSet());
+    _refreshInBackground(screenName, localTweets.map((t) => t.id).toSet());
 
     return FeedState(
       tweets: localTweets,
-      cursorBottom: null, // Cursor will be updated by background refresh
+      cursorBottom: null,
+      isRefreshing: true,
     );
   }
 
   Future<void> _refreshInBackground(String screenName, Set<String> seenIds) async {
-    final client = TwitterClient();
+    final client = ref.read(twitterClientProvider);
     final settings = ref.read(settingsProvider);
 
     try {
+      debugPrint('XFLOW: Refreshing user media from API for $screenName');
       final response = await client.fetchUserTimelineByScreenName(
         screenName,
         cooldownMinutes: settings.cooldownDuration,
       );
       
+      debugPrint('XFLOW: API returned ${response.tweets.length} tweets for $screenName');
+
       if (response.tweets.isNotEmpty) {
         await Repository.insertCachedMedia(response.tweets);
         
-        // Check if we actually have new content to show
         final hasNew = response.tweets.any((t) => !seenIds.contains(t.id));
         
-        if (hasNew) {
-          // Re-fetch everything from DB to ensure correct order and deduplication
-          final allTweets = await Repository.getUserCachedMedia(screenName, settings.loadBatchSize);
+        if (hasNew || (state.value?.tweets.isEmpty ?? true)) {
+          final allTweets = await Repository.getUserCachedMedia(
+            screenName, 
+            settings.loadBatchSize,
+            filters: settings.filters,
+          );
           state = AsyncData(FeedState(
             tweets: allTweets,
             cursorBottom: response.cursorBottom,
+            isRefreshing: false,
           ));
-        } else if (state.value?.cursorBottom == null) {
-          // Even if no new tweets, update the cursor so fetchMore works
-          state = AsyncData(state.value!.copyWith(cursorBottom: response.cursorBottom));
+        } else {
+          final current = state.value;
+          if (current != null) {
+            state = AsyncData(current.copyWith(
+              cursorBottom: response.cursorBottom,
+              isRefreshing: false,
+            ));
+          }
         }
+      } else if (state.value != null) {
+        state = AsyncData(state.value!.copyWith(
+          cursorBottom: response.cursorBottom,
+          isRefreshing: false,
+        ));
       }
-    } catch (e) {
-      debugPrint('Background user media refresh error: $e');
+    } catch (e, st) {
+      debugPrint('XFLOW: Background user media refresh error: $e\n$st');
+      if (state.value != null) {
+        state = AsyncData(state.value!.copyWith(isRefreshing: false));
+      }
     }
   }
 
   Future<void> fetchMore() async {
     final currentState = state.value;
-    final screenName = arg;
+    final rawArg = arg;
+    final screenName = rawArg.startsWith('@') ? rawArg.substring(1) : rawArg;
+    
     if (currentState == null || currentState.isLoadingMore) {
       return;
     }
 
+    final client = ref.read(twitterClientProvider);
     final settings = ref.read(settingsProvider);
     state = AsyncData(currentState.copyWith(isLoadingMore: true));
 
     try {
-      final client = TwitterClient();
-      
-      // Try fetching more from API
       final response = await client.fetchUserTimelineByScreenName(
         screenName,
         cursor: currentState.cursorBottom,
@@ -88,7 +119,6 @@ class UserMediaNotifier extends FamilyAsyncNotifier<FeedState, String> {
         await Repository.insertCachedMedia(newTweets);
       }
       
-      // Deduplicate
       final seenIds = currentState.tweets.map((t) => t.id).toSet();
       final uniqueNewTweets = newTweets.where((t) => !seenIds.contains(t.id)).toList();
 
@@ -106,7 +136,6 @@ class UserMediaNotifier extends FamilyAsyncNotifier<FeedState, String> {
 
 final userMediaNotifierProvider = AsyncNotifierProviderFamily<UserMediaNotifier, FeedState, String>(() => UserMediaNotifier());
 
-// Legacy/Simple list provider
 final userTweetsProvider = Provider.family<AsyncValue<List<Tweet>>, String>((ref, screenName) {
   final asyncState = ref.watch(userMediaNotifierProvider(screenName));
   return asyncState.whenData((state) => state.tweets);

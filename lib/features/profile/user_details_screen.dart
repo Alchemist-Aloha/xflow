@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/navigation/navigation_provider.dart';
+import '../../core/utils/media_cache_manager.dart';
 import '../settings/settings_provider.dart';
 import 'profile_provider.dart';
 
@@ -49,7 +50,10 @@ class UserDetailsScreen extends ConsumerWidget {
                           CircleAvatar(
                             radius: 40,
                             backgroundImage: profile.profileImageUrlHighRes != null
-                                ? CachedNetworkImageProvider(profile.profileImageUrlHighRes!)
+                                ? CachedNetworkImageProvider(
+                                    profile.profileImageUrlHighRes!,
+                                    cacheManager: CustomMediaCacheManager.getInstance(),
+                                  )
                                 : null,
                             child: profile.profileImageUrlHighRes == null
                                 ? const Icon(Icons.person, size: 40)
@@ -101,110 +105,148 @@ class UserDetailsScreen extends ConsumerWidget {
               tweetsAsync.when(
                 data: (state) {
                   final tweets = state.tweets;
-                  if (tweets.isEmpty) {
+                  final isRefreshing = state.isRefreshing;
+
+                  if (tweets.isEmpty && !isRefreshing) {
                     return const SliverToBoxAdapter(
-                      child: Center(child: Text('No tweets found')),
-                    );
-                  }
-
-                  if (settings.isListView) {
-                    return SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          if (index == tweets.length - 1) {
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              ref.read(userMediaNotifierProvider(screenName).notifier).fetchMore();
-                            });
-                          }
-                          final tweet = tweets[index];
-                          return ListTile(
-                            leading: tweet.mediaUrls.isNotEmpty 
-                              ? SizedBox(
-                                  width: 50,
-                                  height: 50,
-                                  child: CachedNetworkImage(
-                                    imageUrl: tweet.thumbnailUrl ?? tweet.mediaUrls.first,
-                                    fit: BoxFit.cover,
-                                  ),
-                                )
-                              : const Icon(Icons.text_fields),
-                            title: Text(tweet.text, maxLines: 2, overflow: TextOverflow.ellipsis),
-                            subtitle: Text(tweet.createdAt?.toString().split('.').first ?? ''),
-                            onTap: () => ref.read(navigationProvider.notifier).openUserMedia(screenName, index),
-                          );
-                        },
-                        childCount: tweets.length,
+                      child: Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(32.0),
+                          child: Text('No tweets found'),
+                        ),
                       ),
                     );
                   }
 
-                  return SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 2),
-                    sliver: SliverGrid(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        crossAxisSpacing: 2,
-                        mainAxisSpacing: 2,
-                        childAspectRatio: 1,
-                      ),
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          // Check if we need to load more when reaching the end of the grid
-                          if (index == tweets.length - 1) {
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              ref.read(userMediaNotifierProvider(screenName).notifier).fetchMore();
-                            });
-                          }
-
-                          final tweet = tweets[index];
-                          return GestureDetector(
-                            onTap: () {
-                              ref.read(navigationProvider.notifier).openUserMedia(screenName, index);
-                            },
-                            child: Container(
-                              color: Colors.black12,
-                              child: Stack(
-                                fit: StackFit.expand,
+                  return SliverMainAxisGroup(
+                    slivers: [
+                      if (isRefreshing)
+                        const SliverToBoxAdapter(
+                          child: LinearProgressIndicator(
+                            backgroundColor: Colors.transparent,
+                            minHeight: 2,
+                          ),
+                        ),
+                      if (tweets.isEmpty && isRefreshing)
+                        const SliverToBoxAdapter(
+                          child: Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(64.0),
+                              child: Column(
                                 children: [
-                                  if (tweet.mediaUrls.isNotEmpty)
-                                    CachedNetworkImage(
-                                      imageUrl: tweet.thumbnailUrl ?? tweet.mediaUrls.first,
-                                      fit: BoxFit.cover,
-                                      memCacheWidth: 300,
-                                      memCacheHeight: 300,
-                                      placeholder: (context, url) => Container(color: Colors.black12),
-                                      errorWidget: (context, url, error) => const Icon(Icons.error),
-                                    )
-                                  else
-                                    Container(
-                                      padding: const EdgeInsets.all(8),
-                                      alignment: Alignment.center,
-                                      child: Text(
-                                        tweet.text,
-                                        maxLines: 4,
-                                        overflow: TextOverflow.ellipsis,
-                                        textAlign: TextAlign.center,
-                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 10),
-                                      ),
-                                    ),
-                                  if (tweet.isVideo)
-                                    const Positioned(
-                                      top: 4,
-                                      right: 4,
-                                      child: Icon(Icons.play_circle_outline, color: Colors.white70, size: 20),
-                                    ),
+                                  CircularProgressIndicator(),
+                                  SizedBox(height: 16),
+                                  Text('Fetching latest items...', style: TextStyle(color: Colors.white70)),
                                 ],
                               ),
                             ),
-                          );
-                        },
-                        childCount: tweets.length,
-                      ),
-                    ),
+                          ),
+                        )
+                      else if (settings.isListView)
+                        SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              if (index == tweets.length - 1) {
+                                WidgetsBinding.instance.addPostFrameCallback((_) {
+                                  ref.read(userMediaNotifierProvider(screenName).notifier).fetchMore();
+                                });
+                              }
+                              final tweet = tweets[index];
+                              return ListTile(
+                                leading: tweet.mediaUrls.isNotEmpty 
+                                  ? SizedBox(
+                                      width: 50,
+                                      height: 50,
+                                      child: CachedNetworkImage(
+                                        cacheManager: CustomMediaCacheManager.getInstance(),
+                                        imageUrl: tweet.thumbnailUrl ?? tweet.mediaUrls.first,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    )
+                                  : const Icon(Icons.text_fields),
+                                title: Text(tweet.text, maxLines: 2, overflow: TextOverflow.ellipsis),
+                                subtitle: Text(tweet.createdAt?.toString().split('.').first ?? ''),
+                                onTap: () => ref.read(navigationProvider.notifier).openUserMedia(screenName, index),
+                              );
+                            },
+                            childCount: tweets.length,
+                          ),
+                        )
+                      else
+                        SliverPadding(
+                          padding: const EdgeInsets.symmetric(horizontal: 2),
+                          sliver: SliverGrid(
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 3,
+                              crossAxisSpacing: 2,
+                              mainAxisSpacing: 2,
+                              childAspectRatio: 1,
+                            ),
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                if (index == tweets.length - 1) {
+                                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                                    ref.read(userMediaNotifierProvider(screenName).notifier).fetchMore();
+                                  });
+                                }
+
+                                final tweet = tweets[index];
+                                return GestureDetector(
+                                  onTap: () {
+                                    ref.read(navigationProvider.notifier).openUserMedia(screenName, index);
+                                  },
+                                  child: Container(
+                                    color: Colors.black12,
+                                    child: Stack(
+                                      fit: StackFit.expand,
+                                      children: [
+                                        if (tweet.mediaUrls.isNotEmpty)
+                                          CachedNetworkImage(
+                                            cacheManager: CustomMediaCacheManager.getInstance(),
+                                            imageUrl: tweet.thumbnailUrl ?? tweet.mediaUrls.first,
+                                            fit: BoxFit.cover,
+                                            memCacheWidth: 300,
+                                            memCacheHeight: 300,
+                                            placeholder: (context, url) => Container(color: Colors.black12),
+                                            errorWidget: (context, url, error) => const Icon(Icons.error),
+                                          )
+                                        else
+                                          Container(
+                                            padding: const EdgeInsets.all(8),
+                                            alignment: Alignment.center,
+                                            child: Text(
+                                              tweet.text,
+                                              maxLines: 4,
+                                              overflow: TextOverflow.ellipsis,
+                                              textAlign: TextAlign.center,
+                                              style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 10),
+                                            ),
+                                          ),
+                                        if (tweet.isVideo)
+                                          const Positioned(
+                                            top: 4,
+                                            right: 4,
+                                            child: Icon(Icons.play_circle_outline, color: Colors.white70, size: 20),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                              childCount: tweets.length,
+                            ),
+                          ),
+                        ),
+                    ],
                   );
                 },
                 loading: () => const SliverToBoxAdapter(
-                  child: Center(child: CircularProgressIndicator()),
+                  child: Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(64.0),
+                      child: CircularProgressIndicator(),
+                    ),
+                  ),
                 ),
                 error: (e, st) => SliverToBoxAdapter(
                   child: Center(child: Text('Error: $e')),

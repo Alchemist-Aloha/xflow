@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/models/tweet.dart';
+import '../../../core/utils/media_cache_manager.dart';
 import '../../feed/widgets/text_tweet_card.dart';
 import '../player_pool_provider.dart';
 
@@ -200,6 +201,7 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
       return SizedBox.expand(
         child: Center(
           child: CachedNetworkImage(
+            cacheManager: CustomMediaCacheManager.getInstance(),
             imageUrl: widget.tweet.mediaUrls.first,
             fit: BoxFit.contain,
             placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
@@ -221,6 +223,7 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
         return SizedBox.expand(
           child: Center(
             child: CachedNetworkImage(
+              cacheManager: CustomMediaCacheManager.getInstance(),
               imageUrl: widget.tweet.mediaUrls[index],
               fit: BoxFit.contain,
               placeholder: (context, url) => const Center(child: CircularProgressIndicator()),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/database/repository.dart';
 import '../../core/database/entities.dart';
+import '../../core/utils/media_cache_manager.dart';
 import '../profile/user_details_screen.dart';
 import '../../core/navigation/navigation_provider.dart';
 import '../settings/settings_screen.dart';
@@ -33,9 +34,11 @@ class SubscriptionListScreen extends ConsumerWidget {
             final sub = subs[index];
             return ListTile(
               leading: CircleAvatar(
-                radius: 18,
                 backgroundImage: sub.profileImageUrl != null
-                    ? CachedNetworkImageProvider(sub.profileImageUrl!)
+                    ? CachedNetworkImageProvider(
+                        sub.profileImageUrl!,
+                        cacheManager: CustomMediaCacheManager.getInstance(),
+                      )
                     : null,
                 child: sub.profileImageUrl == null ? const Icon(Icons.person, size: 20) : null,
               ),

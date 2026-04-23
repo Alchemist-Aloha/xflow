@@ -4,6 +4,7 @@ import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'entities.dart';
 import '../models/tweet.dart';
+import '../../features/settings/settings_provider.dart';
 
 const String tableAccounts = 'accounts';
 const String tableSubscriptions = 'subscriptions';
@@ -151,12 +152,36 @@ class Repository {
     await batch.commit(noResult: true);
   }
 
-  static Future<List<Tweet>> getUnplayedCachedMedia(int limit) async {
+  static Future<List<Tweet>> getUnplayedCachedMedia(int limit, {Set<MediaFilter>? filters}) async {
     final db = await database;
+    
+    String whereClause = 'played_count = ?';
+    List<dynamic> whereArgs = [0];
+
+    if (filters != null && filters.isNotEmpty) {
+      final conditions = <String>[];
+      for (final filter in filters) {
+        switch (filter) {
+          case MediaFilter.video:
+            conditions.add('is_video = 1');
+            break;
+          case MediaFilter.image:
+            conditions.add('(media_urls != "[]" AND is_video = 0)');
+            break;
+          case MediaFilter.text:
+            conditions.add('media_urls = "[]"');
+            break;
+        }
+      }
+      if (conditions.isNotEmpty) {
+        whereClause += ' AND (${conditions.join(' OR ')})';
+      }
+    }
+
     final List<Map<String, dynamic>> maps = await db.query(
       tableCachedMedia,
-      where: 'played_count = ?',
-      whereArgs: [0],
+      where: whereClause,
+      whereArgs: whereArgs,
       orderBy: 'created_at DESC',
       limit: limit,
     );
@@ -175,15 +200,39 @@ class Repository {
     });
   }
 
-  static Future<List<Tweet>> getUserCachedMedia(String userHandle, int limit) async {
+  static Future<List<Tweet>> getUserCachedMedia(String userHandle, int limit, {Set<MediaFilter>? filters}) async {
     final db = await database;
-    // Normalize handle if it has @
-    final handle = userHandle.startsWith('@') ? userHandle : '@$userHandle';
+    // Strip @ if present for normalization
+    final rawHandle = userHandle.startsWith('@') ? userHandle.substring(1) : userHandle;
+    final handleWithAt = '@$rawHandle';
     
+    String whereClause = '(user_handle = ? OR user_handle = ?)';
+    List<dynamic> whereArgs = [rawHandle, handleWithAt];
+
+    if (filters != null && filters.isNotEmpty) {
+      final conditions = <String>[];
+      for (final filter in filters) {
+        switch (filter) {
+          case MediaFilter.video:
+            conditions.add('is_video = 1');
+            break;
+          case MediaFilter.image:
+            conditions.add('(media_urls != "[]" AND is_video = 0)');
+            break;
+          case MediaFilter.text:
+            conditions.add('media_urls = "[]"');
+            break;
+        }
+      }
+      if (conditions.isNotEmpty) {
+        whereClause += ' AND (${conditions.join(' OR ')})';
+      }
+    }
+
     final List<Map<String, dynamic>> maps = await db.query(
       tableCachedMedia,
-      where: 'user_handle = ?',
-      whereArgs: [handle],
+      where: whereClause,
+      whereArgs: whereArgs,
       orderBy: 'created_at DESC',
       limit: limit,
     );
