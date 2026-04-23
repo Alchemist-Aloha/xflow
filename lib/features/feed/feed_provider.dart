@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/client/twitter_client.dart';
 import '../../core/models/tweet.dart';
 import '../../core/database/repository.dart';
+import '../../core/client/discovery_engine.dart';
 import '../settings/settings_provider.dart';
 import '../player/player_pool_provider.dart';
 
@@ -43,40 +44,110 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
     final client = ref.watch(twitterClientProvider);
     final settings = ref.watch(settingsProvider);
     
-    // 1. Try to get unplayed media from local DB
-    List<Tweet> initialTweets = await Repository.getUnplayedCachedMedia(
-      settings.loadBatchSize,
-      filters: settings.filters,
-    );
+    debugPrint('XFLOW: Building FeedNotifier. fetchStrategy: ${settings.fetchStrategy}');
 
-    String? cursorBottom;
+    try {
+      // 1. Try to get unplayed media from local DB
+      List<Tweet> tweets = await Repository.getUnplayedCachedMedia(
+        settings.loadBatchSize * 3,
+        filters: settings.filters,
+      );
 
-    // 2. If DB is empty, fetch from API and save
-    if (initialTweets.isEmpty) {
-      final response = await client.fetchSubscribedMedia(
-        sort: settings.sort,
+      debugPrint('XFLOW: Local pool size: ${tweets.length}');
+
+      // 2. If DB is empty, we MUST fetch from API now to avoid blank screen on first launch
+      if (tweets.isEmpty) {
+        debugPrint('XFLOW: DB empty, performing initial sync...');
+        final response = await client.fetchSubscribedMedia(
+          sort: settings.fetchStrategy,
+          filters: settings.filters,
+          subBatchSize: settings.syncBatchSize,
+          loadBatchSize: settings.initialSyncCount,
+          cooldownMinutes: settings.cooldownDuration,
+        );
+        tweets = response.tweets;
+        debugPrint('XFLOW: Initial sync returned ${tweets.length} tweets');
+        if (tweets.isNotEmpty) {
+          await Repository.insertCachedMedia(tweets);
+        }
+      } else {
+        // DB not empty, trigger a background refresh to get fresher content
+        debugPrint('XFLOW: DB has content, triggering background refresh');
+        Future.delayed(Duration.zero, () => _refreshInBackground());
+      }
+
+      var processed = DiscoveryEngine.applySaturation(tweets, threshold: settings.saturationThreshold);
+
+      // Warm up the player pool
+      final pool = ref.read(playerPoolProvider.notifier);
+      for (int i = 0; i < processed.length && i < 3; i++) {
+        final tweet = processed[i];
+        if (tweet.isVideo && tweet.mediaUrls.isNotEmpty) {
+          pool.warmup(tweet.id, tweet.mediaUrls.first);
+        }
+      }
+      
+      return FeedState(
+        tweets: processed,
+        cursorBottom: null,
+        isRefreshing: tweets.isEmpty, // Only refreshing if we started with nothing
+      );
+    } catch (e, st) {
+      debugPrint('XFLOW: Error in build(): $e\n$st');
+      return FeedState(tweets: [], isRefreshing: false);
+    }
+  }
+
+  Future<void> _refreshInBackground() async {
+    if (!ref.exists(feedNotifierProvider)) return;
+
+    final client = ref.read(twitterClientProvider);
+    final settings = ref.read(settingsProvider);
+
+    debugPrint('XFLOW: Background refresh started');
+
+    try {
+      final freshResponse = await client.fetchSubscribedMedia(
+        sort: settings.fetchStrategy,
         filters: settings.filters,
         subBatchSize: settings.syncBatchSize,
-        loadBatchSize: settings.loadBatchSize,
+        loadBatchSize: settings.initialSyncCount,
         cooldownMinutes: settings.cooldownDuration,
       );
-      initialTweets = response.tweets;
-      cursorBottom = response.cursorBottom;
-      await Repository.insertCachedMedia(initialTweets);
-    }
-    
-    final pool = ref.read(playerPoolProvider.notifier);
-    for (int i = 0; i < initialTweets.length && i < 3; i++) {
-      final tweet = initialTweets[i];
-      if (tweet.isVideo && tweet.mediaUrls.isNotEmpty) {
-        pool.warmup(tweet.id, tweet.mediaUrls.first);
+
+      final freshPool = freshResponse.tweets;
+      debugPrint('XFLOW: Background refresh returned ${freshPool.length} fresh tweets');
+
+      if (freshPool.isNotEmpty) {
+        await Repository.insertCachedMedia(freshPool);
+      }
+
+      final currentAsync = ref.read(feedNotifierProvider);
+      if (currentAsync.hasValue) {
+        final current = currentAsync.value!;
+        
+        final updatedLocalPool = await Repository.getUnplayedCachedMedia(
+          settings.loadBatchSize * 3,
+          filters: settings.filters,
+        );
+        
+        var processed = DiscoveryEngine.interleave(freshPool, updatedLocalPool, settings.freshMixRatio);
+        processed = DiscoveryEngine.applySaturation(processed, threshold: settings.saturationThreshold);
+
+        state = AsyncData(current.copyWith(
+          tweets: processed,
+          cursorBottom: freshResponse.cursorBottom,
+          isRefreshing: false,
+        ));
+        debugPrint('XFLOW: Feed state updated from background refresh. Total: ${processed.length}');
+      }
+    } catch (e) {
+      debugPrint('XFLOW: Background refresh error: $e');
+      final currentAsync = ref.read(feedNotifierProvider);
+      if (currentAsync.hasValue) {
+        state = AsyncData(currentAsync.value!.copyWith(isRefreshing: false));
       }
     }
-    
-    return FeedState(
-      tweets: initialTweets,
-      cursorBottom: cursorBottom,
-    );
   }
 
   Future<void> fetchMore() async {
@@ -98,29 +169,34 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
         filters: settings.filters,
       );
       final seenIds = currentTweets.map((t) => t.id).toSet();
-      var newTweets = allUnplayed.where((t) => !seenIds.contains(t.id)).take(settings.loadBatchSize).toList();
+      var newTweetsFromCache = allUnplayed.where((t) => !seenIds.contains(t.id)).toList();
 
       String? nextCursor = currentCursor;
+      List<Tweet> finalNewTweets = [];
 
-      // 2. If no new local tweets, trigger an API fetch
-      if (newTweets.isEmpty) {
+      // 2. If no new local tweets (or based on ratio), trigger an API fetch
+      // For fetchMore, we can simplify: if we have cache, use it, else API.
+      // Or we can also use the engine here.
+      if (newTweetsFromCache.isEmpty) {
         final client = ref.read(twitterClientProvider);
         final response = await client.fetchSubscribedMedia(
           cursor: currentCursor,
-          sort: settings.sort,
+          sort: settings.fetchStrategy,
           filters: settings.filters,
           subBatchSize: settings.syncBatchSize,
           loadBatchSize: settings.loadBatchSize,
           cooldownMinutes: settings.cooldownDuration,
         );
         
-        newTweets = response.tweets.where((t) => !seenIds.contains(t.id)).toList();
+        finalNewTweets = response.tweets.where((t) => !seenIds.contains(t.id)).toList();
         nextCursor = response.cursorBottom;
-        await Repository.insertCachedMedia(newTweets);
+        await Repository.insertCachedMedia(finalNewTweets);
+      } else {
+        finalNewTweets = newTweetsFromCache.take(settings.loadBatchSize).toList();
       }
 
       state = AsyncData(currentState.copyWith(
-        tweets: [...currentTweets, ...newTweets],
+        tweets: [...currentTweets, ...finalNewTweets],
         cursorBottom: nextCursor,
         isLoadingMore: false,
       ));

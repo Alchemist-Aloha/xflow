@@ -10,9 +10,12 @@ import 'core/client/background_sync.dart';
 import 'core/client/twitter_client.dart';
 import 'features/settings/settings_provider.dart';
 
-void main() {
+import 'core/client/twitter_account.dart';
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
+  await TwitterAccount.init();
   
   runApp(const ProviderScope(child: XFlowApp()));
 }
@@ -22,9 +25,14 @@ class XFlowApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    debugPrint('XFLOW: Building XFlowApp');
     // Manage BackgroundSync lifecycle
-    ref.listen(settingsProvider.select((s) => s.syncInterval), (prev, next) {
-      BackgroundSync.restart(TwitterClient(), ref.read(settingsProvider));
+    ref.listen(settingsProvider, (prev, next) {
+      if (prev?.syncInterval != next.syncInterval || 
+          prev?.syncBatchSize != next.syncBatchSize ||
+          prev?.pruneThreshold != next.pruneThreshold) {
+        BackgroundSync.restart(TwitterClient(), next);
+      }
     });
 
     // Start on boot if not already started

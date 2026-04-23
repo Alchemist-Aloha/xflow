@@ -5,7 +5,6 @@ enum FeedSort { latest, popular, oldest, random, trending }
 enum MediaFilter { video, image, text }
 
 class SettingsState {
-  final FeedSort sort;
   final Set<MediaFilter> filters;
   final bool autoplay;
   final bool isListView;
@@ -18,8 +17,15 @@ class SettingsState {
   final int cooldownDuration;
   final int pruneThreshold;
 
+  // New Discovery Algorithm parameters
+  final bool avoidWatchedContent;
+  final bool unseenSubscriptionBoost;
+  final double freshMixRatio;
+  final int saturationThreshold;
+  final FeedSort fetchStrategy;
+  final int initialSyncCount;
+
   SettingsState({
-    this.sort = FeedSort.latest,
     this.filters = const {},
     this.autoplay = true,
     this.isListView = false,
@@ -29,10 +35,15 @@ class SettingsState {
     this.loadBatchSize = 20,
     this.cooldownDuration = 15,
     this.pruneThreshold = 50000,
+    this.avoidWatchedContent = true,
+    this.unseenSubscriptionBoost = true,
+    this.freshMixRatio = 0.3,
+    this.saturationThreshold = 2,
+    this.fetchStrategy = FeedSort.latest,
+    this.initialSyncCount = 10,
   });
 
   SettingsState copyWith({
-    FeedSort? sort,
     Set<MediaFilter>? filters,
     bool? autoplay,
     bool? isListView,
@@ -42,9 +53,14 @@ class SettingsState {
     int? loadBatchSize,
     int? cooldownDuration,
     int? pruneThreshold,
+    bool? avoidWatchedContent,
+    bool? unseenSubscriptionBoost,
+    double? freshMixRatio,
+    int? saturationThreshold,
+    FeedSort? fetchStrategy,
+    int? initialSyncCount,
   }) {
     return SettingsState(
-      sort: sort ?? this.sort,
       filters: filters ?? this.filters,
       autoplay: autoplay ?? this.autoplay,
       isListView: isListView ?? this.isListView,
@@ -54,6 +70,12 @@ class SettingsState {
       loadBatchSize: loadBatchSize ?? this.loadBatchSize,
       cooldownDuration: cooldownDuration ?? this.cooldownDuration,
       pruneThreshold: pruneThreshold ?? this.pruneThreshold,
+      avoidWatchedContent: avoidWatchedContent ?? this.avoidWatchedContent,
+      unseenSubscriptionBoost: unseenSubscriptionBoost ?? this.unseenSubscriptionBoost,
+      freshMixRatio: freshMixRatio ?? this.freshMixRatio,
+      saturationThreshold: saturationThreshold ?? this.saturationThreshold,
+      fetchStrategy: fetchStrategy ?? this.fetchStrategy,
+      initialSyncCount: initialSyncCount ?? this.initialSyncCount,
     );
   }
 }
@@ -69,7 +91,6 @@ class SettingsNotifier extends Notifier<SettingsState> {
 
   Future<void> _init() async {
     _prefs = await SharedPreferences.getInstance();
-    final sortIdx = _prefs.getInt('sort') ?? 0;
     final filterStrings = _prefs.getStringList('filters') ?? [];
     
     final filters = filterStrings
@@ -92,8 +113,14 @@ class SettingsNotifier extends Notifier<SettingsState> {
     final cooldownDuration = _prefs.getInt('cooldownDuration') ?? 15;
     final pruneThreshold = _prefs.getInt('pruneThreshold') ?? 50000;
 
+    final avoidWatchedContent = _prefs.getBool('avoidWatchedContent') ?? true;
+    final unseenSubscriptionBoost = _prefs.getBool('unseenSubscriptionBoost') ?? true;
+    final freshMixRatio = _prefs.getDouble('freshMixRatio') ?? 0.3;
+    final saturationThreshold = _prefs.getInt('saturationThreshold') ?? 2;
+    final fetchStrategyIdx = _prefs.getInt('fetchStrategy') ?? 0;
+    final initialSyncCount = _prefs.getInt('initialSyncCount') ?? 10;
+
     state = SettingsState(
-      sort: sortIdx < FeedSort.values.length ? FeedSort.values[sortIdx] : FeedSort.latest,
       filters: filters,
       autoplay: _prefs.getBool('autoplay') ?? true,
       isListView: isListView,
@@ -103,12 +130,13 @@ class SettingsNotifier extends Notifier<SettingsState> {
       loadBatchSize: loadBatchSize,
       cooldownDuration: cooldownDuration,
       pruneThreshold: pruneThreshold,
+      avoidWatchedContent: avoidWatchedContent,
+      unseenSubscriptionBoost: unseenSubscriptionBoost,
+      freshMixRatio: freshMixRatio,
+      saturationThreshold: saturationThreshold,
+      fetchStrategy: fetchStrategyIdx < FeedSort.values.length ? FeedSort.values[fetchStrategyIdx] : FeedSort.latest,
+      initialSyncCount: initialSyncCount,
     );
-  }
-
-  void updateSort(FeedSort sort) {
-    state = state.copyWith(sort: sort);
-    _prefs.setInt('sort', sort.index);
   }
 
   void updateMediaCacheSize(int megabytes) {
@@ -139,6 +167,30 @@ class SettingsNotifier extends Notifier<SettingsState> {
   void updatePruneThreshold(int count) {
     state = state.copyWith(pruneThreshold: count);
     _prefs.setInt('pruneThreshold', count);
+  }
+
+  void updateDiscoveryParam({
+    bool? avoidWatchedContent,
+    bool? unseenSubscriptionBoost,
+    double? freshMixRatio,
+    int? saturationThreshold,
+    FeedSort? fetchStrategy,
+    int? initialSyncCount,
+  }) {
+    state = state.copyWith(
+      avoidWatchedContent: avoidWatchedContent,
+      unseenSubscriptionBoost: unseenSubscriptionBoost,
+      freshMixRatio: freshMixRatio,
+      saturationThreshold: saturationThreshold,
+      fetchStrategy: fetchStrategy,
+      initialSyncCount: initialSyncCount,
+    );
+    if (avoidWatchedContent != null) _prefs.setBool('avoidWatchedContent', avoidWatchedContent);
+    if (unseenSubscriptionBoost != null) _prefs.setBool('unseenSubscriptionBoost', unseenSubscriptionBoost);
+    if (freshMixRatio != null) _prefs.setDouble('freshMixRatio', freshMixRatio);
+    if (saturationThreshold != null) _prefs.setInt('saturationThreshold', saturationThreshold);
+    if (fetchStrategy != null) _prefs.setInt('fetchStrategy', fetchStrategy.index);
+    if (initialSyncCount != null) _prefs.setInt('initialSyncCount', initialSyncCount);
   }
 
   void toggleFilter(MediaFilter filter) {

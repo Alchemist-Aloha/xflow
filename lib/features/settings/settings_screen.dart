@@ -58,18 +58,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const Divider(),
           const ListTile(
             title: Text('Content', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
-            subtitle: Text('Sort and filter media'),
+            subtitle: Text('Algorithm and media filters'),
           ),
           ListTile(
-            title: const Text('Sort Order'),
-            trailing: DropdownButton<FeedSort>(
-              value: settings.sort,
-              items: FeedSort.values.map((s) => DropdownMenuItem(
-                value: s, 
-                child: Text(s.name.toUpperCase())
-              )).toList(),
-              onChanged: (v) => v != null ? notifier.updateSort(v) : null,
-            ),
+            leading: const Icon(Icons.architecture),
+            title: const Text('Query Architecture'),
+            subtitle: const Text('Fine-tune sync, fetch, and discovery'),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (c) => const QuerySettingsScreen()),
+              );
+            },
           ),
           ListTile(
             title: const Text('Media Filter'),
@@ -150,17 +150,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (c) => const LogViewerScreen()),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.architecture),
-            title: const Text('Query Architecture'),
-            subtitle: const Text('Fine-tune sync, fetch, and cooldowns'),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (c) => const QuerySettingsScreen()),
               );
             },
           ),

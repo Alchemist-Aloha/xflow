@@ -26,14 +26,6 @@ class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
   void initState() {
     super.initState();
     _pageController.addListener(_handleScroll);
-    _initAuth();
-  }
-
-  Future<void> _initAuth() async {
-    await TwitterAccount.init();
-    if (mounted) {
-      ref.invalidate(feedNotifierProvider);
-    }
   }
 
   @override
@@ -69,31 +61,35 @@ class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
   }
 
   void _managePool() {
-    final feedAsync = ref.read(feedNotifierProvider);
-    final state = feedAsync.value;
-    if (state == null) return;
-    final tweets = state.tweets;
+    try {
+      final feedAsync = ref.read(feedNotifierProvider);
+      final state = feedAsync.value;
+      if (state == null) return;
+      final tweets = state.tweets;
 
-    final pool = ref.read(playerPoolProvider.notifier);
-    final activeIds = <String>{};
+      final pool = ref.read(playerPoolProvider.notifier);
+      final activeIds = <String>{};
 
-    // Prefetch 1 before, 3 after (total 5 active)
-    for (int i = _currentIndex - 1; i <= _currentIndex + 3; i++) {
-      if (i >= 0 && i < tweets.length) {
-        final tweet = tweets[i];
-        activeIds.add(tweet.id);
-        
-        if (tweet.isVideo) {
-          pool.warmup(tweet.id, tweet.mediaUrls.first);
-        } else if (tweet.mediaUrls.isNotEmpty) {
-          // Precache images
-          for (final url in tweet.mediaUrls) {
-            precacheImage(NetworkImage(url), context);
+      // Prefetch 1 before, 3 after (total 5 active)
+      for (int i = _currentIndex - 1; i <= _currentIndex + 3; i++) {
+        if (i >= 0 && i < tweets.length) {
+          final tweet = tweets[i];
+          activeIds.add(tweet.id);
+          
+          if (tweet.isVideo && tweet.mediaUrls.isNotEmpty) {
+            pool.warmup(tweet.id, tweet.mediaUrls.first);
+          } else if (tweet.mediaUrls.isNotEmpty) {
+            // Precache images
+            for (final url in tweet.mediaUrls) {
+              precacheImage(NetworkImage(url), context);
+            }
           }
         }
       }
+      pool.cleanupExcept(activeIds);
+    } catch (e) {
+      debugPrint('XFLOW: Error in _managePool: $e');
     }
-    pool.cleanupExcept(activeIds);
   }
 
   @override
@@ -150,7 +146,20 @@ class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
     return feedAsync.when(
       data: (state) {
         final tweets = state.tweets;
+        debugPrint('XFLOW: UI Build with ${tweets.length} tweets. Refreshing: ${state.isRefreshing}');
         if (tweets.isEmpty) {
+          if (state.isRefreshing) {
+            return const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Fetching latest media...', style: TextStyle(color: Colors.white70)),
+                ],
+              ),
+            );
+          }
           return _buildNoItemsState();
         }
         _managePool();
