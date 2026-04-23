@@ -6,10 +6,15 @@ import 'features/subscriptions/subscription_list_screen.dart';
 import 'features/profile/user_details_screen.dart';
 import 'features/profile/user_media_feed_screen.dart';
 import 'core/navigation/navigation_provider.dart';
+import 'core/client/background_sync.dart';
+import 'core/client/twitter_client.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
+  
+  BackgroundSync.start(TwitterClient());
+  
   runApp(const ProviderScope(child: XFlowApp()));
 }
 
