@@ -17,13 +17,8 @@ class UserMediaNotifier extends FamilyAsyncNotifier<FeedState, String> {
   @override
   FutureOr<FeedState> build(String arg) async {
     final client = TwitterClient();
-    final profile = await ref.watch(userProfileProvider(arg).future);
-    
-    if (profile == null || profile.id.isEmpty) {
-      return FeedState(tweets: []);
-    }
-
-    final response = await client.fetchUserTimeline(profile.id);
+    // Use screenName directly to start fetching immediately
+    final response = await client.fetchUserTimelineByScreenName(arg);
     
     return FeedState(
       tweets: response.tweets,
@@ -38,15 +33,13 @@ class UserMediaNotifier extends FamilyAsyncNotifier<FeedState, String> {
       return;
     }
 
-    final profile = await ref.read(userProfileProvider(screenName).future);
-    if (profile == null || profile.id.isEmpty) return;
-
     state = AsyncData(currentState.copyWith(isLoadingMore: true));
 
     try {
       final client = TwitterClient();
-      final response = await client.fetchUserTimeline(
-        profile.id,
+      // Try fetching by screenName first (cheaper/faster for this client)
+      final response = await client.fetchUserTimelineByScreenName(
+        screenName,
         cursor: currentState.cursorBottom,
       );
       

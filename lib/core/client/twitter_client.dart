@@ -377,6 +377,14 @@ class TwitterClient {
     }
   }
 
+  Future<TweetResponse> fetchUserTimelineByScreenName(String screenName, {String? cursor}) async {
+    return fetchTrendingMedia(
+      query: "from:$screenName",
+      cursor: cursor,
+      filters: {}, // All content
+    );
+  }
+
   TweetResponse _parseTweets(Map<String, dynamic> timeline) {
     final tweets = <Tweet>[];
     final instructions = List.from(timeline['instructions'] ?? timeline['timeline']?['instructions'] ?? []);

@@ -53,7 +53,7 @@ class _UserMediaFeedScreenState extends ConsumerState<UserMediaFeedScreen> {
       final feedAsync = ref.read(userMediaNotifierProvider(widget.screenName));
       if (feedAsync.hasValue) {
         final tweets = feedAsync.value!.tweets;
-        if (page >= tweets.length - 3) {
+        if (page >= tweets.length - 5) { // Increased threshold from 3 to 5
           ref.read(userMediaNotifierProvider(widget.screenName).notifier).fetchMore();
         }
       }
@@ -69,12 +69,19 @@ class _UserMediaFeedScreenState extends ConsumerState<UserMediaFeedScreen> {
     final pool = ref.read(playerPoolProvider.notifier);
     final activeIds = <String>{};
 
-    for (int i = _currentIndex - 1; i <= _currentIndex + 2; i++) {
+    // Prefetch 1 before, 3 after (total 5 active)
+    for (int i = _currentIndex - 1; i <= _currentIndex + 3; i++) {
       if (i >= 0 && i < tweets.length) {
         final tweet = tweets[i];
         activeIds.add(tweet.id);
+        
         if (tweet.isVideo) {
           pool.warmup(tweet.id, tweet.mediaUrls.first);
+        } else if (tweet.mediaUrls.isNotEmpty) {
+          // Precache images
+          for (final url in tweet.mediaUrls) {
+            precacheImage(NetworkImage(url), context);
+          }
         }
       }
     }
