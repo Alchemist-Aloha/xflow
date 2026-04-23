@@ -10,11 +10,13 @@ import '../player_pool_provider.dart';
 class TiktokMediaContainer extends ConsumerStatefulWidget {
   final Tweet tweet;
   final bool isVisible;
+  final Widget? overlay;
 
   const TiktokMediaContainer({
     super.key,
     required this.tweet,
     required this.isVisible,
+    this.overlay,
   });
 
   @override
@@ -95,12 +97,13 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
                 ),
               ),
             ),
+            if (widget.overlay != null) widget.overlay!,
             // Custom Full Screen Button
             Positioned(
-              right: 8,
-              bottom: 100, // Above the text overlay
+              right: 16,
+              bottom: 120, // Above the text overlay
               child: IconButton(
-                icon: const Icon(Icons.fullscreen, color: Colors.white, size: 32),
+                icon: const Icon(Icons.fullscreen, color: Colors.white, size: 36),
                 onPressed: () {
                   // Manually handle orientation before entering fullscreen if needed,
                   // but MaterialVideoControls usually handles it if configured via theme.

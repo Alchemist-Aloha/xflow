@@ -138,11 +138,10 @@ class UserMediaFeedItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        TiktokMediaContainer(tweet: tweet, isVisible: isVisible),
-        TweetTextOverlay(tweet: tweet),
-      ],
+    return TiktokMediaContainer(
+      tweet: tweet,
+      isVisible: isVisible,
+      overlay: TweetTextOverlay(tweet: tweet),
     );
   }
 }
