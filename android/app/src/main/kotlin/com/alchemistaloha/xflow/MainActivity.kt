@@ -1,4 +1,4 @@
-package com.example.xflow
+package com.alchemistaloha.xflow
 
 import io.flutter.embedding.android.FlutterActivity
 

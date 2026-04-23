@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:ffcache/ffcache.dart';
@@ -22,12 +23,18 @@ class TwitterAccount {
     return _currentAccount != null;
   }
 
+  static String _getCacheKey(Uri uri) {
+    return md5.convert(utf8.encode(uri.toString())).toString();
+  }
+
   static Future<http.Response> fetch(Uri uri, {Map<String, String>? headers, Duration? cacheDuration}) async {
-    final cacheKey = uri.toString();
+    final cacheKey = _getCacheKey(uri);
     if (cacheDuration != null) {
       final cachedBody = await _cache.getString(cacheKey);
       if (cachedBody != null) {
-        return http.Response(cachedBody, 200);
+        return http.Response(cachedBody, 200, headers: {
+          'content-type': 'application/json; charset=utf-8',
+        });
       }
     }
 
@@ -71,8 +78,16 @@ class TwitterAccount {
     }
 
     final response = await http.get(uri, headers: combinedHeaders).timeout(const Duration(seconds: 15));
-    if (response.statusCode == 200 && cacheDuration != null) {
-      await _cache.setStringWithTimeout(cacheKey, response.body, cacheDuration);
+    if (response.statusCode == 200) {
+      // Force UTF-8 decoding for the body string to avoid mangling and caching issues
+      final decodedBody = utf8.decode(response.bodyBytes);
+      if (cacheDuration != null) {
+        await _cache.setStringWithTimeout(cacheKey, decodedBody, cacheDuration);
+      }
+      return http.Response(decodedBody, 200, headers: {
+        ...response.headers,
+        'content-type': 'application/json; charset=utf-8',
+      });
     }
     return response;
   }

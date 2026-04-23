@@ -151,7 +151,7 @@ class TwitterClient {
     );
   }
 
-  Future<List<Subscription>> fetchFollowing(String userId, {int maxCount = 1000}) async {
+  Future<List<Subscription>> fetchFollowing(String userId, {int maxCount = 2000}) async {
     final allSubs = <Subscription>[];
     String? currentCursor;
 
