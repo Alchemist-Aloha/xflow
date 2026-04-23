@@ -16,6 +16,7 @@
         "flutter_cache_manager",
         "flutter_riverpod",
         "http",
+        "intl",
         "json_annotation",
         "logging",
         "media_kit",
@@ -190,6 +191,15 @@
         "intl",
         "json_annotation",
         "oauth1"
+      ]
+    },
+    {
+      "name": "intl",
+      "version": "0.20.2",
+      "dependencies": [
+        "clock",
+        "meta",
+        "path"
       ]
     },
     {
@@ -762,15 +772,6 @@
       "dependencies": [
         "crypto",
         "http"
-      ]
-    },
-    {
-      "name": "intl",
-      "version": "0.20.2",
-      "dependencies": [
-        "clock",
-        "meta",
-        "path"
       ]
     },
     {

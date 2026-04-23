@@ -6,6 +6,8 @@ import '../../core/database/entities.dart';
 import '../../core/models/tweet.dart';
 import '../feed/feed_provider.dart'; // For FeedState
 
+import '../settings/settings_provider.dart';
+
 final userProfileProvider = FutureProvider.family<Subscription?, String>((ref, screenName) async {
   final client = TwitterClient();
   return client.fetchProfile(screenName);
@@ -15,7 +17,12 @@ class UserMediaNotifier extends FamilyAsyncNotifier<FeedState, String> {
   @override
   FutureOr<FeedState> build(String arg) async {
     final client = TwitterClient();
-    final response = await client.fetchUserTweets(arg);
+    final settings = ref.watch(settingsProvider);
+    final response = await client.fetchUserTweets(
+      arg,
+      sort: settings.sort,
+      filter: settings.filter,
+    );
     
     return FeedState(
       tweets: response.tweets,
@@ -30,11 +37,17 @@ class UserMediaNotifier extends FamilyAsyncNotifier<FeedState, String> {
       return;
     }
 
+    final settings = ref.read(settingsProvider);
     state = AsyncData(currentState.copyWith(isLoadingMore: true));
 
     try {
       final client = TwitterClient();
-      final response = await client.fetchUserTweets(screenName, cursor: currentState.cursorBottom);
+      final response = await client.fetchUserTweets(
+        screenName,
+        cursor: currentState.cursorBottom,
+        sort: settings.sort,
+        filter: settings.filter,
+      );
       
       final newTweets = response.tweets;
       

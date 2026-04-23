@@ -41,7 +41,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             title: const Text('Sort Order'),
             trailing: DropdownButton<FeedSort>(
               value: settings.sort,
-              items: FeedSort.values.map((s) => DropdownMenuItem(value: s, child: Text(s.name))).toList(),
+              items: FeedSort.values.map((s) => DropdownMenuItem(
+                value: s, 
+                child: Text(s.name.toUpperCase())
+              )).toList(),
               onChanged: (v) => v != null ? notifier.updateSort(v) : null,
             ),
           ),
@@ -49,7 +52,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             title: const Text('Media Filter'),
             trailing: DropdownButton<MediaFilter>(
               value: settings.filter,
-              items: MediaFilter.values.map((f) => DropdownMenuItem(value: f, child: Text(f.name))).toList(),
+              items: MediaFilter.values.map((f) => DropdownMenuItem(
+                value: f, 
+                child: Text(f.name.replaceAll('Only', ' Only').toUpperCase())
+              )).toList(),
               onChanged: (v) => v != null ? notifier.updateFilter(v) : null,
             ),
           ),
@@ -74,7 +80,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             title: const Text('Clear Subscriptions', style: TextStyle(color: Colors.orange)),
             onTap: () async {
               await Repository.clearSubscriptions();
-              ref.invalidate(feedProvider);
+              ref.invalidate(feedNotifierProvider);
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('All subscriptions cleared')),
@@ -92,7 +98,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             title: const Text('Logout', style: TextStyle(color: Colors.red)),
             onTap: () async {
               await TwitterAccount.logout();
-              ref.invalidate(feedProvider);
+              ref.invalidate(feedNotifierProvider);
               if (context.mounted) {
                 Navigator.pop(context);
               }

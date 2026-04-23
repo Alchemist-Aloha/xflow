@@ -27,52 +27,41 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
   @override
   FutureOr<FeedState> build() async {
     final client = ref.watch(twitterClientProvider);
-    final response = await client.fetchSubscribedMedia();
+    final settings = ref.watch(settingsProvider);
     
-    var tweets = response.tweets;
-    tweets = _filterAndSort(tweets);
-
+    final response = await client.fetchSubscribedMedia(
+      sort: settings.sort,
+      filter: settings.filter,
+    );
+    
     return FeedState(
-      tweets: tweets,
+      tweets: response.tweets,
       cursorBottom: response.cursorBottom,
     );
-  }
-
-  List<Tweet> _filterAndSort(List<Tweet> tweets) {
-    final settings = ref.read(settingsProvider);
-    var result = tweets;
-    if (settings.filter == MediaFilter.videoOnly) {
-      result = result.where((t) => t.isVideo).toList();
-    } else if (settings.filter == MediaFilter.imageOnly) {
-      result = result.where((t) => !t.isVideo).toList();
-    }
-    if (settings.sort == FeedSort.oldest) {
-      result = result.reversed.toList();
-    }
-    return result;
   }
 
   Future<void> fetchMore() async {
     final currentState = state.value;
     if (currentState == null || currentState.isLoadingMore || currentState.cursorBottom == null) {
-      debugPrint('FeedNotifier: fetchMore skipped. isLoadingMore: ${currentState?.isLoadingMore}, cursorBottom: ${currentState?.cursorBottom}');
       return;
     }
 
-    debugPrint('FeedNotifier: Fetching more tweets with cursor: ${currentState.cursorBottom}');
+    final settings = ref.read(settingsProvider);
     state = AsyncData(currentState.copyWith(isLoadingMore: true));
 
     try {
       final client = ref.read(twitterClientProvider);
-      final response = await client.fetchSubscribedMedia(cursor: currentState.cursorBottom);
+      final response = await client.fetchSubscribedMedia(
+        cursor: currentState.cursorBottom,
+        sort: settings.sort,
+        filter: settings.filter,
+      );
       
-      var newTweets = _filterAndSort(response.tweets);
-      debugPrint('FeedNotifier: Received ${response.tweets.length} raw tweets, ${newTweets.length} after filtering');
+      var newTweets = response.tweets;
       
       // Deduplicate
       final seenIds = currentState.tweets.map((t) => t.id).toSet();
       newTweets = newTweets.where((t) => !seenIds.contains(t.id)).toList();
-      debugPrint('FeedNotifier: ${newTweets.length} new unique tweets after deduplication');
 
       if (newTweets.isNotEmpty || response.cursorBottom != currentState.cursorBottom) {
         state = AsyncData(currentState.copyWith(
@@ -80,10 +69,8 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
           cursorBottom: response.cursorBottom,
           isLoadingMore: false,
         ));
-        debugPrint('FeedNotifier: state updated. Total tweets: ${state.value?.tweets.length}, next cursor: ${response.cursorBottom}');
       } else {
         state = AsyncData(currentState.copyWith(isLoadingMore: false));
-        debugPrint('FeedNotifier: no new data found.');
       }
     } catch (e, st) {
       debugPrint('Error fetching more: $e');

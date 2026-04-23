@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-enum FeedSort { latest, popular, oldest }
-enum MediaFilter { all, videoOnly, imageOnly }
+enum FeedSort { latest, popular, oldest, random, trending }
+enum MediaFilter { all, videoOnly, imageOnly, gifOnly }
 
 class SettingsState {
   final FeedSort sort;
@@ -35,9 +35,12 @@ class SettingsNotifier extends Notifier<SettingsState> {
 
   Future<void> _init() async {
     _prefs = await SharedPreferences.getInstance();
+    final sortIdx = _prefs.getInt('sort') ?? 0;
+    final filterIdx = _prefs.getInt('filter') ?? 0;
+    
     state = SettingsState(
-      sort: FeedSort.values[_prefs.getInt('sort') ?? 0],
-      filter: MediaFilter.values[_prefs.getInt('filter') ?? 0],
+      sort: sortIdx < FeedSort.values.length ? FeedSort.values[sortIdx] : FeedSort.latest,
+      filter: filterIdx < MediaFilter.values.length ? MediaFilter.values[filterIdx] : MediaFilter.all,
       autoplay: _prefs.getBool('autoplay') ?? true,
     );
   }

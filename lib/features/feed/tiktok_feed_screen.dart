@@ -9,6 +9,7 @@ import '../auth/login_screen.dart';
 import '../../core/client/twitter_account.dart';
 import '../profile/user_details_screen.dart';
 import '../subscriptions/subscription_list_screen.dart';
+import 'widgets/tweet_text_overlay.dart';
 
 class TiktokFeedScreen extends ConsumerStatefulWidget {
   const TiktokFeedScreen({super.key});
@@ -250,43 +251,8 @@ class TiktokFeedItem extends StatelessWidget {
     return Stack(
       children: [
         TiktokMediaContainer(tweet: tweet, isVisible: isVisible),
-        _buildUIOverlay(context),
+        TweetTextOverlay(tweet: tweet),
       ],
-    );
-  }
-
-  Widget _buildUIOverlay(BuildContext context) {
-    return Positioned(
-      bottom: 20,
-      left: 16,
-      right: 16,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          GestureDetector(
-            onTap: () {
-              final handle = tweet.userHandle.replaceFirst('@', '');
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => UserDetailsScreen(screenName: handle),
-                ),
-              );
-            },
-            child: Text(
-              tweet.userHandle,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            tweet.text,
-            style: const TextStyle(color: Colors.white),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
     );
   }
 }

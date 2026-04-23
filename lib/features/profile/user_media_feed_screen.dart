@@ -4,6 +4,7 @@ import '../player/player_pool_provider.dart';
 import 'profile_provider.dart';
 import '../player/widgets/media_container.dart';
 import '../../core/models/tweet.dart';
+import '../feed/widgets/tweet_text_overlay.dart';
 
 class UserMediaFeedScreen extends ConsumerStatefulWidget {
   final String screenName;
@@ -139,32 +140,8 @@ class UserMediaFeedItem extends StatelessWidget {
     return Stack(
       children: [
         TiktokMediaContainer(tweet: tweet, isVisible: isVisible),
-        _buildUIOverlay(),
+        TweetTextOverlay(tweet: tweet),
       ],
-    );
-  }
-
-  Widget _buildUIOverlay() {
-    return Positioned(
-      bottom: 20,
-      left: 16,
-      right: 16,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            tweet.userHandle,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            tweet.text,
-            style: const TextStyle(color: Colors.white),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
     );
   }
 }

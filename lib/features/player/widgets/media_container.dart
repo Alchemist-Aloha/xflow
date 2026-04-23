@@ -84,16 +84,12 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
                     child: Video(
                       key: _videoKey,
                       controller: instance.controller,
-                      controls: (state) => state.isFullscreen 
-                          ? const MaterialVideoControls() 
-                          : const SizedBox.shrink(),
-                      configuration: VideoConfiguration(
-                        fullscreen: VideoFullscreenConfiguration(
-                          preferredOrientations: isLandscape
-                              ? [DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]
-                              : [DeviceOrientation.portraitUp],
-                        ),
-                      ),
+                      controls: MaterialVideoControls,
+                      onExitFullscreen: () async {
+                        await SystemChrome.setPreferredOrientations([
+                          DeviceOrientation.portraitUp,
+                        ]);
+                      },
                     ),
                   ),
                 ),
@@ -106,7 +102,20 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
               child: IconButton(
                 icon: const Icon(Icons.fullscreen, color: Colors.white, size: 32),
                 onPressed: () {
+                  // Manually handle orientation before entering fullscreen if needed,
+                  // but MaterialVideoControls usually handles it if configured via theme.
+                  // For version 1.3.1, we can also use SystemChrome directly in a wrapper if needed.
                   _videoKey.currentState?.enterFullscreen();
+                  if (isLandscape) {
+                    SystemChrome.setPreferredOrientations([
+                      DeviceOrientation.landscapeLeft,
+                      DeviceOrientation.landscapeRight,
+                    ]);
+                  } else {
+                    SystemChrome.setPreferredOrientations([
+                      DeviceOrientation.portraitUp,
+                    ]);
+                  }
                 },
               ),
             ),

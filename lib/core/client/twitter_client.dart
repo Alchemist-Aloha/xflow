@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:collection/collection.dart';
+import 'package:intl/intl.dart';
 import 'twitter_account.dart';
 import '../models/tweet.dart';
 import '../database/entities.dart';
 import '../database/repository.dart';
+import '../../features/settings/settings_provider.dart';
 
 class TweetResponse {
   final List<Tweet> tweets;
@@ -139,8 +141,13 @@ class TwitterClient {
     }
   }
 
-  Future<TweetResponse> fetchUserTweets(String screenName, {String? cursor}) async {
-    return fetchTrendingMedia(query: "from:$screenName filter:media", cursor: cursor);
+  Future<TweetResponse> fetchUserTweets(String screenName, {String? cursor, FeedSort? sort, MediaFilter? filter}) async {
+    return fetchTrendingMedia(
+      query: "from:$screenName filter:media",
+      cursor: cursor,
+      sort: sort,
+      filter: filter,
+    );
   }
 
   Future<List<Subscription>> fetchFollowing(String userId, {int maxCount = 1000}) async {
@@ -219,11 +226,27 @@ class TwitterClient {
     }
   }
 
-  Future<TweetResponse> fetchTrendingMedia({String? cursor, String? query}) async {
+  Future<TweetResponse> fetchTrendingMedia({String? cursor, String? query, FeedSort? sort, MediaFilter? filter}) async {
+    String finalQuery = query ?? "filter:media";
+    
+    if (filter != null) {
+      if (filter == MediaFilter.videoOnly) {
+        finalQuery += " filter:videos";
+      } else if (filter == MediaFilter.imageOnly) {
+        finalQuery += " filter:images";
+      } else if (filter == MediaFilter.gifOnly) {
+        finalQuery += " filter:consumer_video";
+      }
+    }
+
+    if (sort == FeedSort.popular) {
+      finalQuery += " min_faves:100";
+    }
+
     final variables = {
-      "rawQuery": query ?? "filter:media",
+      "rawQuery": finalQuery,
       "count": "20",
-      "product": "Latest",
+      "product": sort == FeedSort.trending ? "Top" : "Latest",
       "querySource": "typed_query",
       "withDownvotePerspective": false,
       "withReactionsMetadata": false,
@@ -238,70 +261,65 @@ class TwitterClient {
     });
 
     try {
-      debugPrint('Fetching media with query: ${query ?? "filter:media"} and cursor: $cursor');
-      final response = await TwitterAccount.fetch(uri);
-      debugPrint('Response status: ${response.statusCode}');
+      debugPrint('Fetching media with query: $finalQuery and cursor: $cursor, sort: $sort');
+      final response = await TwitterAccount.fetch(uri).timeout(const Duration(seconds: 15));
       if (response.statusCode != 200) {
-        debugPrint('Error body: ${response.body}');
+        debugPrint('Error status: ${response.statusCode} body: ${response.body}');
         return TweetResponse(tweets: []);
       }
 
       final result = json.decode(response.body);
       final timeline = result?['data']?['search_by_raw_query']?['search_timeline'];
-      if (timeline == null) {
-        debugPrint('Timeline is null in response. Full result keys: ${result?.keys}');
-        return TweetResponse(tweets: []);
+      if (timeline == null) return TweetResponse(tweets: []);
+
+      final tweetResponse = _parseTweets(timeline);
+      
+      if (sort == FeedSort.random) {
+        tweetResponse.tweets.shuffle();
+      } else if (sort == FeedSort.oldest) {
+        tweetResponse.tweets.sort((a, b) => a.id.compareTo(b.id));
       }
 
-      return _parseTweets(timeline);
+      return tweetResponse;
     } catch (e) {
       debugPrint('Exception in fetchTrendingMedia: $e');
       return TweetResponse(tweets: []);
     }
   }
 
-  Future<TweetResponse> fetchSubscribedMedia({String? cursor}) async {
+  Future<TweetResponse> fetchSubscribedMedia({String? cursor, FeedSort? sort, MediaFilter? filter}) async {
     var subs = await Repository.getSubscriptions();
-    debugPrint('Found ${subs.length} local subscriptions');
     
     if (subs.isEmpty) {
       final currentAccount = TwitterAccount.currentAccount;
       if (currentAccount != null && currentAccount.restId.isNotEmpty) {
-        debugPrint('Fetching following for ${currentAccount.screenName}');
         subs = await fetchFollowing(currentAccount.restId);
         if (subs.isNotEmpty) {
           await Repository.insertSubscriptions(subs);
-          debugPrint('Inserted ${subs.length} subscriptions into DB');
         }
       }
     }
 
     if (subs.isEmpty) {
-      debugPrint('No subscriptions found, falling back to trending');
-      return fetchTrendingMedia(cursor: cursor);
+      return fetchTrendingMedia(cursor: cursor, sort: sort, filter: filter);
     }
 
-    // Pick a subset of users to query
     final pickedSubs = (subs.toList()..shuffle()).take(20);
     final users = pickedSubs.map((s) => 'from:${s.screenName}').join(' OR ');
-    // Added -filter:replies to get more original posts/retweets and less noise
-    final query = "include:nativeretweets ($users) filter:media -filter:replies";
-
-    debugPrint('Searching media from ${pickedSubs.length} users with query: $query');
-    final response = await fetchTrendingMedia(cursor: cursor, query: query);
+    String query = "include:nativeretweets ($users) filter:media -filter:replies";
     
-    // If we're at the first page and results are very few, mix in some trending
+    if (sort == FeedSort.popular) {
+      query += " min_faves:50";
+    }
+
+    final response = await fetchTrendingMedia(cursor: cursor, query: query, sort: sort, filter: filter);
+    
     if (cursor == null && response.tweets.length < 5) {
-      debugPrint('Few subscribed media found (${response.tweets.length}), fetching some trending media too...');
-      final trendingResponse = await fetchTrendingMedia();
-      
-      // Combine and deduplicate
+      final trendingResponse = await fetchTrendingMedia(sort: sort, filter: filter);
       final combined = [...response.tweets];
       final seenIds = response.tweets.map((t) => t.id).toSet();
       for (final t in trendingResponse.tweets) {
-        if (!seenIds.contains(t.id)) {
-          combined.add(t);
-        }
+        if (!seenIds.contains(t.id)) combined.add(t);
       }
       return TweetResponse(
         tweets: combined,
@@ -316,21 +334,11 @@ class TwitterClient {
   TweetResponse _parseTweets(Map<String, dynamic> timeline) {
     final tweets = <Tweet>[];
     final instructions = List.from(timeline['timeline']?['instructions'] ?? []);
-    debugPrint('Instructions count: ${instructions.length}');
-    if (instructions.isEmpty) {
-      debugPrint('No instructions found in timeline. Keys: ${timeline.keys}');
-      return TweetResponse(tweets: []);
-    }
-
+    
     final addEntries = instructions.firstWhereOrNull((e) => e['type'] == 'TimelineAddEntries' || e['__typename'] == 'TimelineAddEntries');
-    if (addEntries == null) {
-      debugPrint('No TimelineAddEntries found. Instruction types: ${instructions.map((e) => e['type'] ?? e['__typename']).toList()}');
-      return TweetResponse(tweets: []);
-    }
+    if (addEntries == null) return TweetResponse(tweets: []);
 
     final entries = List.from(addEntries['entries'] ?? []);
-    debugPrint('Total entries in TimelineAddEntries: ${entries.length}');
-    
     String? cursorTop;
     String? cursorBottom;
 
@@ -366,7 +374,6 @@ class TwitterClient {
       }
     }
     
-    debugPrint('Parsed ${tweets.length} tweets');
     return TweetResponse(
       tweets: tweets,
       cursorTop: cursorTop,
@@ -384,7 +391,6 @@ class TwitterClient {
       }
       if (tweetResult == null) return;
 
-      // Handle nested tweet field if rest_id is missing
       if (tweetResult['rest_id'] == null && tweetResult['tweet'] != null) {
         tweetResult = tweetResult['tweet'];
       }
@@ -392,7 +398,6 @@ class TwitterClient {
       var legacy = tweetResult['legacy'];
       if (legacy == null) return;
 
-      // Handle retweets
       var retweetedStatusResult = tweetResult['retweeted_status_result'] ?? legacy['retweeted_status_result'] ?? legacy['repostedStatusResults'];
       if (retweetedStatusResult != null && retweetedStatusResult['result'] != null) {
         var retweetedResult = retweetedStatusResult['result'];
@@ -401,12 +406,11 @@ class TwitterClient {
         }
         if (retweetedResult['legacy'] != null) {
           legacy = retweetedResult['legacy'];
-          // Use the retweeted tweet's user for the handle
           var retweetedCore = retweetedResult['core'] ?? retweetedResult['tweet']?['core'];
           var retweetedUserResults = retweetedCore?['user_results']?['result'];
           var retweetedScreenName = retweetedUserResults?['legacy']?['screen_name'];
           if (retweetedScreenName != null) {
-            tweetResult['core'] = retweetedCore; // Override core for screenName extraction later
+            tweetResult['core'] = retweetedCore;
           }
         }
       }
@@ -414,15 +418,13 @@ class TwitterClient {
       final core = tweetResult['core'] ?? tweetResult['tweet']?['core'];
       final userResults = core?['user_results']?['result'];
       final screenName = userResults?['legacy']?['screen_name'] ?? 'Unknown';
+      final userAvatarUrl = userResults?['legacy']?['profile_image_url_https'];
 
-      // Media can be in entities or extended_entities
-      // extended_entities usually has the video_info we need
       final media = List.from(legacy['entities']?['media'] ?? []);
       final extendedMedia = List.from(legacy['extended_entities']?['media'] ?? []);
       final allMedia = extendedMedia.isNotEmpty ? extendedMedia : media;
 
       if (allMedia.isEmpty) {
-        // Sometimes media is in the note_tweet
         var noteTweetResult = tweetResult['note_tweet']?['note_tweet_results']?['result'];
         if (noteTweetResult != null) {
           final noteMedia = List.from(noteTweetResult['entity_set']?['media'] ?? []);
@@ -437,7 +439,6 @@ class TwitterClient {
       String? thumbnailUrl;
       bool isVideo = false;
 
-      // Use the first media's thumbnail as the tweet thumbnail
       if (allMedia.isNotEmpty && allMedia.first['media_url_https'] != null) {
         thumbnailUrl = allMedia.first['media_url_https'];
       }
@@ -448,7 +449,6 @@ class TwitterClient {
           final variants = List.from(m['video_info']?['variants'] ?? []);
           if (variants.isEmpty) continue;
 
-          // Find the best quality MP4
           var bestVariant = variants
               .where((v) => v['content_type'] == 'video/mp4' && v['url'] != null)
               .toList()
@@ -457,7 +457,6 @@ class TwitterClient {
           if (bestVariant.isNotEmpty) {
             mediaUrls.add(bestVariant.first['url']);
           } else if (variants.first['url'] != null) {
-            // Fallback to first variant if no MP4 found
             mediaUrls.add(variants.first['url']);
           }
         } else if (m['type'] == 'photo') {
@@ -468,13 +467,26 @@ class TwitterClient {
       }
 
       if (mediaUrls.isNotEmpty) {
+        DateTime? createdAt;
+        if (legacy['created_at'] != null) {
+          try {
+            // X format: "Wed Apr 24 12:34:56 +0000 2024"
+            final format = DateFormat("EEE MMM dd HH:mm:ss Z yyyy", "en_US");
+            createdAt = format.parse(legacy['created_at']);
+          } catch (e) {
+            debugPrint('Error parsing date ${legacy['created_at']}: $e');
+          }
+        }
+
         tweets.add(Tweet(
           id: tweetResult['rest_id'] ?? tweetResult['tweet']?['rest_id'] ?? entryId,
           text: legacy['full_text'] ?? legacy['text'] ?? '',
           userHandle: '@$screenName',
+          userAvatarUrl: userAvatarUrl,
           mediaUrls: mediaUrls,
           thumbnailUrl: thumbnailUrl,
           isVideo: isVideo,
+          createdAt: createdAt,
         ));
       }
     } catch (e) {

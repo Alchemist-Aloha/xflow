@@ -27,11 +27,16 @@ class PlayerPoolNotifier extends Notifier<Map<String, PlayerInstance>> {
     return {};
   }
 
-  void warmup(String id, String url) {
+  void warmup(String id, String url, {bool isLandscape = false}) {
     if (state.containsKey(id)) return;
 
     final player = Player();
-    final controller = VideoController(player);
+    final controller = VideoController(
+      player,
+      configuration: VideoControllerConfiguration(
+        enableHardwareAcceleration: true,
+      ),
+    );
     player.open(Media(url), play: false); // Pre-load but don't play
     
     state = {...state, id: PlayerInstance(player, controller)};
