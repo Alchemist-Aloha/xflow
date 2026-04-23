@@ -1,11 +1,14 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:xflow/features/settings/settings_screen.dart';
 import 'package:xflow/features/settings/settings_provider.dart';
 
 void main() {
+  sqfliteFfiInit();
+  databaseFactory = databaseFactoryFfi;
+
   group('SettingsScreen Widget Tests', () {
     testWidgets('renders all settings options', (WidgetTester tester) async {
       await tester.pumpWidget(

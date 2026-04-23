@@ -7,6 +7,7 @@ import '../../core/utils/media_cache_manager.dart';
 import '../feed/feed_provider.dart';
 import '../subscriptions/subscription_import_screen.dart';
 import 'log_viewer_screen.dart';
+import 'query_settings_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -149,6 +150,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (c) => const LogViewerScreen()),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.architecture),
+            title: const Text('Query Architecture'),
+            subtitle: const Text('Fine-tune sync, fetch, and cooldowns'),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (c) => const QuerySettingsScreen()),
               );
             },
           ),

@@ -175,6 +175,33 @@ class Repository {
     });
   }
 
+  static Future<List<Tweet>> getUserCachedMedia(String userHandle, int limit) async {
+    final db = await database;
+    // Normalize handle if it has @
+    final handle = userHandle.startsWith('@') ? userHandle : '@$userHandle';
+    
+    final List<Map<String, dynamic>> maps = await db.query(
+      tableCachedMedia,
+      where: 'user_handle = ?',
+      whereArgs: [handle],
+      orderBy: 'created_at DESC',
+      limit: limit,
+    );
+
+    return List.generate(maps.length, (i) {
+      return Tweet(
+        id: maps[i]['id'] as String,
+        text: maps[i]['text'] as String,
+        userHandle: maps[i]['user_handle'] as String,
+        userAvatarUrl: maps[i]['user_avatar_url'] as String?,
+        mediaUrls: List<String>.from(jsonDecode(maps[i]['media_urls'] as String)),
+        thumbnailUrl: maps[i]['thumbnail_url'] as String?,
+        isVideo: (maps[i]['is_video'] as int) == 1,
+        createdAt: maps[i]['created_at'] != null ? DateTime.fromMillisecondsSinceEpoch(maps[i]['created_at'] as int) : null,
+      );
+    });
+  }
+
   static Future<void> markMediaAsPlayed(String id) async {
     final db = await database;
     await db.rawUpdate('''
@@ -190,14 +217,14 @@ class Repository {
     return countSq.first['count'] as int;
   }
 
-  static Future<void> pruneCachedMedia() async {
+  static Future<void> pruneCachedMedia({int threshold = 50000}) async {
     final db = await database;
     final countSq = await db.rawQuery('SELECT COUNT(*) as count FROM $tableCachedMedia');
     final count = countSq.first['count'] as int;
 
-    if (count > 50000) {
+    if (count > threshold) {
       // Delete the oldest watched items
-      final deleteCount = count - 50000;
+      final deleteCount = count - threshold;
       await db.execute('''
         DELETE FROM $tableCachedMedia 
         WHERE id IN (

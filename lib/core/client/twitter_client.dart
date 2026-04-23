@@ -58,10 +58,10 @@ class TwitterClient {
     }
   }
 
-  static void _handleRateLimit() {
-    // Standard X search rate limit is usually 15 minutes
-    _rateLimitResetTime = DateTime.now().add(const Duration(minutes: 15));
-    AppLogger.log('429 Rate Limit Exceeded. Pausing requests for 15 minutes.');
+  static void _handleRateLimit(int minutes) {
+    // minutes comes from settings
+    _rateLimitResetTime = DateTime.now().add(Duration(minutes: minutes));
+    AppLogger.log('429 Rate Limit Exceeded. Pausing requests for $minutes minutes.');
   }
 
   static const Map<String, dynamic> defaultFeatures = {
@@ -193,7 +193,7 @@ class TwitterClient {
     );
   }
 
-  Future<List<Subscription>> fetchFollowing(String userId, {int maxCount = 2000}) async {
+  Future<List<Subscription>> fetchFollowing(String userId, {int maxCount = 2000, int cooldownMinutes = 15}) async {
     final allSubs = <Subscription>[];
     String? currentCursor;
 
@@ -221,7 +221,7 @@ class TwitterClient {
         _releaseTurn();
 
         if (response.statusCode == 429) {
-          _handleRateLimit();
+          _handleRateLimit(cooldownMinutes);
           break;
         }
         if (response.statusCode != 200) {
@@ -277,7 +277,14 @@ class TwitterClient {
     }
   }
 
-  Future<TweetResponse> fetchTrendingMedia({String? cursor, String? query, FeedSort? sort, Set<MediaFilter>? filters}) async {
+  Future<TweetResponse> fetchTrendingMedia({
+    String? cursor, 
+    String? query, 
+    FeedSort? sort, 
+    Set<MediaFilter>? filters,
+    int count = 20,
+    int cooldownMinutes = 15,
+  }) async {
     String finalQuery = query ?? "";
     
     if (filters != null && filters.isNotEmpty) {
@@ -308,7 +315,7 @@ class TwitterClient {
 
     final variables = {
       "rawQuery": finalQuery,
-      "count": "20",
+      "count": count.toString(),
       "product": sort == FeedSort.trending ? "Top" : "Latest",
       "querySource": "typed_query",
       "withDownvotePerspective": false,
@@ -331,7 +338,7 @@ class TwitterClient {
       _releaseTurn();
 
       if (response.statusCode == 429) {
-        _handleRateLimit();
+        _handleRateLimit(cooldownMinutes);
         return TweetResponse(tweets: []);
       }
       if (response.statusCode != 200) {
@@ -358,13 +365,20 @@ class TwitterClient {
     }
   }
 
-  Future<TweetResponse> fetchSubscribedMedia({String? cursor, FeedSort? sort, Set<MediaFilter>? filters}) async {
+  Future<TweetResponse> fetchSubscribedMedia({
+    String? cursor, 
+    FeedSort? sort, 
+    Set<MediaFilter>? filters,
+    int subBatchSize = 10,
+    int loadBatchSize = 20,
+    int cooldownMinutes = 15,
+  }) async {
     var subs = await Repository.getSubscriptions();
     
     if (subs.isEmpty) {
       final currentAccount = TwitterAccount.currentAccount;
       if (currentAccount != null && currentAccount.restId.isNotEmpty) {
-        subs = await fetchFollowing(currentAccount.restId);
+        subs = await fetchFollowing(currentAccount.restId, cooldownMinutes: cooldownMinutes);
         if (subs.isNotEmpty) {
           await Repository.insertSubscriptions(subs);
         }
@@ -372,10 +386,16 @@ class TwitterClient {
     }
 
     if (subs.isEmpty) {
-      return fetchTrendingMedia(cursor: cursor, sort: sort, filters: filters);
+      return fetchTrendingMedia(
+        cursor: cursor, 
+        sort: sort, 
+        filters: filters, 
+        count: loadBatchSize,
+        cooldownMinutes: cooldownMinutes,
+      );
     }
 
-    final pickedSubs = (subs.toList()..shuffle()).take(10);
+    final pickedSubs = (subs.toList()..shuffle()).take(subBatchSize);
     final users = pickedSubs.map((s) => 'from:${s.screenName}').join(' OR ');
     String query = "include:nativeretweets ($users) -filter:replies";
     
@@ -383,10 +403,22 @@ class TwitterClient {
       query += " min_faves:50";
     }
 
-    final response = await fetchTrendingMedia(cursor: cursor, query: query, sort: sort, filters: filters);
+    final response = await fetchTrendingMedia(
+      cursor: cursor, 
+      query: query, 
+      sort: sort, 
+      filters: filters, 
+      count: loadBatchSize,
+      cooldownMinutes: cooldownMinutes,
+    );
     
     if (cursor == null && response.tweets.length < 5) {
-      final trendingResponse = await fetchTrendingMedia(sort: sort, filters: filters);
+      final trendingResponse = await fetchTrendingMedia(
+        sort: sort, 
+        filters: filters, 
+        count: loadBatchSize,
+        cooldownMinutes: cooldownMinutes,
+      );
       final combined = [...response.tweets];
       final seenIds = response.tweets.map((t) => t.id).toSet();
       for (final t in trendingResponse.tweets) {
@@ -402,7 +434,7 @@ class TwitterClient {
     return response;
   }
 
-  Future<TweetResponse> fetchUserTimeline(String userId, {String? cursor}) async {
+  Future<TweetResponse> fetchUserTimeline(String userId, {String? cursor, int cooldownMinutes = 15}) async {
     final variables = {
       "userId": userId,
       "count": 20,
@@ -426,7 +458,7 @@ class TwitterClient {
       _releaseTurn();
 
       if (response.statusCode == 429) {
-        _handleRateLimit();
+        _handleRateLimit(cooldownMinutes);
         return TweetResponse(tweets: []);
       }
       if (response.statusCode != 200) return TweetResponse(tweets: []);

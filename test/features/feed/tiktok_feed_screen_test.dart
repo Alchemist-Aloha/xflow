@@ -8,6 +8,11 @@ import 'package:xflow/features/feed/feed_provider.dart';
 import 'package:xflow/core/models/tweet.dart';
 import 'package:xflow/features/player/player_pool_provider.dart';
 
+import 'package:xflow/core/client/twitter_client.dart';
+import 'package:mockito/annotations.dart';
+import 'tiktok_feed_screen_test.mocks.dart';
+
+@GenerateMocks([TwitterClient])
 void main() {
   sqfliteFfiInit();
   databaseFactory = databaseFactoryFfi;

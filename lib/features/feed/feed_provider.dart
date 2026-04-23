@@ -32,7 +32,7 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
     final settings = ref.watch(settingsProvider);
     
     // 1. Try to get unplayed media from local DB
-    List<Tweet> initialTweets = await Repository.getUnplayedCachedMedia(20);
+    List<Tweet> initialTweets = await Repository.getUnplayedCachedMedia(settings.loadBatchSize);
 
     String? cursorBottom;
 
@@ -41,6 +41,9 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
       final response = await client.fetchSubscribedMedia(
         sort: settings.sort,
         filters: settings.filters,
+        subBatchSize: settings.syncBatchSize,
+        loadBatchSize: settings.loadBatchSize,
+        cooldownMinutes: settings.cooldownDuration,
       );
       initialTweets = response.tweets;
       cursorBottom = response.cursorBottom;
@@ -75,9 +78,9 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
 
     try {
       // 1. Try to fetch from DB that aren't already in the current state
-      final allUnplayed = await Repository.getUnplayedCachedMedia(100);
+      final allUnplayed = await Repository.getUnplayedCachedMedia(settings.loadBatchSize * 2);
       final seenIds = currentTweets.map((t) => t.id).toSet();
-      var newTweets = allUnplayed.where((t) => !seenIds.contains(t.id)).take(20).toList();
+      var newTweets = allUnplayed.where((t) => !seenIds.contains(t.id)).take(settings.loadBatchSize).toList();
 
       String? nextCursor = currentCursor;
 
@@ -88,6 +91,9 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
           cursor: currentCursor,
           sort: settings.sort,
           filters: settings.filters,
+          subBatchSize: settings.syncBatchSize,
+          loadBatchSize: settings.loadBatchSize,
+          cooldownMinutes: settings.cooldownDuration,
         );
         
         newTweets = response.tweets.where((t) => !seenIds.contains(t.id)).toList();

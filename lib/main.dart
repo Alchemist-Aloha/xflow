@@ -8,21 +8,30 @@ import 'features/profile/user_media_feed_screen.dart';
 import 'core/navigation/navigation_provider.dart';
 import 'core/client/background_sync.dart';
 import 'core/client/twitter_client.dart';
+import 'features/settings/settings_provider.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
   
-  BackgroundSync.start(TwitterClient());
-  
   runApp(const ProviderScope(child: XFlowApp()));
 }
 
-class XFlowApp extends StatelessWidget {
+class XFlowApp extends ConsumerWidget {
   const XFlowApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Manage BackgroundSync lifecycle
+    ref.listen(settingsProvider.select((s) => s.syncInterval), (prev, next) {
+      BackgroundSync.restart(TwitterClient(), ref.read(settingsProvider));
+    });
+
+    // Start on boot if not already started
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      BackgroundSync.start(TwitterClient(), ref.read(settingsProvider));
+    });
+
     return MaterialApp(
       title: 'XFlow',
       debugShowCheckedModeBanner: false,

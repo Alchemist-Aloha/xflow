@@ -10,6 +10,13 @@ class SettingsState {
   final bool autoplay;
   final bool isListView;
   final int mediaCacheSizeMB;
+  
+  // New architectural parameters
+  final int syncInterval;
+  final int syncBatchSize;
+  final int loadBatchSize;
+  final int cooldownDuration;
+  final int pruneThreshold;
 
   SettingsState({
     this.sort = FeedSort.latest,
@@ -17,15 +24,36 @@ class SettingsState {
     this.autoplay = true,
     this.isListView = false,
     this.mediaCacheSizeMB = 500,
+    this.syncInterval = 15,
+    this.syncBatchSize = 5,
+    this.loadBatchSize = 20,
+    this.cooldownDuration = 15,
+    this.pruneThreshold = 50000,
   });
 
-  SettingsState copyWith({FeedSort? sort, Set<MediaFilter>? filters, bool? autoplay, bool? isListView, int? mediaCacheSizeMB}) {
+  SettingsState copyWith({
+    FeedSort? sort,
+    Set<MediaFilter>? filters,
+    bool? autoplay,
+    bool? isListView,
+    int? mediaCacheSizeMB,
+    int? syncInterval,
+    int? syncBatchSize,
+    int? loadBatchSize,
+    int? cooldownDuration,
+    int? pruneThreshold,
+  }) {
     return SettingsState(
       sort: sort ?? this.sort,
       filters: filters ?? this.filters,
       autoplay: autoplay ?? this.autoplay,
       isListView: isListView ?? this.isListView,
       mediaCacheSizeMB: mediaCacheSizeMB ?? this.mediaCacheSizeMB,
+      syncInterval: syncInterval ?? this.syncInterval,
+      syncBatchSize: syncBatchSize ?? this.syncBatchSize,
+      loadBatchSize: loadBatchSize ?? this.loadBatchSize,
+      cooldownDuration: cooldownDuration ?? this.cooldownDuration,
+      pruneThreshold: pruneThreshold ?? this.pruneThreshold,
     );
   }
 }
@@ -57,6 +85,12 @@ class SettingsNotifier extends Notifier<SettingsState> {
 
     final isListView = _prefs.getBool('isListView') ?? false;
     final mediaCacheSizeMB = _prefs.getInt('mediaCacheSizeMB') ?? 500;
+    
+    final syncInterval = _prefs.getInt('syncInterval') ?? 15;
+    final syncBatchSize = _prefs.getInt('syncBatchSize') ?? 5;
+    final loadBatchSize = _prefs.getInt('loadBatchSize') ?? 20;
+    final cooldownDuration = _prefs.getInt('cooldownDuration') ?? 15;
+    final pruneThreshold = _prefs.getInt('pruneThreshold') ?? 50000;
 
     state = SettingsState(
       sort: sortIdx < FeedSort.values.length ? FeedSort.values[sortIdx] : FeedSort.latest,
@@ -64,6 +98,11 @@ class SettingsNotifier extends Notifier<SettingsState> {
       autoplay: _prefs.getBool('autoplay') ?? true,
       isListView: isListView,
       mediaCacheSizeMB: mediaCacheSizeMB,
+      syncInterval: syncInterval,
+      syncBatchSize: syncBatchSize,
+      loadBatchSize: loadBatchSize,
+      cooldownDuration: cooldownDuration,
+      pruneThreshold: pruneThreshold,
     );
   }
 
@@ -75,6 +114,31 @@ class SettingsNotifier extends Notifier<SettingsState> {
   void updateMediaCacheSize(int megabytes) {
     state = state.copyWith(mediaCacheSizeMB: megabytes);
     _prefs.setInt('mediaCacheSizeMB', megabytes);
+  }
+
+  void updateSyncInterval(int minutes) {
+    state = state.copyWith(syncInterval: minutes);
+    _prefs.setInt('syncInterval', minutes);
+  }
+
+  void updateSyncBatchSize(int size) {
+    state = state.copyWith(syncBatchSize: size);
+    _prefs.setInt('syncBatchSize', size);
+  }
+
+  void updateLoadBatchSize(int size) {
+    state = state.copyWith(loadBatchSize: size);
+    _prefs.setInt('loadBatchSize', size);
+  }
+
+  void updateCooldownDuration(int minutes) {
+    state = state.copyWith(cooldownDuration: minutes);
+    _prefs.setInt('cooldownDuration', minutes);
+  }
+
+  void updatePruneThreshold(int count) {
+    state = state.copyWith(pruneThreshold: count);
+    _prefs.setInt('pruneThreshold', count);
   }
 
   void toggleFilter(MediaFilter filter) {

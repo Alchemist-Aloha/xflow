@@ -89,12 +89,16 @@ class MockTwitterClient extends _i1.Mock implements _i2.TwitterClient {
   _i3.Future<List<_i4.Subscription>> fetchFollowing(
     String? userId, {
     int? maxCount = 2000,
+    int? cooldownMinutes = 15,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
           #fetchFollowing,
           [userId],
-          {#maxCount: maxCount},
+          {
+            #maxCount: maxCount,
+            #cooldownMinutes: cooldownMinutes,
+          },
         ),
         returnValue:
             _i3.Future<List<_i4.Subscription>>.value(<_i4.Subscription>[]),
@@ -106,6 +110,8 @@ class MockTwitterClient extends _i1.Mock implements _i2.TwitterClient {
     String? query,
     _i5.FeedSort? sort,
     Set<_i5.MediaFilter>? filters,
+    int? count = 20,
+    int? cooldownMinutes = 15,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -116,6 +122,8 @@ class MockTwitterClient extends _i1.Mock implements _i2.TwitterClient {
             #query: query,
             #sort: sort,
             #filters: filters,
+            #count: count,
+            #cooldownMinutes: cooldownMinutes,
           },
         ),
         returnValue: _i3.Future<_i2.TweetResponse>.value(_FakeTweetResponse_0(
@@ -128,6 +136,8 @@ class MockTwitterClient extends _i1.Mock implements _i2.TwitterClient {
               #query: query,
               #sort: sort,
               #filters: filters,
+              #count: count,
+              #cooldownMinutes: cooldownMinutes,
             },
           ),
         )),
@@ -138,6 +148,9 @@ class MockTwitterClient extends _i1.Mock implements _i2.TwitterClient {
     String? cursor,
     _i5.FeedSort? sort,
     Set<_i5.MediaFilter>? filters,
+    int? subBatchSize = 10,
+    int? loadBatchSize = 20,
+    int? cooldownMinutes = 15,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -147,6 +160,9 @@ class MockTwitterClient extends _i1.Mock implements _i2.TwitterClient {
             #cursor: cursor,
             #sort: sort,
             #filters: filters,
+            #subBatchSize: subBatchSize,
+            #loadBatchSize: loadBatchSize,
+            #cooldownMinutes: cooldownMinutes,
           },
         ),
         returnValue: _i3.Future<_i2.TweetResponse>.value(_FakeTweetResponse_0(
@@ -158,6 +174,9 @@ class MockTwitterClient extends _i1.Mock implements _i2.TwitterClient {
               #cursor: cursor,
               #sort: sort,
               #filters: filters,
+              #subBatchSize: subBatchSize,
+              #loadBatchSize: loadBatchSize,
+              #cooldownMinutes: cooldownMinutes,
             },
           ),
         )),
@@ -167,19 +186,26 @@ class MockTwitterClient extends _i1.Mock implements _i2.TwitterClient {
   _i3.Future<_i2.TweetResponse> fetchUserTimeline(
     String? userId, {
     String? cursor,
+    int? cooldownMinutes = 15,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
           #fetchUserTimeline,
           [userId],
-          {#cursor: cursor},
+          {
+            #cursor: cursor,
+            #cooldownMinutes: cooldownMinutes,
+          },
         ),
         returnValue: _i3.Future<_i2.TweetResponse>.value(_FakeTweetResponse_0(
           this,
           Invocation.method(
             #fetchUserTimeline,
             [userId],
-            {#cursor: cursor},
+            {
+              #cursor: cursor,
+              #cooldownMinutes: cooldownMinutes,
+            },
           ),
         )),
       ) as _i3.Future<_i2.TweetResponse>);
