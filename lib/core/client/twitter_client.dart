@@ -1,11 +1,11 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:collection/collection.dart';
 import 'package:intl/intl.dart';
 import 'twitter_account.dart';
 import '../models/tweet.dart';
 import '../database/entities.dart';
 import '../database/repository.dart';
+import '../utils/app_logger.dart';
 import '../../features/settings/settings_provider.dart';
 
 class TweetResponse {
@@ -137,7 +137,7 @@ class TwitterClient {
         followingCount: legacy?['friends_count'],
       );
     } catch (e) {
-      debugPrint('Error fetching profile: $e');
+      AppLogger.log('Error fetching profile: $e');
       return null;
     }
   }
@@ -172,10 +172,10 @@ class TwitterClient {
           'features': jsonEncode(followingFeatures),
         });
 
-        debugPrint('Fetching following with cursor: $currentCursor (Found so far: ${allSubs.length})');
+        AppLogger.log('Fetching following with cursor: $currentCursor (Found so far: ${allSubs.length})');
         final response = await TwitterAccount.fetch(uri, cacheDuration: const Duration(hours: 1));
         if (response.statusCode != 200) {
-          debugPrint('fetchFollowing Error: ${response.statusCode} ${response.body}');
+          AppLogger.log('fetchFollowing Error: ${response.statusCode} ${response.body}');
           break;
         }
 
@@ -222,7 +222,7 @@ class TwitterClient {
       }
       return allSubs;
     } catch (e) {
-      debugPrint('Error fetching following: $e');
+      AppLogger.log('Error fetching following: $e');
       return allSubs;
     }
   }
@@ -274,10 +274,10 @@ class TwitterClient {
     });
 
     try {
-      debugPrint('Fetching media with query: $finalQuery and cursor: $cursor, sort: $sort');
+      AppLogger.log('Fetching media with query: $finalQuery and cursor: $cursor, sort: $sort');
       final response = await TwitterAccount.fetch(uri).timeout(const Duration(seconds: 15));
       if (response.statusCode != 200) {
-        debugPrint('Error status: ${response.statusCode} body: ${response.body}');
+        AppLogger.log('Error status: ${response.statusCode} body: ${response.body}');
         return TweetResponse(tweets: []);
       }
 
@@ -295,7 +295,7 @@ class TwitterClient {
 
       return tweetResponse;
     } catch (e) {
-      debugPrint('Exception in fetchTrendingMedia: $e');
+      AppLogger.log('Exception in fetchTrendingMedia: $e');
       return TweetResponse(tweets: []);
     }
   }
@@ -372,7 +372,7 @@ class TwitterClient {
 
       return _parseTweets(timeline);
     } catch (e) {
-      debugPrint('Error fetching user timeline: $e');
+      AppLogger.log('Error fetching user timeline: $e');
       return TweetResponse(tweets: []);
     }
   }
@@ -384,7 +384,7 @@ class TwitterClient {
     final addEntries = instructions.firstWhereOrNull((e) => e['type'] == 'TimelineAddEntries' || e['__typename'] == 'TimelineAddEntries');
     if (addEntries == null) {
       // Try to find instructions in a different place
-      debugPrint('No TimelineAddEntries found in instructions: ${instructions.map((e) => e['type'] ?? e['__typename'])}');
+      AppLogger.log('No TimelineAddEntries found in instructions: ${instructions.map((e) => e['type'] ?? e['__typename'])}');
       return TweetResponse(tweets: []);
     }
 
@@ -420,7 +420,7 @@ class TwitterClient {
           parseTweetResult(content, entryId, tweets);
         }
       } catch (e) {
-        debugPrint('Error parsing entry $entryId: $e');
+        AppLogger.log('Error parsing entry $entryId: $e');
       }
     }
     
@@ -521,8 +521,10 @@ class TwitterClient {
           final format = DateFormat("EEE MMM dd HH:mm:ss Z yyyy", "en_US");
           createdAt = format.parse(legacy['created_at']);
         } catch (e) {
-          debugPrint('Error parsing date ${legacy['created_at']}: $e');
+          AppLogger.log('XFLOW: Error parsing date ${legacy['created_at']}: $e');
         }
+      } else {
+        AppLogger.log('XFLOW: No created_at in legacy: ${legacy.keys.toList()}');
       }
 
       tweets.add(Tweet(
@@ -536,7 +538,7 @@ class TwitterClient {
         createdAt: createdAt,
       ));
     } catch (e) {
-      debugPrint('Error in parseTweetResult for $entryId: $e');
+      AppLogger.log('Error in parseTweetResult for $entryId: $e');
     }
   }
 }

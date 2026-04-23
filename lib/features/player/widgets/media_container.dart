@@ -25,6 +25,7 @@ class TiktokMediaContainer extends ConsumerStatefulWidget {
 
 class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
   final GlobalKey<VideoState> _videoKey = GlobalKey<VideoState>();
+  int _imageIndex = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -41,6 +42,28 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
       return Stack(
         children: [
           _buildImageGallery(),
+          if (widget.tweet.mediaUrls.length > 1)
+            Positioned(
+              bottom: 120, // Above the text overlay
+              left: 0,
+              right: 0,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(widget.tweet.mediaUrls.length, (index) {
+                  return Container(
+                    width: 6,
+                    height: 6,
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _imageIndex == index 
+                        ? Colors.white 
+                        : Colors.white.withValues(alpha: 0.4),
+                    ),
+                  );
+                }),
+              ),
+            ),
           if (widget.overlay != null) widget.overlay!,
         ],
       );
@@ -187,6 +210,11 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
     return PageView.builder(
       scrollDirection: Axis.horizontal,
       itemCount: widget.tweet.mediaUrls.length,
+      onPageChanged: (index) {
+        setState(() {
+          _imageIndex = index;
+        });
+      },
       itemBuilder: (context, index) {
         return SizedBox.expand(
           child: Center(

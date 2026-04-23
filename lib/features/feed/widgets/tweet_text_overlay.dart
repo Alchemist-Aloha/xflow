@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import '../../../core/models/tweet.dart';
 import '../../../core/navigation/navigation_provider.dart';
+import '../../../core/utils/app_logger.dart';
 
 class TweetTextOverlay extends ConsumerStatefulWidget {
   final Tweet tweet;
@@ -54,7 +55,15 @@ class _TweetTextOverlayState extends ConsumerState<TweetTextOverlay> {
   Widget _buildUserHeader(BuildContext context) {
     String dateStr = "";
     if (widget.tweet.createdAt != null) {
-      dateStr = " • ${DateFormat('MMM d, HH:mm').format(widget.tweet.createdAt!)}";
+      try {
+        final date = widget.tweet.createdAt!.toLocal();
+        dateStr = " • ${DateFormat.yMMMd().add_Hm().format(date)}";
+      } catch (e) {
+        AppLogger.log('XFLOW: Error formatting date: $e');
+        dateStr = " • ERR";
+      }
+    } else {
+      AppLogger.log('XFLOW: createdAt is NULL for tweet ${widget.tweet.id}');
     }
 
     return GestureDetector(

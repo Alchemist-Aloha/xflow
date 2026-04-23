@@ -5,6 +5,7 @@ import '../../core/client/twitter_account.dart';
 import '../../core/database/repository.dart';
 import '../feed/feed_provider.dart';
 import '../subscriptions/subscription_import_screen.dart';
+import 'log_viewer_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -110,6 +111,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               if (context.mounted) {
                 Navigator.pop(context);
               }
+            },
+          ),
+          const Divider(),
+          const ListTile(
+            title: Text('Debug', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
+            subtitle: Text('Developer tools and diagnostics'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.terminal),
+            title: const Text('App Logs'),
+            subtitle: const Text('View internal diagnostic logs'),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (c) => const LogViewerScreen()),
+              );
             },
           ),
         ],
