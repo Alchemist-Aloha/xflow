@@ -4,6 +4,7 @@ import '../player/player_pool_provider.dart';
 import 'feed_provider.dart';
 import '../player/widgets/media_container.dart';
 import '../../core/models/tweet.dart';
+import '../../core/database/repository.dart';
 import '../settings/settings_screen.dart';
 import '../auth/login_screen.dart';
 import '../../core/client/twitter_account.dart';
@@ -54,7 +55,13 @@ class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
       final feedAsync = ref.read(feedNotifierProvider);
       if (feedAsync.hasValue) {
         final tweets = feedAsync.value!.tweets;
-        if (page >= tweets.length - 5) { // Increased threshold from 3 to 5
+        
+        // Mark as played
+        if (page < tweets.length) {
+          Repository.markMediaAsPlayed(tweets[page].id);
+        }
+
+        if (page >= tweets.length - 5) {
           ref.read(feedNotifierProvider.notifier).fetchMore();
         }
       }

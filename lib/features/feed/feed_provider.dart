@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/client/twitter_client.dart';
 import '../../core/models/tweet.dart';
+import '../../core/database/repository.dart';
 import '../settings/settings_provider.dart';
 import '../player/player_pool_provider.dart';
 
@@ -30,28 +31,39 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
     final client = ref.watch(twitterClientProvider);
     final settings = ref.watch(settingsProvider);
     
-    final response = await client.fetchSubscribedMedia(
-      sort: settings.sort,
-      filters: settings.filters,
-    );
+    // 1. Try to get unplayed media from local DB
+    List<Tweet> initialTweets = await Repository.getUnplayedCachedMedia(20);
+
+    String? cursorBottom;
+
+    // 2. If DB is empty, fetch from API and save
+    if (initialTweets.isEmpty) {
+      final response = await client.fetchSubscribedMedia(
+        sort: settings.sort,
+        filters: settings.filters,
+      );
+      initialTweets = response.tweets;
+      cursorBottom = response.cursorBottom;
+      await Repository.insertCachedMedia(initialTweets);
+    }
     
     final pool = ref.read(playerPoolProvider.notifier);
-    for (int i = 0; i < response.tweets.length && i < 3; i++) {
-      final tweet = response.tweets[i];
+    for (int i = 0; i < initialTweets.length && i < 3; i++) {
+      final tweet = initialTweets[i];
       if (tweet.isVideo && tweet.mediaUrls.isNotEmpty) {
         pool.warmup(tweet.id, tweet.mediaUrls.first);
       }
     }
     
     return FeedState(
-      tweets: response.tweets,
-      cursorBottom: response.cursorBottom,
+      tweets: initialTweets,
+      cursorBottom: cursorBottom,
     );
   }
 
   Future<void> fetchMore() async {
     final currentState = state.value;
-    if (currentState == null || currentState.isLoadingMore || currentState.cursorBottom == null) {
+    if (currentState == null || currentState.isLoadingMore) {
       return;
     }
 
@@ -59,28 +71,32 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
     state = AsyncData(currentState.copyWith(isLoadingMore: true));
 
     try {
-      final client = ref.read(twitterClientProvider);
-      final response = await client.fetchSubscribedMedia(
-        cursor: currentState.cursorBottom,
-        sort: settings.sort,
-        filters: settings.filters,
-      );
-      
-      var newTweets = response.tweets;
-      
-      // Deduplicate
+      // 1. Try to fetch from DB that aren't already in the current state
+      final allUnplayed = await Repository.getUnplayedCachedMedia(100);
       final seenIds = currentState.tweets.map((t) => t.id).toSet();
-      newTweets = newTweets.where((t) => !seenIds.contains(t.id)).toList();
+      var newTweets = allUnplayed.where((t) => !seenIds.contains(t.id)).take(20).toList();
 
-      if (newTweets.isNotEmpty || response.cursorBottom != currentState.cursorBottom) {
-        state = AsyncData(currentState.copyWith(
-          tweets: [...currentState.tweets, ...newTweets],
-          cursorBottom: response.cursorBottom,
-          isLoadingMore: false,
-        ));
-      } else {
-        state = AsyncData(currentState.copyWith(isLoadingMore: false));
+      String? nextCursor = currentState.cursorBottom;
+
+      // 2. If no new local tweets, trigger an API fetch
+      if (newTweets.isEmpty) {
+        final client = ref.read(twitterClientProvider);
+        final response = await client.fetchSubscribedMedia(
+          cursor: currentState.cursorBottom,
+          sort: settings.sort,
+          filters: settings.filters,
+        );
+        
+        newTweets = response.tweets.where((t) => !seenIds.contains(t.id)).toList();
+        nextCursor = response.cursorBottom;
+        await Repository.insertCachedMedia(newTweets);
       }
+
+      state = AsyncData(currentState.copyWith(
+        tweets: [...currentState.tweets, ...newTweets],
+        cursorBottom: nextCursor,
+        isLoadingMore: false,
+      ));
     } catch (e) {
       debugPrint('Error fetching more: $e');
       state = AsyncData(currentState.copyWith(isLoadingMore: false));
