@@ -219,10 +219,12 @@ class TiktokFeedItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TiktokMediaContainer(
-      tweet: tweet,
-      isVisible: isVisible,
-      overlay: TweetTextOverlay(tweet: tweet),
+    return RepaintBoundary(
+      child: TiktokMediaContainer(
+        tweet: tweet,
+        isVisible: isVisible,
+        overlay: TweetTextOverlay(tweet: tweet),
+      ),
     );
   }
 }
