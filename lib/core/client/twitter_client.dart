@@ -479,29 +479,27 @@ class TwitterClient {
         }
       }
 
-      if (mediaUrls.isNotEmpty) {
-        DateTime? createdAt;
-        if (legacy['created_at'] != null) {
-          try {
-            // X format: "Wed Apr 24 12:34:56 +0000 2024"
-            final format = DateFormat("EEE MMM dd HH:mm:ss Z yyyy", "en_US");
-            createdAt = format.parse(legacy['created_at']);
-          } catch (e) {
-            debugPrint('Error parsing date ${legacy['created_at']}: $e');
-          }
+      DateTime? createdAt;
+      if (legacy['created_at'] != null) {
+        try {
+          // X format: "Wed Apr 24 12:34:56 +0000 2024"
+          final format = DateFormat("EEE MMM dd HH:mm:ss Z yyyy", "en_US");
+          createdAt = format.parse(legacy['created_at']);
+        } catch (e) {
+          debugPrint('Error parsing date ${legacy['created_at']}: $e');
         }
-
-        tweets.add(Tweet(
-          id: tweetResult['rest_id'] ?? tweetResult['tweet']?['rest_id'] ?? entryId,
-          text: legacy['full_text'] ?? legacy['text'] ?? '',
-          userHandle: '@$screenName',
-          userAvatarUrl: userAvatarUrl,
-          mediaUrls: mediaUrls,
-          thumbnailUrl: thumbnailUrl,
-          isVideo: isVideo,
-          createdAt: createdAt,
-        ));
       }
+
+      tweets.add(Tweet(
+        id: tweetResult['rest_id'] ?? tweetResult['tweet']?['rest_id'] ?? entryId,
+        text: legacy['full_text'] ?? legacy['text'] ?? '',
+        userHandle: '@$screenName',
+        userAvatarUrl: userAvatarUrl,
+        mediaUrls: mediaUrls,
+        thumbnailUrl: thumbnailUrl,
+        isVideo: isVideo,
+        createdAt: createdAt,
+      ));
     } catch (e) {
       debugPrint('Error in parseTweetResult for $entryId: $e');
     }

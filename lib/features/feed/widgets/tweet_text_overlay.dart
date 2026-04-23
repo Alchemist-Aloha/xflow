@@ -76,17 +76,33 @@ class _TweetTextOverlayState extends ConsumerState<TweetTextOverlay> {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              "${widget.tweet.userHandle}$dateStr",
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-                shadows: [
-                  Shadow(offset: Offset(0, 1), blurRadius: 2, color: Colors.black54),
-                ],
-              ),
-              overflow: TextOverflow.ellipsis,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.tweet.userHandle,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    shadows: [
+                      Shadow(offset: Offset(0, 1), blurRadius: 2, color: Colors.black54),
+                    ],
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (dateStr.isNotEmpty)
+                  Text(
+                    dateStr.replaceFirst(" • ", ""),
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                      shadows: [
+                        Shadow(offset: Offset(0, 1), blurRadius: 2, color: Colors.black54),
+                      ],
+                    ),
+                  ),
+              ],
             ),
           ),
         ],
