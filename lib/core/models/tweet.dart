@@ -18,4 +18,9 @@ class Tweet {
     this.isVideo = false,
     this.createdAt,
   });
+
+  String? get userAvatarUrlHighRes {
+    if (userAvatarUrl == null) return null;
+    return userAvatarUrl!.replaceAll('_normal', '');
+  }
 }

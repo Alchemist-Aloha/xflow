@@ -76,10 +76,10 @@ class _TweetTextOverlayState extends ConsumerState<TweetTextOverlay> {
           CircleAvatar(
             radius: 20,
             backgroundColor: Colors.white24,
-            backgroundImage: widget.tweet.userAvatarUrl != null
-                ? CachedNetworkImageProvider(widget.tweet.userAvatarUrl!)
+            backgroundImage: widget.tweet.userAvatarUrlHighRes != null
+                ? CachedNetworkImageProvider(widget.tweet.userAvatarUrlHighRes!)
                 : null,
-            child: widget.tweet.userAvatarUrl == null
+            child: widget.tweet.userAvatarUrlHighRes == null
                 ? const Icon(Icons.person, color: Colors.white, size: 20)
                 : null,
           ),

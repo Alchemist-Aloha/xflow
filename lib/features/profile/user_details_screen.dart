@@ -48,10 +48,10 @@ class UserDetailsScreen extends ConsumerWidget {
                         children: [
                           CircleAvatar(
                             radius: 40,
-                            backgroundImage: profile.profileImageUrl != null
-                                ? CachedNetworkImageProvider(profile.profileImageUrl!)
+                            backgroundImage: profile.profileImageUrlHighRes != null
+                                ? CachedNetworkImageProvider(profile.profileImageUrlHighRes!)
                                 : null,
-                            child: profile.profileImageUrl == null
+                            child: profile.profileImageUrlHighRes == null
                                 ? const Icon(Icons.person, size: 40)
                                 : null,
                           ),

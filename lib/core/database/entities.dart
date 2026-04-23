@@ -47,6 +47,11 @@ class Subscription {
     this.followingCount,
   });
 
+  String? get profileImageUrlHighRes {
+    if (profileImageUrl == null) return null;
+    return profileImageUrl!.replaceAll('_normal', '');
+  }
+
   Map<String, dynamic> toMap() => {
     'id': id,
     'screen_name': screenName,
