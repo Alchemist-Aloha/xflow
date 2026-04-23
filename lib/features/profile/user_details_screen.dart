@@ -94,7 +94,7 @@ class UserDetailsScreen extends ConsumerWidget {
                   final tweets = state.tweets;
                   if (tweets.isEmpty) {
                     return const SliverToBoxAdapter(
-                      child: Center(child: Text('No media found')),
+                      child: Center(child: Text('No tweets found')),
                     );
                   }
                   return SliverPadding(
@@ -120,24 +120,40 @@ class UserDetailsScreen extends ConsumerWidget {
                             onTap: () {
                               ref.read(navigationProvider.notifier).openUserMedia(screenName, index);
                             },
-                            child: Stack(
-                              fit: StackFit.expand,
-                              children: [
-                                CachedNetworkImage(
-                                  imageUrl: tweet.thumbnailUrl ?? tweet.mediaUrls.first,
-                                  fit: BoxFit.cover,
-                                  memCacheWidth: 300,
-                                  memCacheHeight: 300,
-                                  placeholder: (context, url) => Container(color: Colors.black12),
-                                  errorWidget: (context, url, error) => const Icon(Icons.error),
-                                ),
-                                if (tweet.isVideo)
-                                  const Positioned(
-                                    top: 4,
-                                    right: 4,
-                                    child: Icon(Icons.play_circle_outline, color: Colors.white70, size: 20),
-                                  ),
-                              ],
+                            child: Container(
+                              color: Colors.black12,
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  if (tweet.mediaUrls.isNotEmpty)
+                                    CachedNetworkImage(
+                                      imageUrl: tweet.thumbnailUrl ?? tweet.mediaUrls.first,
+                                      fit: BoxFit.cover,
+                                      memCacheWidth: 300,
+                                      memCacheHeight: 300,
+                                      placeholder: (context, url) => Container(color: Colors.black12),
+                                      errorWidget: (context, url, error) => const Icon(Icons.error),
+                                    )
+                                  else
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        tweet.text,
+                                        maxLines: 4,
+                                        overflow: TextOverflow.ellipsis,
+                                        textAlign: TextAlign.center,
+                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 10),
+                                      ),
+                                    ),
+                                  if (tweet.isVideo)
+                                    const Positioned(
+                                      top: 4,
+                                      right: 4,
+                                      child: Icon(Icons.play_circle_outline, color: Colors.white70, size: 20),
+                                    ),
+                                ],
+                              ),
                             ),
                           );
                         },

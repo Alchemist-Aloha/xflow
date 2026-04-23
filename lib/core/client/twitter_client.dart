@@ -141,12 +141,12 @@ class TwitterClient {
     }
   }
 
-  Future<TweetResponse> fetchUserTweets(String screenName, {String? cursor, FeedSort? sort, MediaFilter? filter}) async {
+  Future<TweetResponse> fetchUserTweets(String screenName, {String? cursor, FeedSort? sort, Set<MediaFilter>? filters}) async {
     return fetchTrendingMedia(
-      query: "from:$screenName filter:media",
+      query: "from:$screenName",
       cursor: cursor,
       sort: sort,
-      filter: filter,
+      filters: filters,
     );
   }
 
@@ -226,17 +226,32 @@ class TwitterClient {
     }
   }
 
-  Future<TweetResponse> fetchTrendingMedia({String? cursor, String? query, FeedSort? sort, MediaFilter? filter}) async {
-    String finalQuery = query ?? "filter:media";
+  Future<TweetResponse> fetchTrendingMedia({String? cursor, String? query, FeedSort? sort, Set<MediaFilter>? filters}) async {
+    String finalQuery = query ?? "";
     
-    if (filter != null) {
-      if (filter == MediaFilter.videoOnly) {
-        finalQuery += " filter:videos";
-      } else if (filter == MediaFilter.imageOnly) {
-        finalQuery += " filter:images";
-      } else if (filter == MediaFilter.gifOnly) {
-        finalQuery += " filter:consumer_video";
+    if (filters != null && filters.isNotEmpty) {
+      final filterQueries = <String>[];
+      for (final f in filters) {
+        switch (f) {
+          case MediaFilter.video:
+            filterQueries.add("filter:videos");
+            break;
+          case MediaFilter.image:
+            filterQueries.add("filter:images");
+            break;
+          case MediaFilter.gif:
+            filterQueries.add("filter:consumer_video");
+            break;
+          case MediaFilter.text:
+            filterQueries.add("-filter:media");
+            break;
+        }
       }
+      final combinedFilter = "(${filterQueries.join(' OR ')})";
+      finalQuery = finalQuery.isEmpty ? combinedFilter : "$finalQuery $combinedFilter";
+    } else if (query == null) {
+      // Default "All" case if no specific query provided
+      finalQuery = "filter:media OR -filter:media";
     }
 
     if (sort == FeedSort.popular) {
@@ -287,7 +302,7 @@ class TwitterClient {
     }
   }
 
-  Future<TweetResponse> fetchSubscribedMedia({String? cursor, FeedSort? sort, MediaFilter? filter}) async {
+  Future<TweetResponse> fetchSubscribedMedia({String? cursor, FeedSort? sort, Set<MediaFilter>? filters}) async {
     var subs = await Repository.getSubscriptions();
     
     if (subs.isEmpty) {
@@ -301,21 +316,21 @@ class TwitterClient {
     }
 
     if (subs.isEmpty) {
-      return fetchTrendingMedia(cursor: cursor, sort: sort, filter: filter);
+      return fetchTrendingMedia(cursor: cursor, sort: sort, filters: filters);
     }
 
     final pickedSubs = (subs.toList()..shuffle()).take(20);
     final users = pickedSubs.map((s) => 'from:${s.screenName}').join(' OR ');
-    String query = "include:nativeretweets ($users) filter:media -filter:replies";
+    String query = "include:nativeretweets ($users) -filter:replies";
     
     if (sort == FeedSort.popular) {
       query += " min_faves:50";
     }
 
-    final response = await fetchTrendingMedia(cursor: cursor, query: query, sort: sort, filter: filter);
+    final response = await fetchTrendingMedia(cursor: cursor, query: query, sort: sort, filters: filters);
     
     if (cursor == null && response.tweets.length < 5) {
-      final trendingResponse = await fetchTrendingMedia(sort: sort, filter: filter);
+      final trendingResponse = await fetchTrendingMedia(sort: sort, filters: filters);
       final combined = [...response.tweets];
       final seenIds = response.tweets.map((t) => t.id).toSet();
       for (final t in trendingResponse.tweets) {
@@ -432,8 +447,6 @@ class TwitterClient {
           allMedia.addAll(noteExtendedMedia.isNotEmpty ? noteExtendedMedia : noteMedia);
         }
       }
-
-      if (allMedia.isEmpty) return;
 
       final mediaUrls = <String>[];
       String? thumbnailUrl;

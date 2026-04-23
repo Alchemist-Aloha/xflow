@@ -2,23 +2,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 enum FeedSort { latest, popular, oldest, random, trending }
-enum MediaFilter { all, videoOnly, imageOnly, gifOnly }
+enum MediaFilter { video, image, gif, text }
 
 class SettingsState {
   final FeedSort sort;
-  final MediaFilter filter;
+  final Set<MediaFilter> filters;
   final bool autoplay;
 
   SettingsState({
     this.sort = FeedSort.latest,
-    this.filter = MediaFilter.all,
+    this.filters = const {},
     this.autoplay = true,
   });
 
-  SettingsState copyWith({FeedSort? sort, MediaFilter? filter, bool? autoplay}) {
+  SettingsState copyWith({FeedSort? sort, Set<MediaFilter>? filters, bool? autoplay}) {
     return SettingsState(
       sort: sort ?? this.sort,
-      filter: filter ?? this.filter,
+      filters: filters ?? this.filters,
       autoplay: autoplay ?? this.autoplay,
     );
   }
@@ -36,11 +36,22 @@ class SettingsNotifier extends Notifier<SettingsState> {
   Future<void> _init() async {
     _prefs = await SharedPreferences.getInstance();
     final sortIdx = _prefs.getInt('sort') ?? 0;
-    final filterIdx = _prefs.getInt('filter') ?? 0;
+    final filterStrings = _prefs.getStringList('filters') ?? [];
     
+    final filters = filterStrings
+        .map((s) {
+          try {
+            return MediaFilter.values.firstWhere((f) => f.name == s);
+          } catch (_) {
+            return null;
+          }
+        })
+        .whereType<MediaFilter>()
+        .toSet();
+
     state = SettingsState(
       sort: sortIdx < FeedSort.values.length ? FeedSort.values[sortIdx] : FeedSort.latest,
-      filter: filterIdx < MediaFilter.values.length ? MediaFilter.values[filterIdx] : MediaFilter.all,
+      filters: filters,
       autoplay: _prefs.getBool('autoplay') ?? true,
     );
   }
@@ -50,9 +61,15 @@ class SettingsNotifier extends Notifier<SettingsState> {
     _prefs.setInt('sort', sort.index);
   }
 
-  void updateFilter(MediaFilter filter) {
-    state = state.copyWith(filter: filter);
-    _prefs.setInt('filter', filter.index);
+  void toggleFilter(MediaFilter filter) {
+    final nextFilters = Set<MediaFilter>.from(state.filters);
+    if (nextFilters.contains(filter)) {
+      nextFilters.remove(filter);
+    } else {
+      nextFilters.add(filter);
+    }
+    state = state.copyWith(filters: nextFilters);
+    _prefs.setStringList('filters', nextFilters.map((f) => f.name).toList());
   }
 
   void toggleAutoplay(bool value) {

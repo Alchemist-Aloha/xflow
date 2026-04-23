@@ -32,7 +32,7 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
     
     final response = await client.fetchSubscribedMedia(
       sort: settings.sort,
-      filter: settings.filter,
+      filters: settings.filters,
     );
     
     final pool = ref.read(playerPoolProvider.notifier);
@@ -63,7 +63,7 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
       final response = await client.fetchSubscribedMedia(
         cursor: currentState.cursorBottom,
         sort: settings.sort,
-        filter: settings.filter,
+        filters: settings.filters,
       );
       
       var newTweets = response.tweets;

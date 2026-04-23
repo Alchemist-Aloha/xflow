@@ -50,13 +50,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           ListTile(
             title: const Text('Media Filter'),
-            trailing: DropdownButton<MediaFilter>(
-              value: settings.filter,
-              items: MediaFilter.values.map((f) => DropdownMenuItem(
-                value: f, 
-                child: Text(f.name.replaceAll('Only', ' Only').toUpperCase())
+            subtitle: Text(
+              settings.filters.isEmpty 
+                ? 'Showing all content' 
+                : 'Filtering by: ${settings.filters.map((f) => f.name.toUpperCase()).join(", ")}'
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Wrap(
+              spacing: 8.0,
+              children: MediaFilter.values.map((f) => FilterChip(
+                label: Text(f.name.toUpperCase()),
+                selected: settings.filters.contains(f),
+                onSelected: (_) => notifier.toggleFilter(f),
               )).toList(),
-              onChanged: (v) => v != null ? notifier.updateFilter(v) : null,
             ),
           ),
           const Divider(),

@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:media_kit_video/media_kit_video.dart';
-import 'package:media_kit_video/media_kit_video_controls/media_kit_video_controls.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/models/tweet.dart';
+import '../../feed/widgets/text_tweet_card.dart';
 import '../player_pool_provider.dart';
 
 class TiktokMediaContainer extends ConsumerStatefulWidget {
@@ -29,7 +29,7 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
   @override
   Widget build(BuildContext context) {
     if (widget.tweet.mediaUrls.isEmpty) {
-      return const Center(child: Text('No Media'));
+      return TextTweetCard(text: widget.tweet.text);
     }
 
     if (!widget.tweet.isVideo) {

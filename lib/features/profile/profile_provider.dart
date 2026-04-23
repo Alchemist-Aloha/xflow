@@ -21,7 +21,7 @@ class UserMediaNotifier extends FamilyAsyncNotifier<FeedState, String> {
     final response = await client.fetchUserTweets(
       arg,
       sort: settings.sort,
-      filter: settings.filter,
+      filters: {}, // Force all content on profile page
     );
     
     return FeedState(
@@ -46,7 +46,7 @@ class UserMediaNotifier extends FamilyAsyncNotifier<FeedState, String> {
         screenName,
         cursor: currentState.cursorBottom,
         sort: settings.sort,
-        filter: settings.filter,
+        filters: {}, // Force all content on profile page
       );
       
       final newTweets = response.tweets;
