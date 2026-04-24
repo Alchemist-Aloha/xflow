@@ -84,4 +84,34 @@ void main() {
       expect(result, tweets);
     });
   });
+
+  group('DiscoveryEngine.applyUnseenSubscriptionBoost', () {
+    test('promotes less-watched accounts within local window', () {
+      final tweets = [
+        Tweet(id: '1', userHandle: '@heavy', text: '', mediaUrls: []),
+        Tweet(id: '2', userHandle: '@heavy', text: '', mediaUrls: []),
+        Tweet(id: '3', userHandle: '@light', text: '', mediaUrls: []),
+        Tweet(id: '4', userHandle: '@new', text: '', mediaUrls: []),
+      ];
+
+      final boosted = DiscoveryEngine.applyUnseenSubscriptionBoost(
+        tweets,
+        {'heavy': 50, 'light': 5, 'new': 0},
+        lookahead: 4,
+      );
+
+      // Expect a lower-played account to surface ahead of heavy users.
+      expect(boosted.first.userHandle, anyOf('@light', '@new'));
+    });
+
+    test('keeps order when no play stats are available', () {
+      final tweets = [
+        Tweet(id: '1', userHandle: '@a', text: '', mediaUrls: []),
+        Tweet(id: '2', userHandle: '@b', text: '', mediaUrls: []),
+      ];
+
+      final boosted = DiscoveryEngine.applyUnseenSubscriptionBoost(tweets, {});
+      expect(boosted, tweets);
+    });
+  });
 }

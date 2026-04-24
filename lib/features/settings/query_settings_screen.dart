@@ -91,6 +91,24 @@ class QuerySettingsScreen extends ConsumerWidget {
               ),
             ),
           ),
+          SwitchListTile(
+            title: const Text('Strict Subscriptions Only'),
+            subtitle: const Text('Do not inject global trending when subscription query is sparse'),
+            value: settings.strictSubscriptionsOnly,
+            onChanged: (val) => notifier.updateDiscoveryParam(strictSubscriptionsOnly: val),
+          ),
+          SwitchListTile(
+            title: const Text('Include Native Retweets'),
+            subtitle: const Text('Allow retweets from followed accounts in subscription feed query'),
+            value: settings.includeNativeRetweets,
+            onChanged: (val) => notifier.updateDiscoveryParam(includeNativeRetweets: val),
+          ),
+          SwitchListTile(
+            title: const Text('Use Chunked Subscription Queries'),
+            subtitle: const Text('Build query chunks from all subscriptions instead of random sampling'),
+            value: settings.useChunkedSubscriptions,
+            onChanged: (val) => notifier.updateDiscoveryParam(useChunkedSubscriptions: val),
+          ),
 
           const Divider(),
           _SectionHeader(title: 'Sync Architecture'),

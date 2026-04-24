@@ -27,6 +27,8 @@ class TwitterClient {
   static bool _isRequestInProgress = false;
   static DateTime? _rateLimitResetTime;
   static final List<Completer<void>> _requestQueue = [];
+  static int _subscriptionChunkIndex = 0;
+  static String? _lastSubscribedQuery;
 
   static Future<void> _waitForTurn() async {
     if (_rateLimitResetTime != null) {
@@ -372,6 +374,9 @@ class TwitterClient {
     int subBatchSize = 10,
     int loadBatchSize = 20,
     int cooldownMinutes = 15,
+    bool strictSubscriptionsOnly = true,
+    bool includeNativeRetweets = false,
+    bool useChunkedSubscriptions = true,
   }) async {
     var subs = await Repository.getSubscriptions();
     
@@ -386,6 +391,9 @@ class TwitterClient {
     }
 
     if (subs.isEmpty) {
+      if (strictSubscriptionsOnly) {
+        return TweetResponse(tweets: []);
+      }
       return fetchTrendingMedia(
         cursor: cursor, 
         sort: sort, 
@@ -395,9 +403,69 @@ class TwitterClient {
       );
     }
 
-    final pickedSubs = (subs.toList()..shuffle()).take(subBatchSize);
-    final users = pickedSubs.map((s) => 'from:${s.screenName}').join(' OR ');
-    String query = "include:nativeretweets ($users) -filter:replies";
+    String buildUsersClause(Iterable<Subscription> selectedSubs) {
+      return selectedSubs.map((s) => 'from:${s.screenName}').join(' OR ');
+    }
+
+    String buildQueryFromUsersClause(String usersClause) {
+      final base = includeNativeRetweets
+          ? 'include:nativeretweets ($usersClause) -filter:replies'
+          : '($usersClause) -filter:replies -filter:retweets';
+      return base;
+    }
+
+    List<String> buildChunkedQueries(List<Subscription> list) {
+      final sorted = [...list]..sort((a, b) => a.screenName.compareTo(b.screenName));
+      final queries = <String>[];
+
+      String currentUsers = '';
+      for (final sub in sorted) {
+        final candidate = currentUsers.isEmpty
+            ? 'from:${sub.screenName}'
+            : '$currentUsers OR from:${sub.screenName}';
+        final candidateQuery = buildQueryFromUsersClause(candidate);
+
+        // Keep query comfortably below API query size limits.
+        if (candidateQuery.length > 480 && currentUsers.isNotEmpty) {
+          queries.add(buildQueryFromUsersClause(currentUsers));
+          currentUsers = 'from:${sub.screenName}';
+        } else {
+          currentUsers = candidate;
+        }
+      }
+
+      if (currentUsers.isNotEmpty) {
+        queries.add(buildQueryFromUsersClause(currentUsers));
+      }
+      return queries;
+    }
+
+    String query;
+    if (cursor != null && _lastSubscribedQuery != null) {
+      // Continue pagination on the same query chunk.
+      query = _lastSubscribedQuery!;
+    } else if (useChunkedSubscriptions) {
+      final queries = buildChunkedQueries(subs);
+      if (queries.isEmpty) {
+        if (strictSubscriptionsOnly) return TweetResponse(tweets: []);
+        return fetchTrendingMedia(
+          cursor: cursor,
+          sort: sort,
+          filters: filters,
+          count: loadBatchSize,
+          cooldownMinutes: cooldownMinutes,
+        );
+      }
+      final idx = _subscriptionChunkIndex % queries.length;
+      query = queries[idx];
+      _subscriptionChunkIndex = (_subscriptionChunkIndex + 1) % queries.length;
+      _lastSubscribedQuery = query;
+    } else {
+      final pickedSubs = (subs.toList()..shuffle()).take(subBatchSize);
+      final users = buildUsersClause(pickedSubs);
+      query = buildQueryFromUsersClause(users);
+      _lastSubscribedQuery = query;
+    }
     
     if (sort == FeedSort.popular) {
       query += " min_faves:50";
@@ -412,7 +480,7 @@ class TwitterClient {
       cooldownMinutes: cooldownMinutes,
     );
     
-    if (cursor == null && response.tweets.length < 5) {
+    if (!strictSubscriptionsOnly && cursor == null && response.tweets.length < 5) {
       final trendingResponse = await fetchTrendingMedia(
         sort: sort, 
         filters: filters, 

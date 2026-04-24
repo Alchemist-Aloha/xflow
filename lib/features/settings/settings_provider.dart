@@ -24,6 +24,9 @@ class SettingsState {
   final int saturationThreshold;
   final FeedSort fetchStrategy;
   final int initialSyncCount;
+  final bool strictSubscriptionsOnly;
+  final bool includeNativeRetweets;
+  final bool useChunkedSubscriptions;
 
   SettingsState({
     this.filters = const {},
@@ -41,6 +44,9 @@ class SettingsState {
     this.saturationThreshold = 2,
     this.fetchStrategy = FeedSort.latest,
     this.initialSyncCount = 10,
+    this.strictSubscriptionsOnly = true,
+    this.includeNativeRetweets = false,
+    this.useChunkedSubscriptions = true,
   });
 
   SettingsState copyWith({
@@ -59,6 +65,9 @@ class SettingsState {
     int? saturationThreshold,
     FeedSort? fetchStrategy,
     int? initialSyncCount,
+    bool? strictSubscriptionsOnly,
+    bool? includeNativeRetweets,
+    bool? useChunkedSubscriptions,
   }) {
     return SettingsState(
       filters: filters ?? this.filters,
@@ -76,6 +85,9 @@ class SettingsState {
       saturationThreshold: saturationThreshold ?? this.saturationThreshold,
       fetchStrategy: fetchStrategy ?? this.fetchStrategy,
       initialSyncCount: initialSyncCount ?? this.initialSyncCount,
+      strictSubscriptionsOnly: strictSubscriptionsOnly ?? this.strictSubscriptionsOnly,
+      includeNativeRetweets: includeNativeRetweets ?? this.includeNativeRetweets,
+      useChunkedSubscriptions: useChunkedSubscriptions ?? this.useChunkedSubscriptions,
     );
   }
 }
@@ -119,6 +131,9 @@ class SettingsNotifier extends Notifier<SettingsState> {
     final saturationThreshold = _prefs.getInt('saturationThreshold') ?? 2;
     final fetchStrategyIdx = _prefs.getInt('fetchStrategy') ?? 0;
     final initialSyncCount = _prefs.getInt('initialSyncCount') ?? 10;
+    final strictSubscriptionsOnly = _prefs.getBool('strictSubscriptionsOnly') ?? true;
+    final includeNativeRetweets = _prefs.getBool('includeNativeRetweets') ?? false;
+    final useChunkedSubscriptions = _prefs.getBool('useChunkedSubscriptions') ?? true;
 
     state = SettingsState(
       filters: filters,
@@ -136,6 +151,9 @@ class SettingsNotifier extends Notifier<SettingsState> {
       saturationThreshold: saturationThreshold,
       fetchStrategy: fetchStrategyIdx < FeedSort.values.length ? FeedSort.values[fetchStrategyIdx] : FeedSort.latest,
       initialSyncCount: initialSyncCount,
+      strictSubscriptionsOnly: strictSubscriptionsOnly,
+      includeNativeRetweets: includeNativeRetweets,
+      useChunkedSubscriptions: useChunkedSubscriptions,
     );
   }
 
@@ -176,6 +194,9 @@ class SettingsNotifier extends Notifier<SettingsState> {
     int? saturationThreshold,
     FeedSort? fetchStrategy,
     int? initialSyncCount,
+    bool? strictSubscriptionsOnly,
+    bool? includeNativeRetweets,
+    bool? useChunkedSubscriptions,
   }) {
     state = state.copyWith(
       avoidWatchedContent: avoidWatchedContent,
@@ -184,6 +205,9 @@ class SettingsNotifier extends Notifier<SettingsState> {
       saturationThreshold: saturationThreshold,
       fetchStrategy: fetchStrategy,
       initialSyncCount: initialSyncCount,
+      strictSubscriptionsOnly: strictSubscriptionsOnly,
+      includeNativeRetweets: includeNativeRetweets,
+      useChunkedSubscriptions: useChunkedSubscriptions,
     );
     if (avoidWatchedContent != null) _prefs.setBool('avoidWatchedContent', avoidWatchedContent);
     if (unseenSubscriptionBoost != null) _prefs.setBool('unseenSubscriptionBoost', unseenSubscriptionBoost);
@@ -191,6 +215,9 @@ class SettingsNotifier extends Notifier<SettingsState> {
     if (saturationThreshold != null) _prefs.setInt('saturationThreshold', saturationThreshold);
     if (fetchStrategy != null) _prefs.setInt('fetchStrategy', fetchStrategy.index);
     if (initialSyncCount != null) _prefs.setInt('initialSyncCount', initialSyncCount);
+    if (strictSubscriptionsOnly != null) _prefs.setBool('strictSubscriptionsOnly', strictSubscriptionsOnly);
+    if (includeNativeRetweets != null) _prefs.setBool('includeNativeRetweets', includeNativeRetweets);
+    if (useChunkedSubscriptions != null) _prefs.setBool('useChunkedSubscriptions', useChunkedSubscriptions);
   }
 
   void toggleFilter(MediaFilter filter) {

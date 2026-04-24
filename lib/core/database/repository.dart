@@ -200,6 +200,80 @@ class Repository {
     });
   }
 
+  static Future<List<Tweet>> getCachedMediaCandidates(
+    int limit, {
+    required bool avoidWatchedContent,
+    Set<MediaFilter>? filters,
+  }) async {
+    if (avoidWatchedContent) {
+      return getUnplayedCachedMedia(limit, filters: filters);
+    }
+
+    final db = await database;
+    String? whereClause;
+    List<dynamic>? whereArgs;
+
+    if (filters != null && filters.isNotEmpty) {
+      final conditions = <String>[];
+      for (final filter in filters) {
+        switch (filter) {
+          case MediaFilter.video:
+            conditions.add('is_video = 1');
+            break;
+          case MediaFilter.image:
+            conditions.add('(media_urls != "[]" AND is_video = 0)');
+            break;
+          case MediaFilter.text:
+            conditions.add('media_urls = "[]"');
+            break;
+        }
+      }
+      if (conditions.isNotEmpty) {
+        whereClause = '(${conditions.join(' OR ')})';
+        whereArgs = [];
+      }
+    }
+
+    final List<Map<String, dynamic>> maps = await db.query(
+      tableCachedMedia,
+      where: whereClause,
+      whereArgs: whereArgs,
+      orderBy: 'created_at DESC',
+      limit: limit,
+    );
+
+    return List.generate(maps.length, (i) {
+      return Tweet(
+        id: maps[i]['id'] as String,
+        text: maps[i]['text'] as String,
+        userHandle: maps[i]['user_handle'] as String,
+        userAvatarUrl: maps[i]['user_avatar_url'] as String?,
+        mediaUrls: List<String>.from(jsonDecode(maps[i]['media_urls'] as String)),
+        thumbnailUrl: maps[i]['thumbnail_url'] as String?,
+        isVideo: (maps[i]['is_video'] as int) == 1,
+        createdAt: maps[i]['created_at'] != null ? DateTime.fromMillisecondsSinceEpoch(maps[i]['created_at'] as int) : null,
+      );
+    });
+  }
+
+  static Future<Map<String, int>> getPlayedCountsByUser() async {
+    final db = await database;
+    final rows = await db.rawQuery('''
+      SELECT LOWER(REPLACE(user_handle, '@', '')) AS normalized_handle,
+             SUM(played_count) AS total_played
+      FROM $tableCachedMedia
+      GROUP BY normalized_handle
+    ''');
+
+    final out = <String, int>{};
+    for (final row in rows) {
+      final handle = row['normalized_handle'] as String?;
+      if (handle == null || handle.isEmpty) continue;
+      out[handle] = (row['total_played'] as int?) ?? 0;
+    }
+    return out;
+  }
+
   static Future<List<Tweet>> getUserCachedMedia(String userHandle, int limit, {Set<MediaFilter>? filters}) async {
     final db = await database;
     // Strip @ if present for normalization

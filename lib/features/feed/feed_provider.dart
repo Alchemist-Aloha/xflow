@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/client/twitter_client.dart';
 import '../../core/models/tweet.dart';
 import '../../core/database/repository.dart';
@@ -39,45 +40,95 @@ class FeedState {
 }
 
 class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
+  Future<int> _resolveSyncBatchSize(SettingsState settings) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final persisted = prefs.getInt('syncBatchSize');
+      return persisted ?? settings.syncBatchSize;
+    } catch (_) {
+      return settings.syncBatchSize;
+    }
+  }
+
+  List<Tweet> _runDiscoveryPipeline(
+    List<Tweet> freshPool,
+    List<Tweet> localPool,
+    SettingsState settings,
+    Map<String, int> playedByUser,
+  ) {
+    var processed = DiscoveryEngine.interleave(freshPool, localPool, settings.freshMixRatio);
+    processed = DiscoveryEngine.applySaturation(processed, threshold: settings.saturationThreshold);
+    if (settings.unseenSubscriptionBoost) {
+      processed = DiscoveryEngine.applyUnseenSubscriptionBoost(processed, playedByUser);
+    }
+    return processed;
+  }
+
   @override
   FutureOr<FeedState> build() async {
     final client = ref.watch(twitterClientProvider);
     final settings = ref.watch(settingsProvider);
+    final syncBatchSize = await _resolveSyncBatchSize(settings);
     
     debugPrint('XFLOW: Building FeedNotifier. fetchStrategy: ${settings.fetchStrategy}');
 
     try {
-      // 1. Try to get unplayed media from local DB
-      List<Tweet> tweets = await Repository.getUnplayedCachedMedia(
+      // Stage 1: candidate retrieval (local + fresh)
+      final localFuture = Repository.getCachedMediaCandidates(
         settings.loadBatchSize * 3,
+        avoidWatchedContent: settings.avoidWatchedContent,
         filters: settings.filters,
       );
+      final freshFuture = client.fetchSubscribedMedia(
+        sort: settings.fetchStrategy,
+        filters: settings.filters,
+        subBatchSize: syncBatchSize,
+        loadBatchSize: settings.initialSyncCount,
+        cooldownMinutes: settings.cooldownDuration,
+        strictSubscriptionsOnly: settings.strictSubscriptionsOnly,
+        includeNativeRetweets: settings.includeNativeRetweets,
+        useChunkedSubscriptions: settings.useChunkedSubscriptions,
+      );
 
-      debugPrint('XFLOW: Local pool size: ${tweets.length}');
-      tweets.shuffle(); // Break database clumping
+      final localPool = await localFuture;
+      final freshResponse = await freshFuture;
+      final freshPool = freshResponse.tweets;
+      if (freshPool.isNotEmpty) {
+        await Repository.insertCachedMedia(freshPool);
+      }
 
-      // 2. If DB is empty, we MUST fetch from API now to avoid blank screen on first launch
+      final playedByUser = settings.unseenSubscriptionBoost
+          ? await Repository.getPlayedCountsByUser()
+          : const <String, int>{};
+
+      var tweets = _runDiscoveryPipeline(freshPool, localPool, settings, playedByUser);
+
+      debugPrint('XFLOW: Local pool size after pipeline: ${tweets.length}');
+
+      // If discovery produced nothing, make one fallback API call to avoid blank screen.
       if (tweets.isEmpty) {
-        debugPrint('XFLOW: DB empty, performing initial sync...');
+        debugPrint('XFLOW: Discovery produced empty pool, performing fallback sync...');
         final response = await client.fetchSubscribedMedia(
           sort: settings.fetchStrategy,
           filters: settings.filters,
-          subBatchSize: settings.syncBatchSize,
+          subBatchSize: syncBatchSize,
           loadBatchSize: settings.initialSyncCount,
           cooldownMinutes: settings.cooldownDuration,
+          strictSubscriptionsOnly: settings.strictSubscriptionsOnly,
+          includeNativeRetweets: settings.includeNativeRetweets,
+          useChunkedSubscriptions: settings.useChunkedSubscriptions,
         );
         tweets = response.tweets;
-        debugPrint('XFLOW: Initial sync returned ${tweets.length} tweets');
+        debugPrint('XFLOW: Fallback sync returned ${tweets.length} tweets');
         if (tweets.isNotEmpty) {
           await Repository.insertCachedMedia(tweets);
         }
-      } else {
-        // DB not empty, trigger a background refresh to get fresher content
-        debugPrint('XFLOW: DB has content, triggering background refresh');
-        Future.delayed(Duration.zero, () => _refreshInBackground());
       }
 
-      var processed = DiscoveryEngine.applySaturation(tweets, threshold: settings.saturationThreshold);
+      final processed = tweets;
+
+      // Trigger a follow-up refresh regardless to keep feed hot and up-to-date.
+      Future.delayed(Duration.zero, () => _refreshInBackground());
 
       // Warm up the player pool
       final pool = ref.read(playerPoolProvider.notifier);
@@ -104,16 +155,26 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
 
     final client = ref.read(twitterClientProvider);
     final settings = ref.read(settingsProvider);
+    final syncBatchSize = await _resolveSyncBatchSize(settings);
 
     debugPrint('XFLOW: Background refresh started');
 
     try {
+      final localPool = await Repository.getCachedMediaCandidates(
+        settings.loadBatchSize * 3,
+        avoidWatchedContent: settings.avoidWatchedContent,
+        filters: settings.filters,
+      );
+
       final freshResponse = await client.fetchSubscribedMedia(
         sort: settings.fetchStrategy,
         filters: settings.filters,
-        subBatchSize: settings.syncBatchSize,
+        subBatchSize: syncBatchSize,
         loadBatchSize: settings.initialSyncCount,
         cooldownMinutes: settings.cooldownDuration,
+        strictSubscriptionsOnly: settings.strictSubscriptionsOnly,
+        includeNativeRetweets: settings.includeNativeRetweets,
+        useChunkedSubscriptions: settings.useChunkedSubscriptions,
       );
 
       final freshPool = freshResponse.tweets;
@@ -126,14 +187,12 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
       final currentAsync = ref.read(feedNotifierProvider);
       if (currentAsync.hasValue) {
         final current = currentAsync.value!;
-        
-        final updatedLocalPool = await Repository.getUnplayedCachedMedia(
-          settings.loadBatchSize * 3,
-          filters: settings.filters,
-        );
-        
-        var processed = DiscoveryEngine.interleave(freshPool, updatedLocalPool, settings.freshMixRatio);
-        processed = DiscoveryEngine.applySaturation(processed, threshold: settings.saturationThreshold);
+
+        final playedByUser = settings.unseenSubscriptionBoost
+            ? await Repository.getPlayedCountsByUser()
+            : const <String, int>{};
+
+        final processed = _runDiscoveryPipeline(freshPool, localPool, settings, playedByUser);
 
         state = AsyncData(current.copyWith(
           tweets: processed,
@@ -161,16 +220,18 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
     final currentCursor = currentState.cursorBottom;
 
     final settings = ref.read(settingsProvider);
+    final syncBatchSize = await _resolveSyncBatchSize(settings);
     state = AsyncData(currentState.copyWith(isLoadingMore: true));
 
     try {
       // 1. Try to fetch from DB that aren't already in the current state
-      final allUnplayed = await Repository.getUnplayedCachedMedia(
+      final allCandidates = await Repository.getCachedMediaCandidates(
         settings.loadBatchSize * 2,
+        avoidWatchedContent: settings.avoidWatchedContent,
         filters: settings.filters,
       );
       final seenIds = currentTweets.map((t) => t.id).toSet();
-      var newTweetsFromCache = allUnplayed.where((t) => !seenIds.contains(t.id)).toList();
+      var newTweetsFromCache = allCandidates.where((t) => !seenIds.contains(t.id)).toList();
 
       String? nextCursor = currentCursor;
       List<Tweet> finalNewTweets = [];
@@ -184,9 +245,12 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
           cursor: currentCursor,
           sort: settings.fetchStrategy,
           filters: settings.filters,
-          subBatchSize: settings.syncBatchSize,
+          subBatchSize: syncBatchSize,
           loadBatchSize: settings.loadBatchSize,
           cooldownMinutes: settings.cooldownDuration,
+          strictSubscriptionsOnly: settings.strictSubscriptionsOnly,
+          includeNativeRetweets: settings.includeNativeRetweets,
+          useChunkedSubscriptions: settings.useChunkedSubscriptions,
         );
         
         finalNewTweets = response.tweets.where((t) => !seenIds.contains(t.id)).toList();

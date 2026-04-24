@@ -7,9 +7,7 @@ class DiscoveryEngine {
     final result = <Tweet>[];
     int freshIdx = 0;
     int cacheIdx = 0;
-    
-    // Track fresh items in a set for O(1) lookups
-    final freshIds = fresh.map((t) => t.id).toSet();
+
     int currentFreshCount = 0;
 
     while (freshIdx < fresh.length || cacheIdx < cached.length) {
@@ -37,10 +35,48 @@ class DiscoveryEngine {
     return result;
   }
 
-  static bool _isFresh(Tweet tweet, List<Tweet> freshSource) {
-    // In practice, we'd check if the ID exists in the fresh list.
-    // For the engine, we can just check reference or ID.
-    return freshSource.any((t) => t.id == tweet.id);
+  static String _normalizeHandle(String handle) {
+    final trimmed = handle.trim();
+    if (trimmed.startsWith('@')) {
+      return trimmed.substring(1).toLowerCase();
+    }
+    return trimmed.toLowerCase();
+  }
+
+  /// Stage 4: Slightly promotes tweets from less-watched accounts.
+  ///
+  /// The boost is intentionally local (lookahead window) to avoid destroying
+  /// freshness/interleave ordering while still improving account discovery.
+  static List<Tweet> applyUnseenSubscriptionBoost(
+    List<Tweet> tweets,
+    Map<String, int> playedCountByUser, {
+    int lookahead = 6,
+  }) {
+    if (tweets.length < 2 || playedCountByUser.isEmpty) return tweets;
+
+    final result = List<Tweet>.from(tweets);
+
+    for (int i = 0; i < result.length - 1; i++) {
+      final end = (i + lookahead).clamp(i + 1, result.length);
+      int bestIdx = i;
+      int bestScore = playedCountByUser[_normalizeHandle(result[i].userHandle)] ?? 0;
+
+      for (int j = i + 1; j < end; j++) {
+        final candScore = playedCountByUser[_normalizeHandle(result[j].userHandle)] ?? 0;
+        if (candScore < bestScore) {
+          bestScore = candScore;
+          bestIdx = j;
+        }
+      }
+
+      if (bestIdx != i) {
+        final temp = result[i];
+        result[i] = result[bestIdx];
+        result[bestIdx] = temp;
+      }
+    }
+
+    return result;
   }
 
   static List<Tweet> applySaturation(List<Tweet> tweets, {int threshold = 2}) {
