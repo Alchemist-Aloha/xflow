@@ -154,6 +154,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               );
             },
           ),
+          ListTile(
+            leading: const Icon(Icons.bug_report_outlined),
+            title: const Text('Debug Timeline'),
+            subtitle: const Text('Test official Twitter API fetch'),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (c) => const DebugTimelineScreen()),
+              );
+            },
+          ),
           const Divider(),
           ListTile(
             title: const Text('Storage', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
