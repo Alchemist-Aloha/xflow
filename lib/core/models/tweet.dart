@@ -3,6 +3,7 @@ class Tweet {
   final String text;
   final String userHandle;
   final String? userAvatarUrl;
+  final String? mediaKey;
   final List<String> mediaUrls;
   final String? thumbnailUrl;
   final bool isVideo;
@@ -14,6 +15,7 @@ class Tweet {
     required this.text,
     required this.userHandle,
     this.userAvatarUrl,
+    this.mediaKey,
     required this.mediaUrls,
     this.thumbnailUrl,
     this.isVideo = false,
@@ -31,6 +33,7 @@ class Tweet {
     String? text,
     String? userHandle,
     String? userAvatarUrl,
+    String? mediaKey,
     List<String>? mediaUrls,
     String? thumbnailUrl,
     bool? isVideo,
@@ -42,6 +45,7 @@ class Tweet {
       text: text ?? this.text,
       userHandle: userHandle ?? this.userHandle,
       userAvatarUrl: userAvatarUrl ?? this.userAvatarUrl,
+      mediaKey: mediaKey ?? this.mediaKey,
       mediaUrls: mediaUrls ?? this.mediaUrls,
       thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
       isVideo: isVideo ?? this.isVideo,
@@ -50,4 +54,3 @@ class Tweet {
     );
   }
 }
-

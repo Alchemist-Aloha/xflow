@@ -8,6 +8,7 @@ import '../feed/feed_provider.dart';
 import '../subscriptions/subscription_import_screen.dart';
 import 'log_viewer_screen.dart';
 import 'query_settings_screen.dart';
+import 'debug_timeline_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});

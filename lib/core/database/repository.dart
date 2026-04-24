@@ -5,6 +5,7 @@ import 'package:sqflite/sqflite.dart';
 import 'entities.dart';
 import '../models/tweet.dart';
 import '../../features/settings/settings_provider.dart';
+import '../utils/app_logger.dart';
 
 const String tableAccounts = 'accounts';
 const String tableSubscriptions = 'subscriptions';
@@ -23,7 +24,7 @@ class Repository {
     String path = join(await getDatabasesPath(), 'xflow.db');
     return await openDatabase(
       path,
-      version: 6,
+      version: 7,
       onCreate: (db, version) async {
         await db.execute(
           'CREATE TABLE $tableAccounts (id TEXT PRIMARY KEY, screen_name TEXT, rest_id TEXT, auth_header TEXT)',
@@ -37,6 +38,7 @@ class Repository {
             text TEXT,
             user_handle TEXT,
             user_avatar_url TEXT,
+            media_key TEXT,
             media_urls TEXT,
             thumbnail_url TEXT,
             is_video INTEGER,
@@ -48,6 +50,9 @@ class Repository {
         ''');
         await db.execute(
           'CREATE INDEX idx_discovery_lookup ON $tableCachedMedia (played_count, created_at DESC)',
+        );
+        await db.execute(
+          'CREATE INDEX idx_media_key ON $tableCachedMedia (media_key)',
         );
       },
       onUpgrade: (db, oldVersion, newVersion) async {
@@ -89,6 +94,12 @@ class Repository {
           await db.execute(
             'CREATE INDEX IF NOT EXISTS idx_discovery_lookup ON $tableCachedMedia (played_count, created_at DESC)',
           );
+        }
+        if (oldVersion < 7) {
+          await db.execute(
+              'ALTER TABLE $tableCachedMedia ADD COLUMN media_key TEXT');
+          await db.execute(
+              'CREATE INDEX IF NOT EXISTS idx_media_key ON $tableCachedMedia (media_key)');
         }
       },
     );
@@ -154,6 +165,7 @@ class Repository {
           'text': tweet.text,
           'user_handle': tweet.userHandle,
           'user_avatar_url': tweet.userAvatarUrl,
+          'media_key': tweet.mediaKey,
           'media_urls': jsonEncode(tweet.mediaUrls),
           'thumbnail_url': tweet.thumbnailUrl,
           'is_video': tweet.isVideo ? 1 : 0,
@@ -170,8 +182,11 @@ class Repository {
       {Set<MediaFilter>? filters}) async {
     final db = await database;
 
-    String whereClause = 'played_count = ?';
-    List<dynamic> whereArgs = [0];
+    // Use a subquery to exclude any tweets whose media_key has been played elsewhere
+    String whereClause = 'played_count = 0';
+    whereClause += ' AND (media_key IS NULL OR media_key NOT IN (SELECT media_key FROM $tableCachedMedia WHERE played_count > 0 AND media_key IS NOT NULL))';
+    
+    List<dynamic> whereArgs = [];
 
     if (filters != null && filters.isNotEmpty) {
       final conditions = <String>[];
@@ -201,12 +216,17 @@ class Repository {
       limit: limit,
     );
 
+    if (maps.isEmpty) return [];
+
+    AppLogger.log('Discovery: Media-Key deduplication filtered potential candidates. Results: ${maps.length}');
+
     return List.generate(maps.length, (i) {
       return Tweet(
         id: maps[i]['id'] as String,
         text: maps[i]['text'] as String,
         userHandle: maps[i]['user_handle'] as String,
         userAvatarUrl: maps[i]['user_avatar_url'] as String?,
+        mediaKey: maps[i]['media_key'] as String?,
         mediaUrls:
             List<String>.from(jsonDecode(maps[i]['media_urls'] as String)),
         thumbnailUrl: maps[i]['thumbnail_url'] as String?,
@@ -266,6 +286,7 @@ class Repository {
         text: maps[i]['text'] as String,
         userHandle: maps[i]['user_handle'] as String,
         userAvatarUrl: maps[i]['user_avatar_url'] as String?,
+        mediaKey: maps[i]['media_key'] as String?,
         mediaUrls:
             List<String>.from(jsonDecode(maps[i]['media_urls'] as String)),
         thumbnailUrl: maps[i]['thumbnail_url'] as String?,
@@ -340,6 +361,7 @@ class Repository {
         text: maps[i]['text'] as String,
         userHandle: maps[i]['user_handle'] as String,
         userAvatarUrl: maps[i]['user_avatar_url'] as String?,
+        mediaKey: maps[i]['media_key'] as String?,
         mediaUrls:
             List<String>.from(jsonDecode(maps[i]['media_urls'] as String)),
         thumbnailUrl: maps[i]['thumbnail_url'] as String?,
@@ -432,4 +454,3 @@ class Repository {
     );
   }
 }
-

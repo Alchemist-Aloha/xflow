@@ -755,10 +755,12 @@ class TwitterClient {
 
       final mediaUrls = <String>[];
       String? thumbnailUrl;
+      String? mediaKey;
       bool isVideo = false;
 
       if (allMedia.isNotEmpty && allMedia.first['media_url_https'] != null) {
         thumbnailUrl = allMedia.first['media_url_https'];
+        mediaKey = allMedia.first['media_key'];
       }
 
       for (final m in allMedia) {
@@ -810,6 +812,7 @@ class TwitterClient {
         text: legacy['full_text'] ?? legacy['text'] ?? '',
         userHandle: '@$screenName',
         userAvatarUrl: userAvatarUrl,
+        mediaKey: mediaKey,
         mediaUrls: mediaUrls,
         thumbnailUrl: thumbnailUrl,
         isVideo: isVideo,
