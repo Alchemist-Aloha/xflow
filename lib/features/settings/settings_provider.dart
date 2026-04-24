@@ -6,6 +6,7 @@ enum FeedSort { latest, popular, oldest, random, trending }
 enum MediaFilter { video, image, text }
 
 class SettingsState {
+  final bool isInitialized;
   final Set<MediaFilter> filters;
   final bool autoplay;
   final bool isListView;
@@ -52,6 +53,7 @@ class SettingsState {
   final int mediaDeduplicationWindow;
 
   SettingsState({
+    this.isInitialized = false,
     this.filters = const {},
     this.autoplay = true,
     this.isListView = false,
@@ -89,6 +91,7 @@ class SettingsState {
   });
 
   SettingsState copyWith({
+    bool? isInitialized,
     Set<MediaFilter>? filters,
     bool? autoplay,
     bool? isListView,
@@ -125,6 +128,7 @@ class SettingsState {
     int? mediaDeduplicationWindow,
   }) {
     return SettingsState(
+      isInitialized: isInitialized ?? this.isInitialized,
       filters: filters ?? this.filters,
       autoplay: autoplay ?? this.autoplay,
       isListView: isListView ?? this.isListView,
@@ -170,14 +174,13 @@ class SettingsState {
   }
 }
 
-
 class SettingsNotifier extends Notifier<SettingsState> {
   late SharedPreferences _prefs;
 
   @override
   SettingsState build() {
     _init();
-    return SettingsState();
+    return SettingsState(isInitialized: false);
   }
 
   Future<void> _init() async {
@@ -234,9 +237,11 @@ class SettingsNotifier extends Notifier<SettingsState> {
     final playbackRetryLimit = _prefs.getInt('playbackRetryLimit') ?? 1;
     final autoSkipDelaySeconds = _prefs.getInt('autoSkipDelaySeconds') ?? 2;
     final lazyLoadThreshold = _prefs.getInt('lazyLoadThreshold') ?? 10;
-    final mediaDeduplicationWindow = _prefs.getInt('mediaDeduplicationWindow') ?? 50;
+    final mediaDeduplicationWindow =
+        _prefs.getInt('mediaDeduplicationWindow') ?? 50;
 
     state = SettingsState(
+      isInitialized: true,
       filters: filters,
       autoplay: _prefs.getBool('autoplay') ?? true,
       isListView: isListView,

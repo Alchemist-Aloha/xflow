@@ -59,16 +59,25 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
     int protectedIndex = 0,
     List<Tweet> currentTweets = const [],
   }) {
+    final head = currentTweets.take(protectedIndex).toList();
+    final headIds = head.map((t) => t.id).toSet();
+    final headMedia = head
+        .where((t) => t.mediaUrls.isNotEmpty)
+        .map((t) => t.mediaUrls.first)
+        .toSet();
+
     // Initialize seen sets using a sliding window of already visible tweets
     final dedupeWindow = currentTweets.length > settings.mediaDeduplicationWindow
         ? currentTweets.sublist(currentTweets.length - settings.mediaDeduplicationWindow)
         : currentTweets;
 
-    final seenIds = dedupeWindow.map((t) => t.id).toSet();
-    final seenMediaUrls = dedupeWindow
-        .where((t) => t.mediaUrls.isNotEmpty)
-        .map((t) => t.mediaUrls.first)
-        .toSet();
+    final seenIds = {...headIds, ...dedupeWindow.map((t) => t.id)};
+    final seenMediaUrls = {
+      ...headMedia,
+      ...dedupeWindow
+          .where((t) => t.mediaUrls.isNotEmpty)
+          .map((t) => t.mediaUrls.first)
+    };
 
     List<Tweet> deduplicate(List<Tweet> pool) {
       return pool.where((t) {
@@ -86,14 +95,17 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
     final uniqueFresh = deduplicate(freshPool)..shuffle();
     final uniqueLocal = deduplicate(localPool)..shuffle();
 
-    var processed = DiscoveryEngine.interleave(
+    final interleaved = DiscoveryEngine.interleave(
         uniqueFresh, uniqueLocal, settings.freshMixRatio);
+
+    var processed = [...head, ...interleaved];
 
     processed = DiscoveryEngine.applySaturation(
       processed,
       threshold: settings.saturationThreshold,
       windowSize: settings.saturationWindow,
-      startIndex: protectedIndex,
+      startIndex: head.length,
+      maxSaturationSwaps: settings.maxSaturationSwaps,
     );
 
     if (settings.unseenSubscriptionBoost) {
@@ -101,7 +113,7 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
         processed,
         playedByUser,
         lookahead: settings.unseenBoostLookahead,
-        startIndex: protectedIndex,
+        startIndex: head.length,
       );
     }
     return processed;
@@ -138,7 +150,9 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
       }
 
       // TRIGGER BACKGROUND SYNC
-      Future.delayed(Duration.zero, () => _refreshInBackground());
+      if (settings.isInitialized) {
+        Future.delayed(Duration.zero, () => _refreshInBackground());
+      }
 
       return FeedState(
         tweets: localTagged,
