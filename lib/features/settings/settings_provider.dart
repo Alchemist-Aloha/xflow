@@ -24,6 +24,7 @@ class SettingsState {
   final bool unseenSubscriptionBoost;
   final double freshMixRatio;
   final int saturationThreshold;
+  final int mediaSaturationThreshold;
   final FeedSort fetchStrategy;
   final int initialSyncCount;
   final bool strictSubscriptionsOnly;
@@ -45,6 +46,7 @@ class SettingsState {
   final int maxQueryLength;
   final int apiTimeoutSeconds;
   final int maxSaturationSwaps;
+  final int maxSaturationPasses;
 
   // Playback & UI Tuning
   final int playbackRetryLimit;
@@ -67,6 +69,7 @@ class SettingsState {
     this.unseenSubscriptionBoost = true,
     this.freshMixRatio = 0.3,
     this.saturationThreshold = 2,
+    this.mediaSaturationThreshold = 1,
     this.fetchStrategy = FeedSort.latest,
     this.initialSyncCount = 10,
     this.strictSubscriptionsOnly = true,
@@ -84,6 +87,7 @@ class SettingsState {
     this.maxQueryLength = 480,
     this.apiTimeoutSeconds = 15,
     this.maxSaturationSwaps = 1000,
+    this.maxSaturationPasses = 3,
     this.playbackRetryLimit = 1,
     this.autoSkipDelaySeconds = 2,
     this.lazyLoadThreshold = 10,
@@ -105,6 +109,7 @@ class SettingsState {
     bool? unseenSubscriptionBoost,
     double? freshMixRatio,
     int? saturationThreshold,
+    int? mediaSaturationThreshold,
     FeedSort? fetchStrategy,
     int? initialSyncCount,
     bool? strictSubscriptionsOnly,
@@ -122,6 +127,7 @@ class SettingsState {
     int? maxQueryLength,
     int? apiTimeoutSeconds,
     int? maxSaturationSwaps,
+    int? maxSaturationPasses,
     int? playbackRetryLimit,
     int? autoSkipDelaySeconds,
     int? lazyLoadThreshold,
@@ -143,6 +149,8 @@ class SettingsState {
           unseenSubscriptionBoost ?? this.unseenSubscriptionBoost,
       freshMixRatio: freshMixRatio ?? this.freshMixRatio,
       saturationThreshold: saturationThreshold ?? this.saturationThreshold,
+      mediaSaturationThreshold:
+          mediaSaturationThreshold ?? this.mediaSaturationThreshold,
       fetchStrategy: fetchStrategy ?? this.fetchStrategy,
       initialSyncCount: initialSyncCount ?? this.initialSyncCount,
       strictSubscriptionsOnly:
@@ -165,6 +173,7 @@ class SettingsState {
       maxQueryLength: maxQueryLength ?? this.maxQueryLength,
       apiTimeoutSeconds: apiTimeoutSeconds ?? this.apiTimeoutSeconds,
       maxSaturationSwaps: maxSaturationSwaps ?? this.maxSaturationSwaps,
+      maxSaturationPasses: maxSaturationPasses ?? this.maxSaturationPasses,
       playbackRetryLimit: playbackRetryLimit ?? this.playbackRetryLimit,
       autoSkipDelaySeconds: autoSkipDelaySeconds ?? this.autoSkipDelaySeconds,
       lazyLoadThreshold: lazyLoadThreshold ?? this.lazyLoadThreshold,
@@ -212,6 +221,8 @@ class SettingsNotifier extends Notifier<SettingsState> {
         _prefs.getBool('unseenSubscriptionBoost') ?? true;
     final freshMixRatio = _prefs.getDouble('freshMixRatio') ?? 0.3;
     final saturationThreshold = _prefs.getInt('saturationThreshold') ?? 2;
+    final mediaSaturationThreshold =
+        _prefs.getInt('mediaSaturationThreshold') ?? 1;
     final fetchStrategyIdx = _prefs.getInt('fetchStrategy') ?? 0;
     final initialSyncCount = _prefs.getInt('initialSyncCount') ?? 10;
     final strictSubscriptionsOnly =
@@ -234,6 +245,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
     final maxQueryLength = _prefs.getInt('maxQueryLength') ?? 480;
     final apiTimeoutSeconds = _prefs.getInt('apiTimeoutSeconds') ?? 15;
     final maxSaturationSwaps = _prefs.getInt('maxSaturationSwaps') ?? 1000;
+    final maxSaturationPasses = _prefs.getInt('maxSaturationPasses') ?? 3;
     final playbackRetryLimit = _prefs.getInt('playbackRetryLimit') ?? 1;
     final autoSkipDelaySeconds = _prefs.getInt('autoSkipDelaySeconds') ?? 2;
     final lazyLoadThreshold = _prefs.getInt('lazyLoadThreshold') ?? 10;
@@ -255,6 +267,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
       unseenSubscriptionBoost: unseenSubscriptionBoost,
       freshMixRatio: freshMixRatio,
       saturationThreshold: saturationThreshold,
+      mediaSaturationThreshold: mediaSaturationThreshold,
       fetchStrategy: fetchStrategyIdx < FeedSort.values.length
           ? FeedSort.values[fetchStrategyIdx]
           : FeedSort.latest,
@@ -274,6 +287,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
       maxQueryLength: maxQueryLength,
       apiTimeoutSeconds: apiTimeoutSeconds,
       maxSaturationSwaps: maxSaturationSwaps,
+      maxSaturationPasses: maxSaturationPasses,
       playbackRetryLimit: playbackRetryLimit,
       autoSkipDelaySeconds: autoSkipDelaySeconds,
       lazyLoadThreshold: lazyLoadThreshold,
@@ -316,6 +330,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
     bool? unseenSubscriptionBoost,
     double? freshMixRatio,
     int? saturationThreshold,
+    int? mediaSaturationThreshold,
     FeedSort? fetchStrategy,
     int? initialSyncCount,
     bool? strictSubscriptionsOnly,
@@ -332,6 +347,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
     int? maxQueryLength,
     int? apiTimeoutSeconds,
     int? maxSaturationSwaps,
+    int? maxSaturationPasses,
     int? playbackRetryLimit,
     int? autoSkipDelaySeconds,
     int? lazyLoadThreshold,
@@ -342,6 +358,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
       unseenSubscriptionBoost: unseenSubscriptionBoost,
       freshMixRatio: freshMixRatio,
       saturationThreshold: saturationThreshold,
+      mediaSaturationThreshold: mediaSaturationThreshold,
       fetchStrategy: fetchStrategy,
       initialSyncCount: initialSyncCount,
       strictSubscriptionsOnly: strictSubscriptionsOnly,
@@ -358,6 +375,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
       maxQueryLength: maxQueryLength,
       apiTimeoutSeconds: apiTimeoutSeconds,
       maxSaturationSwaps: maxSaturationSwaps,
+      maxSaturationPasses: maxSaturationPasses,
       playbackRetryLimit: playbackRetryLimit,
       autoSkipDelaySeconds: autoSkipDelaySeconds,
       lazyLoadThreshold: lazyLoadThreshold,
@@ -370,6 +388,8 @@ class SettingsNotifier extends Notifier<SettingsState> {
     if (freshMixRatio != null) _prefs.setDouble('freshMixRatio', freshMixRatio);
     if (saturationThreshold != null)
       _prefs.setInt('saturationThreshold', saturationThreshold);
+    if (mediaSaturationThreshold != null)
+      _prefs.setInt('mediaSaturationThreshold', mediaSaturationThreshold);
     if (fetchStrategy != null)
       _prefs.setInt('fetchStrategy', fetchStrategy.index);
     if (initialSyncCount != null)
@@ -399,6 +419,8 @@ class SettingsNotifier extends Notifier<SettingsState> {
       _prefs.setInt('apiTimeoutSeconds', apiTimeoutSeconds);
     if (maxSaturationSwaps != null)
       _prefs.setInt('maxSaturationSwaps', maxSaturationSwaps);
+    if (maxSaturationPasses != null)
+      _prefs.setInt('maxSaturationPasses', maxSaturationPasses);
     if (playbackRetryLimit != null)
       _prefs.setInt('playbackRetryLimit', playbackRetryLimit);
     if (autoSkipDelaySeconds != null)

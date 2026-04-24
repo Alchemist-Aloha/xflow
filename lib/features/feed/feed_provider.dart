@@ -100,14 +100,6 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
 
     var processed = [...head, ...interleaved];
 
-    processed = DiscoveryEngine.applySaturation(
-      processed,
-      threshold: settings.saturationThreshold,
-      windowSize: settings.saturationWindow,
-      startIndex: head.length,
-      maxSaturationSwaps: settings.maxSaturationSwaps,
-    );
-
     if (settings.unseenSubscriptionBoost) {
       processed = DiscoveryEngine.applyUnseenSubscriptionBoost(
         processed,
@@ -116,6 +108,17 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
         startIndex: head.length,
       );
     }
+
+    processed = DiscoveryEngine.applySaturation(
+      processed,
+      threshold: settings.saturationThreshold,
+      mediaThreshold: settings.mediaSaturationThreshold,
+      windowSize: settings.saturationWindow,
+      startIndex: head.length,
+      maxSaturationSwaps: settings.maxSaturationSwaps,
+      maxPasses: settings.maxSaturationPasses,
+    );
+
     return processed;
   }
 
@@ -358,9 +361,11 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
       combined = DiscoveryEngine.applySaturation(
         combined,
         threshold: settings.saturationThreshold,
+        mediaThreshold: settings.mediaSaturationThreshold,
         windowSize: settings.saturationWindow,
         startIndex: state.value!.tweets.length,
         maxSaturationSwaps: settings.maxSaturationSwaps,
+        maxPasses: settings.maxSaturationPasses,
       );
 
       state = AsyncData(state.value!.copyWith(
