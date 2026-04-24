@@ -195,8 +195,6 @@ class SettingsNotifier extends Notifier<SettingsState> {
     );
   }
 
-
-
   void updateMediaCacheSize(int megabytes) {
     state = state.copyWith(mediaCacheSizeMB: megabytes);
     _prefs.setInt('mediaCacheSizeMB', megabytes);
@@ -276,10 +274,8 @@ class SettingsNotifier extends Notifier<SettingsState> {
       _prefs.setInt('saturationWindow', saturationWindow);
     if (unseenBoostLookahead != null)
       _prefs.setInt('unseenBoostLookahead', unseenBoostLookahead);
-    if (minFavesFilter != null)
-      _prefs.setInt('minFavesFilter', minFavesFilter);
+    if (minFavesFilter != null) _prefs.setInt('minFavesFilter', minFavesFilter);
   }
-
 
   void toggleFilter(MediaFilter filter) {
     final nextFilters = Set<MediaFilter>.from(state.filters);
@@ -307,7 +303,6 @@ class SettingsNotifier extends Notifier<SettingsState> {
     _prefs.setBool('showDebugInfo', value);
   }
 }
-
 
 final settingsProvider = NotifierProvider<SettingsNotifier, SettingsState>(
   SettingsNotifier.new,

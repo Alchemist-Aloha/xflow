@@ -317,7 +317,9 @@ class TwitterClient {
 
     // Always exclude replies from feed discovery/trending queries to avoid duplicates and noise
     if (!finalQuery.contains("-filter:replies")) {
-      finalQuery = finalQuery.isEmpty ? "-filter:replies" : "$finalQuery -filter:replies";
+      finalQuery = finalQuery.isEmpty
+          ? "-filter:replies"
+          : "$finalQuery -filter:replies";
     }
 
     if (filters != null && filters.isNotEmpty) {
@@ -484,7 +486,8 @@ class TwitterClient {
     if (cursor != null && _lastSubscribedQuery != null) {
       // Continue pagination on the same query chunk.
       query = _lastSubscribedQuery!;
-      AppLogger.log('Fetching subscribed media (Pagination) using last query: $query');
+      AppLogger.log(
+          'Fetching subscribed media (Pagination) using last query: $query');
     } else if (useChunkedSubscriptions) {
       final queries = buildChunkedQueries(subs);
       if (queries.isEmpty) {
@@ -500,14 +503,16 @@ class TwitterClient {
       }
       final idx = _subscriptionChunkIndex % queries.length;
       query = queries[idx];
-      AppLogger.log('Fetching subscribed media (Chunked): Chunk ${idx + 1} of ${queries.length}. Total Subs: ${subs.length}');
+      AppLogger.log(
+          'Fetching subscribed media (Chunked): Chunk ${idx + 1} of ${queries.length}. Total Subs: ${subs.length}');
       _subscriptionChunkIndex = (_subscriptionChunkIndex + 1) % queries.length;
       _lastSubscribedQuery = query;
     } else {
       final pickedSubs = (subs.toList()..shuffle()).take(subBatchSize);
       final users = buildUsersClause(pickedSubs);
       query = buildQueryFromUsersClause(users);
-      AppLogger.log('Fetching subscribed media (Random Sample): ${pickedSubs.length} accounts selected');
+      AppLogger.log(
+          'Fetching subscribed media (Random Sample): ${pickedSubs.length} accounts selected');
       _lastSubscribedQuery = query;
     }
 
@@ -520,8 +525,6 @@ class TwitterClient {
       cooldownMinutes: cooldownMinutes,
       minFaves: minFaves,
     );
-
-
 
     if (!strictSubscriptionsOnly &&
         cursor == null &&
@@ -655,7 +658,8 @@ class TwitterClient {
       }
     }
 
-    AppLogger.log('Parsing complete. Processed ${entries.length} entries. Found ${tweets.length} tweets.');
+    AppLogger.log(
+        'Parsing complete. Processed ${entries.length} entries. Found ${tweets.length} tweets.');
 
     return TweetResponse(
       tweets: tweets,
@@ -663,7 +667,6 @@ class TwitterClient {
       cursorBottom: cursorBottom,
     );
   }
-
 
   void parseTweetResult(
       Map<String, dynamic> itemContent, String entryId, List<Tweet> tweets) {
@@ -686,14 +689,13 @@ class TwitterClient {
       if (legacy == null) return;
 
       // Skip replies to avoid duplicates and noise in the media feed
-      if (legacy['in_reply_to_status_id_str'] != null || 
+      if (legacy['in_reply_to_status_id_str'] != null ||
           legacy['in_reply_to_screen_name'] != null) {
         return;
       }
 
-      String tweetId = tweetResult['rest_id'] ??
-          tweetResult['tweet']?['rest_id'] ??
-          entryId;
+      String tweetId =
+          tweetResult['rest_id'] ?? tweetResult['tweet']?['rest_id'] ?? entryId;
 
       var retweetedStatusResult = tweetResult['retweeted_status_result'] ??
           legacy['retweeted_status_result'] ??
