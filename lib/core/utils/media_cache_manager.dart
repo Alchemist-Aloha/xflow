@@ -55,6 +55,26 @@ class CustomMediaCacheManager {
   }
 
   static Future<void> clearCache() async {
-    await getInstance().emptyCache();
+    try {
+      final tempDir = await getTemporaryDirectory();
+      final possiblePaths = {
+        p.join(tempDir.path, key),
+        p.join(tempDir.path, 'libCachedImageData', key),
+        p.join(tempDir.path, 'flutter_cache_manager', key),
+      };
+
+      for (final path in possiblePaths) {
+        final dir = Directory(path);
+        if (await dir.exists()) {
+          await dir.delete(recursive: true);
+        }
+      }
+      
+      // Also empty the manager instance
+      await getInstance().emptyCache();
+    } catch (e) {
+      debugPrint('Error clearing physical cache: $e');
+    }
   }
 }
+

@@ -12,10 +12,19 @@ import 'features/settings/settings_provider.dart';
 
 import 'core/client/twitter_account.dart';
 
+import 'core/database/repository.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // MediaKit.ensureInitialized() is typically synchronous or its return value is not needed to be awaited in this context
   MediaKit.ensureInitialized();
-  await TwitterAccount.init();
+
+  // Parallelize core engine and data layer initialization
+  await Future.wait([
+    TwitterAccount.init(),
+    Repository.database, // Pre-warm DB connection
+  ]);
   
   runApp(const ProviderScope(child: XFlowApp()));
 }

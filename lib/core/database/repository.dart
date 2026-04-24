@@ -23,7 +23,7 @@ class Repository {
     String path = join(await getDatabasesPath(), 'xflow.db');
     return await openDatabase(
       path,
-      version: 5,
+      version: 6,
       onCreate: (db, version) async {
         await db.execute(
           'CREATE TABLE $tableAccounts (id TEXT PRIMARY KEY, screen_name TEXT, rest_id TEXT, auth_header TEXT)',
@@ -46,6 +46,9 @@ class Repository {
             duration_watched INTEGER DEFAULT 0
           )
         ''');
+        await db.execute(
+          'CREATE INDEX idx_discovery_lookup ON $tableCachedMedia (played_count, created_at DESC)',
+        );
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -81,6 +84,11 @@ class Repository {
               duration_watched INTEGER DEFAULT 0
             )
           ''');
+        }
+        if (oldVersion < 6) {
+          await db.execute(
+            'CREATE INDEX IF NOT EXISTS idx_discovery_lookup ON $tableCachedMedia (played_count, created_at DESC)',
+          );
         }
       },
     );
@@ -189,7 +197,7 @@ class Repository {
       tableCachedMedia,
       where: whereClause,
       whereArgs: whereArgs,
-      orderBy: 'created_at DESC',
+      orderBy: 'RANDOM()',
       limit: limit,
     );
 
@@ -248,7 +256,7 @@ class Repository {
       tableCachedMedia,
       where: whereClause,
       whereArgs: whereArgs,
-      orderBy: 'created_at DESC',
+      orderBy: 'RANDOM()',
       limit: limit,
     );
 
@@ -322,7 +330,7 @@ class Repository {
       tableCachedMedia,
       where: whereClause,
       whereArgs: whereArgs,
-      orderBy: 'created_at DESC',
+      orderBy: 'RANDOM()',
       limit: limit,
     );
 
@@ -359,24 +367,40 @@ class Repository {
     return countSq.first['count'] as int;
   }
 
-  static Future<void> pruneCachedMedia({int threshold = 50000}) async {
+  static Future<void> pruneCachedMedia({int threshold = 5000}) async {
     final db = await database;
-    final countSq =
-        await db.rawQuery('SELECT COUNT(*) as count FROM $tableCachedMedia');
+    
+    // 1. Delete by age: Remove anything older than 7 days
+    final sevenDaysAgo = DateTime.now().subtract(const Duration(days: 7)).millisecondsSinceEpoch;
+    await db.delete(
+      tableCachedMedia,
+      where: 'created_at < ?',
+      whereArgs: [sevenDaysAgo],
+    );
+
+    // 2. Delete by count: If still over threshold, delete oldest watched items
+    final countSq = await db.rawQuery('SELECT COUNT(*) as count FROM $tableCachedMedia');
     final count = countSq.first['count'] as int;
 
     if (count > threshold) {
-      // Delete the oldest watched items
       final deleteCount = count - threshold;
       await db.execute('''
         DELETE FROM $tableCachedMedia 
         WHERE id IN (
           SELECT id FROM $tableCachedMedia 
-          WHERE played_count > 0 
-          ORDER BY last_played_at ASC 
+          ORDER BY COALESCE(last_played_at, created_at) ASC 
           LIMIT ?
         )
       ''', [deleteCount]);
     }
   }
+
+  static Future<void> purgeSeenMetadata() async {
+    final db = await database;
+    await db.delete(
+      tableCachedMedia,
+      where: 'played_count > 0',
+    );
+  }
 }
+

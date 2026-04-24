@@ -200,8 +200,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               }
             },
           ),
+          ListTile(
+            leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
+            title: const Text('Purge Seen Metadata', style: TextStyle(color: Colors.redAccent)),
+            subtitle: const Text('Delete database records for videos you have already watched'),
+            onTap: () async {
+              final scaffoldMessenger = ScaffoldMessenger.of(context);
+              await Repository.purgeSeenMetadata();
+              await _loadStats();
+              if (mounted) {
+                scaffoldMessenger.showSnackBar(
+                  const SnackBar(content: Text('Seen metadata purged')),
+                );
+              }
+            },
+          ),
         ],
       ),
     );
+
   }
 }

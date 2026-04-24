@@ -60,7 +60,7 @@ class MockFeedNotifier extends FeedNotifier {
   FutureOr<FeedState> build() => mockState;
 
   @override
-  Future<void> fetchMore() async {}
+  Future<void> fetchMore({int retryCount = 0}) async {}
 }
 
 class MockPlayerPool extends PlayerPoolNotifier {

@@ -55,140 +55,86 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
     List<Tweet> freshPool,
     List<Tweet> localPool,
     SettingsState settings,
-    Map<String, int> playedByUser,
-  ) {
+    Map<String, int> playedByUser, {
+    int protectedIndex = 0,
+  }) {
     final seenIds = <String>{};
     final seenMediaUrls = <String>{};
 
-    final uniqueFresh = freshPool.where((t) {
-      if (seenIds.contains(t.id)) return false;
-      if (t.mediaUrls.isNotEmpty && seenMediaUrls.contains(t.mediaUrls.first)) {
-        return false;
-      }
-      seenIds.add(t.id);
-      if (t.mediaUrls.isNotEmpty) seenMediaUrls.add(t.mediaUrls.first);
-      return true;
-    }).toList();
+    List<Tweet> deduplicate(List<Tweet> pool) {
+      return pool.where((t) {
+        if (seenIds.contains(t.id)) return false;
+        if (t.mediaUrls.isNotEmpty &&
+            seenMediaUrls.contains(t.mediaUrls.first)) {
+          return false;
+        }
+        seenIds.add(t.id);
+        if (t.mediaUrls.isNotEmpty) seenMediaUrls.add(t.mediaUrls.first);
+        return true;
+      }).toList();
+    }
 
-    final uniqueLocal = localPool.where((t) {
-      if (seenIds.contains(t.id)) return false;
-      if (t.mediaUrls.isNotEmpty && seenMediaUrls.contains(t.mediaUrls.first)) {
-        return false;
-      }
-      seenIds.add(t.id);
-      if (t.mediaUrls.isNotEmpty) seenMediaUrls.add(t.mediaUrls.first);
-      return true;
-    }).toList();
+    final uniqueFresh = deduplicate(freshPool);
+    final uniqueLocal = deduplicate(localPool);
 
     var processed = DiscoveryEngine.interleave(
         uniqueFresh, uniqueLocal, settings.freshMixRatio);
+
     processed = DiscoveryEngine.applySaturation(
       processed,
       threshold: settings.saturationThreshold,
       windowSize: settings.saturationWindow,
+      startIndex: protectedIndex,
     );
+
     if (settings.unseenSubscriptionBoost) {
       processed = DiscoveryEngine.applyUnseenSubscriptionBoost(
         processed,
         playedByUser,
         lookahead: settings.unseenBoostLookahead,
+        startIndex: protectedIndex,
       );
     }
     return processed;
-
   }
 
   @override
   FutureOr<FeedState> build() async {
-    final client = ref.watch(twitterClientProvider);
     final settings = ref.watch(settingsProvider);
-    final syncBatchSize = await _resolveSyncBatchSize(settings);
 
     debugPrint(
         'XFLOW: Building FeedNotifier. fetchStrategy: ${settings.fetchStrategy}');
 
     try {
-      // Stage 1: candidate retrieval (local + fresh)
-      final localFuture = Repository.getCachedMediaCandidates(
+      // Stage 1: Immediate local candidate retrieval
+      final localPool = await Repository.getCachedMediaCandidates(
         settings.loadBatchSize * 3,
         avoidWatchedContent: settings.avoidWatchedContent,
         filters: settings.filters,
       );
-      final freshFuture = client.fetchSubscribedMedia(
-        sort: settings.fetchStrategy,
-        filters: settings.filters,
-        subBatchSize: syncBatchSize,
-        loadBatchSize: settings.initialSyncCount,
-        cooldownMinutes: settings.cooldownDuration,
-        strictSubscriptionsOnly: settings.strictSubscriptionsOnly,
-        includeNativeRetweets: settings.includeNativeRetweets,
-        useChunkedSubscriptions: settings.useChunkedSubscriptions,
-        minFaves: settings.minFavesFilter,
-      );
+      final localTagged =
+          localPool.map((t) => t.copyWith(source: 'Cache')).toList();
+      AppLogger.log(
+          'XFLOW: Cold start: Retrieved ${localPool.length} local candidates');
 
-
-      final localPool = await localFuture;
-      final localTagged = localPool.map((t) => t.copyWith(source: 'Cache')).toList();
-      AppLogger.log('XFLOW: Retrieved ${localPool.length} candidates from local repository');
-      
-      final freshResponse = await freshFuture;
-      final freshPool = freshResponse.tweets;
-      final freshTagged = freshPool.map((t) => t.copyWith(source: 'API')).toList();
-      
-      if (freshPool.isNotEmpty) {
-        await Repository.insertCachedMedia(freshPool);
-      }
-
-      final playedByUser = settings.unseenSubscriptionBoost
-          ? await Repository.getPlayedCountsByUser()
-          : const <String, int>{};
-
-      var tweets =
-          _runDiscoveryPipeline(freshTagged, localTagged, settings, playedByUser);
-
-
-      debugPrint('XFLOW: Local pool size after pipeline: ${tweets.length}');
-
-      // If discovery produced nothing, make one fallback API call to avoid blank screen.
-      if (tweets.isEmpty) {
-        debugPrint(
-            'XFLOW: Discovery produced empty pool, performing fallback sync...');
-        final response = await client.fetchSubscribedMedia(
-          sort: settings.fetchStrategy,
-          filters: settings.filters,
-          subBatchSize: syncBatchSize,
-          loadBatchSize: settings.initialSyncCount,
-          cooldownMinutes: settings.cooldownDuration,
-          strictSubscriptionsOnly: settings.strictSubscriptionsOnly,
-          includeNativeRetweets: settings.includeNativeRetweets,
-          useChunkedSubscriptions: settings.useChunkedSubscriptions,
-        );
-        tweets = response.tweets;
-        debugPrint('XFLOW: Fallback sync returned ${tweets.length} tweets');
-        if (tweets.isNotEmpty) {
-          await Repository.insertCachedMedia(tweets);
+      // EARLY MEDIA WARMUP
+      if (localTagged.isNotEmpty) {
+        final pool = ref.read(playerPoolProvider.notifier);
+        for (int i = 0; i < localTagged.length && i < 3; i++) {
+          final tweet = localTagged[i];
+          if (tweet.isVideo && tweet.mediaUrls.isNotEmpty) {
+            pool.warmup(tweet.id, tweet.mediaUrls.first);
+          }
         }
       }
 
-      final processed = tweets;
-
-      // Trigger a follow-up refresh regardless to keep feed hot and up-to-date.
+      // TRIGGER BACKGROUND SYNC
       Future.delayed(Duration.zero, () => _refreshInBackground());
 
-      // Warm up the player pool
-      final pool = ref.read(playerPoolProvider.notifier);
-      for (int i = 0; i < processed.length && i < 3; i++) {
-        final tweet = processed[i];
-        if (tweet.isVideo && tweet.mediaUrls.isNotEmpty) {
-          pool.warmup(tweet.id, tweet.mediaUrls.first);
-        }
-      }
-
       return FeedState(
-        tweets: processed,
+        tweets: localTagged,
         cursorBottom: null,
-        isRefreshing:
-            tweets.isEmpty, // Only refreshing if we started with nothing
+        isRefreshing: localTagged.isEmpty,
       );
     } catch (e, st) {
       debugPrint('XFLOW: Error in build(): $e\n$st');
@@ -206,13 +152,7 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
     debugPrint('XFLOW: Background refresh started');
 
     try {
-      final localPool = await Repository.getCachedMediaCandidates(
-        settings.loadBatchSize * 3,
-        avoidWatchedContent: settings.avoidWatchedContent,
-        filters: settings.filters,
-      );
-      final localTagged = localPool.map((t) => t.copyWith(source: 'Cache')).toList();
-
+      // 1. Fetch from API
       final freshResponse = await client.fetchSubscribedMedia(
         sort: settings.fetchStrategy,
         filters: settings.filters,
@@ -225,16 +165,25 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
         minFaves: settings.minFavesFilter,
       );
 
-
       final freshPool = freshResponse.tweets;
-      final freshTagged = freshPool.map((t) => t.copyWith(source: 'API')).toList();
-      
+      final freshTagged =
+          freshPool.map((t) => t.copyWith(source: 'API')).toList();
+
       debugPrint(
           'XFLOW: Background refresh returned ${freshPool.length} fresh tweets');
 
       if (freshPool.isNotEmpty) {
         await Repository.insertCachedMedia(freshPool);
       }
+
+      // 2. Fetch local pool (now including fresh items)
+      final localPool = await Repository.getCachedMediaCandidates(
+        settings.loadBatchSize * 5,
+        avoidWatchedContent: settings.avoidWatchedContent,
+        filters: settings.filters,
+      );
+      final localTagged =
+          localPool.map((t) => t.copyWith(source: 'Cache')).toList();
 
       final currentAsync = ref.read(feedNotifierProvider);
       if (currentAsync.hasValue) {
@@ -244,9 +193,15 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
             ? await Repository.getPlayedCountsByUser()
             : const <String, int>{};
 
-        final processed =
-            _runDiscoveryPipeline(freshTagged, localTagged, settings, playedByUser);
-
+        // PROTECT THE ACTIVE VIDEO: If user is at index 0, protect index 0 from being swapped.
+        // We protect up to 2 items to ensure the "next" item also doesn't jump unexpectedly.
+        final processed = _runDiscoveryPipeline(
+          freshTagged,
+          localTagged,
+          settings,
+          playedByUser,
+          protectedIndex: 2,
+        );
 
         state = AsyncData(current.copyWith(
           tweets: processed,
@@ -265,37 +220,40 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
     }
   }
 
-  Future<void> fetchMore() async {
+  Future<void> fetchMore({int retryCount = 0}) async {
     final currentState = state.value;
-    if (currentState == null || currentState.isLoadingMore) {
+    if (currentState == null || currentState.isLoadingMore || retryCount > 3) {
       return;
     }
 
     final currentTweets = currentState.tweets;
     final currentCursor = currentState.cursorBottom;
-
     final settings = ref.read(settingsProvider);
     final syncBatchSize = await _resolveSyncBatchSize(settings);
+    
     state = AsyncData(currentState.copyWith(isLoadingMore: true));
 
     try {
-      // 1. Try to fetch from DB that aren't already in the current state
+      // 1. Try to fetch from DB first
       final allCandidates = await Repository.getCachedMediaCandidates(
-        settings.loadBatchSize * 2,
+        settings.loadBatchSize * 3,
         avoidWatchedContent: settings.avoidWatchedContent,
         filters: settings.filters,
       );
+      
       final seenIds = currentTweets.map((t) => t.id).toSet();
-      var newTweetsFromCache =
-          allCandidates.where((t) => !seenIds.contains(t.id)).toList();
+      final seenMedia = currentTweets.where((t) => t.mediaUrls.isNotEmpty).map((t) => t.mediaUrls.first).toSet();
+      
+      var newTweets = allCandidates.where((t) {
+        final isNewId = !seenIds.contains(t.id);
+        final isNewMedia = t.mediaUrls.isEmpty || !seenMedia.contains(t.mediaUrls.first);
+        return isNewId && isNewMedia;
+      }).toList();
 
       String? nextCursor = currentCursor;
-      List<Tweet> finalNewTweets = [];
 
-      // 2. If no new local tweets (or based on ratio), trigger an API fetch
-      // For fetchMore, we can simplify: if we have cache, use it, else API.
-      // Or we can also use the engine here.
-      if (newTweetsFromCache.isEmpty) {
+      // 2. If local pool is dry or small, hit the API
+      if (newTweets.length < 5) {
         final client = ref.read(twitterClientProvider);
         final response = await client.fetchSubscribedMedia(
           cursor: currentCursor,
@@ -310,25 +268,37 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
           minFaves: settings.minFavesFilter,
         );
 
+        final freshUnique = response.tweets.where((t) {
+          final isNewId = !seenIds.contains(t.id);
+          final isNewMedia = t.mediaUrls.isEmpty || !seenMedia.contains(t.mediaUrls.first);
+          return isNewId && isNewMedia;
+        }).toList();
 
-        finalNewTweets = response.tweets
-            .where((t) => !seenIds.contains(t.id))
-            .map((t) => t.copyWith(source: 'API'))
-            .toList();
-        nextCursor = response.cursorBottom;
         await Repository.insertCachedMedia(response.tweets);
-      } else {
-        finalNewTweets = newTweetsFromCache
-            .take(settings.loadBatchSize)
-            .map((t) => t.copyWith(source: 'Cache'))
-            .toList();
+        newTweets.addAll(freshUnique);
+        nextCursor = response.cursorBottom;
       }
 
+      if (newTweets.isEmpty && nextCursor != null) {
+        // Deduplication ate everything, try one more time with the new cursor
+        state = AsyncData(currentState.copyWith(isLoadingMore: false, cursorBottom: nextCursor));
+        return fetchMore(retryCount: retryCount + 1);
+      }
 
-      finalNewTweets.shuffle(); // Diversify before appending
+      final finalNewTweets = newTweets
+          .take(settings.loadBatchSize)
+          .map((t) => t.copyWith(source: newTweets.first.source ?? 'Mixed'))
+          .toList();
+
+      finalNewTweets.shuffle();
       var combined = [...currentTweets, ...finalNewTweets];
-      combined = DiscoveryEngine.applySaturation(combined,
-          threshold: settings.saturationThreshold);
+      
+      // Apply diversity enforcement to the new tail
+      combined = DiscoveryEngine.applySaturation(
+        combined,
+        threshold: settings.saturationThreshold,
+        startIndex: currentTweets.length,
+      );
 
       state = AsyncData(currentState.copyWith(
         tweets: combined,

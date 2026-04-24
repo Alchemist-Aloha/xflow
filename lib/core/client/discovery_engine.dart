@@ -56,13 +56,14 @@ class DiscoveryEngine {
     List<Tweet> tweets,
     Map<String, int> playedCountByUser, {
     int lookahead = 6,
+    int startIndex = 0,
   }) {
     if (tweets.length < 2 || playedCountByUser.isEmpty) return tweets;
 
     final result = List<Tweet>.from(tweets);
     int boosts = 0;
 
-    for (int i = 0; i < result.length - 1; i++) {
+    for (int i = startIndex; i < result.length - 1; i++) {
       final end = (i + lookahead).clamp(i + 1, result.length);
       int bestIdx = i;
       int bestScore =
@@ -86,20 +87,20 @@ class DiscoveryEngine {
     }
 
     if (boosts > 0) {
-      AppLogger.log('Discovery: Applied $boosts unseen subscription boosts (Lookahead: $lookahead)');
+      AppLogger.log('Discovery: Applied $boosts unseen subscription boosts (Lookahead: $lookahead, StartIndex: $startIndex)');
     }
     return result;
   }
 
   static List<Tweet> applySaturation(List<Tweet> tweets,
-      {int threshold = 2, int windowSize = 10}) {
+      {int threshold = 2, int windowSize = 10, int startIndex = 0}) {
     if (tweets.isEmpty) return tweets;
     final result = List<Tweet>.from(tweets);
 
     int totalSwaps = 0;
     const maxTotalSwaps = 1000;
 
-    for (int i = 0; i < result.length && totalSwaps < maxTotalSwaps; i++) {
+    for (int i = startIndex; i < result.length && totalSwaps < maxTotalSwaps; i++) {
       final handle = result[i].userHandle;
       final start = (i - windowSize + 1).clamp(0, result.length);
       final window = result.sublist(start, i);
@@ -154,8 +155,8 @@ class DiscoveryEngine {
           totalSwaps++;
           i--;
         } else if (isConsecutive || count >= threshold) {
-          // TRAPPED! No candidates forward. Try to find a spot backwards that won't break things.
-          for (int k = i - 1; k > 0; k--) {
+          // TRAPPED! No candidates forward. Try to find a spot backwards but NOT before startIndex
+          for (int k = i - 1; k > startIndex; k--) {
             final targetHandle = result[k].userHandle;
             if (targetHandle != handle) {
               // Can we swap result[i] and result[k]?
@@ -187,7 +188,7 @@ class DiscoveryEngine {
       }
     }
     if (totalSwaps > 0) {
-      AppLogger.log('Discovery: Applied $totalSwaps saturation swaps (Window: $windowSize, Threshold: $threshold)');
+      AppLogger.log('Discovery: Applied $totalSwaps saturation swaps (Window: $windowSize, Threshold: $threshold, StartIndex: $startIndex)');
     }
     return result;
   }

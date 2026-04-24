@@ -112,6 +112,7 @@ class MockTwitterClient extends _i1.Mock implements _i2.TwitterClient {
     Set<_i5.MediaFilter>? filters,
     int? count = 20,
     int? cooldownMinutes = 15,
+    int? minFaves,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -124,6 +125,7 @@ class MockTwitterClient extends _i1.Mock implements _i2.TwitterClient {
             #filters: filters,
             #count: count,
             #cooldownMinutes: cooldownMinutes,
+            #minFaves: minFaves,
           },
         ),
         returnValue: _i3.Future<_i2.TweetResponse>.value(_FakeTweetResponse_0(
@@ -138,6 +140,7 @@ class MockTwitterClient extends _i1.Mock implements _i2.TwitterClient {
               #filters: filters,
               #count: count,
               #cooldownMinutes: cooldownMinutes,
+              #minFaves: minFaves,
             },
           ),
         )),
@@ -154,6 +157,7 @@ class MockTwitterClient extends _i1.Mock implements _i2.TwitterClient {
     bool? strictSubscriptionsOnly = true,
     bool? includeNativeRetweets = false,
     bool? useChunkedSubscriptions = true,
+    int? minFaves,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -169,6 +173,7 @@ class MockTwitterClient extends _i1.Mock implements _i2.TwitterClient {
             #strictSubscriptionsOnly: strictSubscriptionsOnly,
             #includeNativeRetweets: includeNativeRetweets,
             #useChunkedSubscriptions: useChunkedSubscriptions,
+            #minFaves: minFaves,
           },
         ),
         returnValue: _i3.Future<_i2.TweetResponse>.value(_FakeTweetResponse_0(
@@ -186,6 +191,7 @@ class MockTwitterClient extends _i1.Mock implements _i2.TwitterClient {
               #strictSubscriptionsOnly: strictSubscriptionsOnly,
               #includeNativeRetweets: includeNativeRetweets,
               #useChunkedSubscriptions: useChunkedSubscriptions,
+              #minFaves: minFaves,
             },
           ),
         )),

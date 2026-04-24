@@ -53,7 +53,8 @@ class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
           Repository.markMediaAsPlayed(tweets[page].id);
         }
 
-        if (page >= tweets.length - 5) {
+        // Trigger lazy load earlier (10 items from end) to handle deduplication overhead
+        if (page >= tweets.length - 10) {
           ref.read(feedNotifierProvider.notifier).fetchMore();
         }
       }

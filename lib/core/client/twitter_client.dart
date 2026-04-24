@@ -688,12 +688,6 @@ class TwitterClient {
       var legacy = tweetResult['legacy'];
       if (legacy == null) return;
 
-      // Skip replies to avoid duplicates and noise in the media feed
-      if (legacy['in_reply_to_status_id_str'] != null ||
-          legacy['in_reply_to_screen_name'] != null) {
-        return;
-      }
-
       String tweetId =
           tweetResult['rest_id'] ?? tweetResult['tweet']?['rest_id'] ?? entryId;
 
