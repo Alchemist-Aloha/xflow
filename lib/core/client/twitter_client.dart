@@ -10,7 +10,7 @@ import '../utils/date_utils.dart';
 import '../../features/settings/settings_provider.dart';
 
 class TweetResponse {
-  final List<Tweet> tweets;
+  List<Tweet> tweets;
   final String? cursorTop;
   final String? cursorBottom;
 
@@ -615,23 +615,181 @@ class TwitterClient {
     );
   }
 
+  Future<TweetResponse> fetchVideoMixer({
+    String? cursor,
+    int count = 20,
+    Set<MediaFilter>? filters,
+  }) async {
+    final variables = {
+      "count": count,
+      "includePromotedContent": true,
+      "latestControlAvailable": true,
+      "requestContext": "launch",
+    };
+    if (cursor != null) variables['cursor'] = cursor;
+
+    final uri = Uri.https('x.com', '/i/api/graphql/rAqW5uh6Unfi46lidxFwzA/MediaTabVideoMixer', {
+      'variables': jsonEncode(variables),
+      'features': jsonEncode(followingFeatures),
+    });
+
+    try {
+      AppLogger.log('Fetching MediaTabVideoMixer');
+      await _waitForTurn();
+      final response = await TwitterAccount.fetch(uri);
+      _releaseTurn();
+
+      if (response.statusCode != 200) return TweetResponse(tweets: []);
+      final result = json.decode(response.body);
+      final tweetResponse = _parseAgnosticTimeline(result);
+      
+      if (filters != null && filters.isNotEmpty) {
+        tweetResponse.tweets = _applyFilters(tweetResponse.tweets, filters);
+      }
+      
+      return tweetResponse;
+    } catch (e) {
+      AppLogger.log('Error fetching VideoMixer: $e');
+      return TweetResponse(tweets: []);
+    }
+  }
+
+  Future<TweetResponse> fetchAlgorithmicTimeline({
+    String? cursor,
+    int count = 20,
+    Set<MediaFilter>? filters,
+  }) async {
+    final variables = {
+      "count": count,
+      "includePromotedContent": true,
+      "latestControlAvailable": true,
+      "requestContext": "launch",
+    };
+    if (cursor != null) variables['cursor'] = cursor;
+
+    final uri = Uri.https('x.com', '/i/api/graphql/Yf4WJo0fW46TnqrHUw_1Ow/HomeTimeline', {
+      'variables': jsonEncode(variables),
+      'features': jsonEncode(followingFeatures),
+    });
+
+    try {
+      AppLogger.log('Fetching algorithmic timeline (For You)');
+      await _waitForTurn();
+      final response = await TwitterAccount.fetch(uri);
+      _releaseTurn();
+
+      if (response.statusCode != 200) return TweetResponse(tweets: []);
+      final result = json.decode(response.body);
+      final tweetResponse = _parseAgnosticTimeline(result);
+      
+      if (filters != null && filters.isNotEmpty) {
+        tweetResponse.tweets = _applyFilters(tweetResponse.tweets, filters);
+      }
+      
+      return tweetResponse;
+    } catch (e) {
+      AppLogger.log('Error fetching algorithmic timeline: $e');
+      return TweetResponse(tweets: []);
+    }
+  }
+
+  Future<TweetResponse> fetchChronologicalTimeline({
+    String? cursor,
+    int count = 20,
+    Set<MediaFilter>? filters,
+  }) async {
+    final variables = {
+      "count": count,
+      "includePromotedContent": true,
+      "latestControlAvailable": true,
+      "requestContext": "launch",
+    };
+    if (cursor != null) variables['cursor'] = cursor;
+
+    final uri = Uri.https('x.com', '/i/api/graphql/hlno2aLQsxiQlOrK-a2V-w/HomeLatestTimeline', {
+      'variables': jsonEncode(variables),
+      'features': jsonEncode(followingFeatures),
+    });
+
+    try {
+      AppLogger.log('Fetching chronological timeline (Following)');
+      await _waitForTurn();
+      final response = await TwitterAccount.fetch(uri);
+      _releaseTurn();
+
+      if (response.statusCode != 200) return TweetResponse(tweets: []);
+      final result = json.decode(response.body);
+      final tweetResponse = _parseAgnosticTimeline(result);
+      
+      if (filters != null && filters.isNotEmpty) {
+        tweetResponse.tweets = _applyFilters(tweetResponse.tweets, filters);
+      }
+      
+      return tweetResponse;
+    } catch (e) {
+      AppLogger.log('Error fetching chronological timeline: $e');
+      return TweetResponse(tweets: []);
+    }
+  }
+
+  List<Tweet> _applyFilters(List<Tweet> tweets, Set<MediaFilter> filters) {
+    return tweets.where((tweet) {
+      bool matches = false;
+      for (final filter in filters) {
+        switch (filter) {
+          case MediaFilter.video:
+            if (tweet.isVideo) matches = true;
+            break;
+          case MediaFilter.image:
+            if (!tweet.isVideo && tweet.mediaUrls.isNotEmpty) matches = true;
+            break;
+          case MediaFilter.text:
+            if (tweet.mediaUrls.isEmpty) matches = true;
+            break;
+        }
+        if (matches) break;
+      }
+      return matches;
+    }).toList();
+  }
+
+  /// Deep search for the 'instructions' array within the GraphQL response.
+  TweetResponse _parseAgnosticTimeline(Map<String, dynamic> response) {
+    Map<String, dynamic>? findTimeline(dynamic obj) {
+      if (obj is! Map) return null;
+      if (obj.containsKey('instructions')) return obj as Map<String, dynamic>;
+      for (final value in obj.values) {
+        final result = findTimeline(value);
+        if (result != null) return result;
+      }
+      return null;
+    }
+
+    final timeline = findTimeline(response['data'] ?? {});
+    if (timeline == null) {
+      AppLogger.log('Agnostic Parser: Could not find instructions in response keys: ${response.keys}');
+      return TweetResponse(tweets: []);
+    }
+    return _parseTweets(timeline);
+  }
+
   TweetResponse _parseTweets(Map<String, dynamic> timeline) {
     final tweets = <Tweet>[];
     final instructions = List.from(timeline['instructions'] ??
         timeline['timeline']?['instructions'] ??
         []);
 
-    final addEntries = instructions.firstWhereOrNull((e) =>
-        e['type'] == 'TimelineAddEntries' ||
-        e['__typename'] == 'TimelineAddEntries');
-    if (addEntries == null) {
-      // Try to find instructions in a different place
-      AppLogger.log(
-          'No TimelineAddEntries found in instructions: ${instructions.map((e) => e['type'] ?? e['__typename'])}');
+    // Find entries from any instruction that contains them (AddEntries or ReplaceEntry)
+    final entriesInstruction = instructions.firstWhereOrNull((e) =>
+        e['entries'] != null || e['entry'] != null);
+        
+    if (entriesInstruction == null) {
+      AppLogger.log('No entries found in instructions. Available types: ${instructions.map((e) => e['type'] ?? e['__typename'])}');
       return TweetResponse(tweets: []);
     }
 
-    final entries = List.from(addEntries['entries'] ?? []);
+    final entries = List.from(entriesInstruction['entries'] ?? [entriesInstruction['entry']].where((e) => e != null));
+
     String? cursorTop;
     String? cursorBottom;
 
@@ -732,8 +890,13 @@ class TwitterClient {
 
       final core = tweetResult['core'] ?? tweetResult['tweet']?['core'];
       final userResults = core?['user_results']?['result'];
-      final screenName = userResults?['legacy']?['screen_name'] ?? 'Unknown';
-      final userAvatarUrl = userResults?['legacy']?['profile_image_url_https'];
+      
+      final screenName = userResults?['legacy']?['screen_name'] ?? 
+                         userResults?['core']?['screen_name'] ?? 
+                         'Unknown';
+                         
+      final userAvatarUrl = userResults?['legacy']?['profile_image_url_https'] ??
+                            userResults?['avatar']?['image_url'];
 
       final media = List.from(legacy['entities']?['media'] ?? []);
       final extendedMedia =

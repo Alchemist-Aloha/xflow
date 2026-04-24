@@ -179,17 +179,35 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
 
     try {
       // 1. Fetch from API
-      final freshResponse = await client.fetchSubscribedMedia(
-        sort: settings.fetchStrategy,
-        filters: settings.filters,
-        subBatchSize: syncBatchSize,
-        loadBatchSize: settings.initialSyncCount,
-        cooldownMinutes: settings.cooldownDuration,
-        strictSubscriptionsOnly: settings.strictSubscriptionsOnly,
-        includeNativeRetweets: settings.includeNativeRetweets,
-        useChunkedSubscriptions: settings.useChunkedSubscriptions,
-        minFaves: settings.minFavesFilter,
-      );
+      final TweetResponse freshResponse;
+      if (settings.fetchStrategy == FeedSort.videomixer) {
+        freshResponse = await client.fetchVideoMixer(
+          count: settings.initialSyncCount,
+          filters: settings.filters,
+        );
+      } else if (settings.fetchStrategy == FeedSort.algorithmic) {
+        freshResponse = await client.fetchAlgorithmicTimeline(
+          count: settings.initialSyncCount,
+          filters: settings.filters,
+        );
+      } else if (settings.fetchStrategy == FeedSort.chronological) {
+        freshResponse = await client.fetchChronologicalTimeline(
+          count: settings.initialSyncCount,
+          filters: settings.filters,
+        );
+      } else {
+        freshResponse = await client.fetchSubscribedMedia(
+          sort: settings.fetchStrategy,
+          filters: settings.filters,
+          subBatchSize: syncBatchSize,
+          loadBatchSize: settings.initialSyncCount,
+          cooldownMinutes: settings.cooldownDuration,
+          strictSubscriptionsOnly: settings.strictSubscriptionsOnly,
+          includeNativeRetweets: settings.includeNativeRetweets,
+          useChunkedSubscriptions: settings.useChunkedSubscriptions,
+          minFaves: settings.minFavesFilter,
+        );
+      }
 
       final freshPool = freshResponse.tweets;
       final freshTagged =
@@ -297,20 +315,41 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
         final client = ref.read(twitterClientProvider);
         if (currentCursor != null) seenCursors.add(currentCursor);
 
-        final response = await client.fetchSubscribedMedia(
-          cursor: currentCursor,
-          sort: settings.fetchStrategy,
-          filters: settings.filters,
-          subBatchSize: syncBatchSize,
-          loadBatchSize: settings.loadBatchSize,
-          cooldownMinutes: settings.cooldownDuration,
-          strictSubscriptionsOnly: settings.strictSubscriptionsOnly,
-          includeNativeRetweets: settings.includeNativeRetweets,
-          useChunkedSubscriptions: settings.useChunkedSubscriptions,
-          minFaves: settings.minFavesFilter,
-          maxQueryLength: settings.maxQueryLength,
-          timeoutSeconds: settings.apiTimeoutSeconds,
-        );
+        final TweetResponse response;
+        if (settings.fetchStrategy == FeedSort.videomixer) {
+          response = await client.fetchVideoMixer(
+            cursor: currentCursor,
+            count: settings.loadBatchSize,
+            filters: settings.filters,
+          );
+        } else if (settings.fetchStrategy == FeedSort.algorithmic) {
+          response = await client.fetchAlgorithmicTimeline(
+            cursor: currentCursor,
+            count: settings.loadBatchSize,
+            filters: settings.filters,
+          );
+        } else if (settings.fetchStrategy == FeedSort.chronological) {
+          response = await client.fetchChronologicalTimeline(
+            cursor: currentCursor,
+            count: settings.loadBatchSize,
+            filters: settings.filters,
+          );
+        } else {
+          response = await client.fetchSubscribedMedia(
+            cursor: currentCursor,
+            sort: settings.fetchStrategy,
+            filters: settings.filters,
+            subBatchSize: syncBatchSize,
+            loadBatchSize: settings.loadBatchSize,
+            cooldownMinutes: settings.cooldownDuration,
+            strictSubscriptionsOnly: settings.strictSubscriptionsOnly,
+            includeNativeRetweets: settings.includeNativeRetweets,
+            useChunkedSubscriptions: settings.useChunkedSubscriptions,
+            minFaves: settings.minFavesFilter,
+            maxQueryLength: settings.maxQueryLength,
+            timeoutSeconds: settings.apiTimeoutSeconds,
+          );
+        }
 
         final freshUnique = response.tweets.where((t) {
           return !seenIds.contains(t.id) && 

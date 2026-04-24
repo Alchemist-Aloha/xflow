@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-enum FeedSort { latest, popular, oldest, random, trending }
+enum FeedSort { latest, popular, trending, algorithmic, chronological, videomixer }
 
 enum MediaFilter { video, image, text }
 

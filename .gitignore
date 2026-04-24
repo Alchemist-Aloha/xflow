@@ -47,3 +47,4 @@ app.*.map.json
 
 /docs/tutorial.md
 /docs/tutorial/*
+/api_response
