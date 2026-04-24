@@ -6,6 +6,7 @@ import '../../core/client/twitter_client.dart';
 import '../../core/models/tweet.dart';
 import '../../core/database/repository.dart';
 import '../../core/client/discovery_engine.dart';
+import '../../core/utils/app_logger.dart';
 import '../settings/settings_provider.dart';
 import '../player/player_pool_provider.dart';
 
@@ -81,13 +82,20 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
 
     var processed = DiscoveryEngine.interleave(
         uniqueFresh, uniqueLocal, settings.freshMixRatio);
-    processed = DiscoveryEngine.applySaturation(processed,
-        threshold: settings.saturationThreshold);
+    processed = DiscoveryEngine.applySaturation(
+      processed,
+      threshold: settings.saturationThreshold,
+      windowSize: settings.saturationWindow,
+    );
     if (settings.unseenSubscriptionBoost) {
-      processed =
-          DiscoveryEngine.applyUnseenSubscriptionBoost(processed, playedByUser);
+      processed = DiscoveryEngine.applyUnseenSubscriptionBoost(
+        processed,
+        playedByUser,
+        lookahead: settings.unseenBoostLookahead,
+      );
     }
     return processed;
+
   }
 
   @override
@@ -115,11 +123,18 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
         strictSubscriptionsOnly: settings.strictSubscriptionsOnly,
         includeNativeRetweets: settings.includeNativeRetweets,
         useChunkedSubscriptions: settings.useChunkedSubscriptions,
+        minFaves: settings.minFavesFilter,
       );
 
+
       final localPool = await localFuture;
+      final localTagged = localPool.map((t) => t.copyWith(source: 'Cache')).toList();
+      AppLogger.log('XFLOW: Retrieved ${localPool.length} candidates from local repository');
+      
       final freshResponse = await freshFuture;
       final freshPool = freshResponse.tweets;
+      final freshTagged = freshPool.map((t) => t.copyWith(source: 'API')).toList();
+      
       if (freshPool.isNotEmpty) {
         await Repository.insertCachedMedia(freshPool);
       }
@@ -129,7 +144,8 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
           : const <String, int>{};
 
       var tweets =
-          _runDiscoveryPipeline(freshPool, localPool, settings, playedByUser);
+          _runDiscoveryPipeline(freshTagged, localTagged, settings, playedByUser);
+
 
       debugPrint('XFLOW: Local pool size after pipeline: ${tweets.length}');
 
@@ -195,6 +211,7 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
         avoidWatchedContent: settings.avoidWatchedContent,
         filters: settings.filters,
       );
+      final localTagged = localPool.map((t) => t.copyWith(source: 'Cache')).toList();
 
       final freshResponse = await client.fetchSubscribedMedia(
         sort: settings.fetchStrategy,
@@ -205,9 +222,13 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
         strictSubscriptionsOnly: settings.strictSubscriptionsOnly,
         includeNativeRetweets: settings.includeNativeRetweets,
         useChunkedSubscriptions: settings.useChunkedSubscriptions,
+        minFaves: settings.minFavesFilter,
       );
 
+
       final freshPool = freshResponse.tweets;
+      final freshTagged = freshPool.map((t) => t.copyWith(source: 'API')).toList();
+      
       debugPrint(
           'XFLOW: Background refresh returned ${freshPool.length} fresh tweets');
 
@@ -224,7 +245,8 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
             : const <String, int>{};
 
         final processed =
-            _runDiscoveryPipeline(freshPool, localPool, settings, playedByUser);
+            _runDiscoveryPipeline(freshTagged, localTagged, settings, playedByUser);
+
 
         state = AsyncData(current.copyWith(
           tweets: processed,
@@ -285,16 +307,23 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
           strictSubscriptionsOnly: settings.strictSubscriptionsOnly,
           includeNativeRetweets: settings.includeNativeRetweets,
           useChunkedSubscriptions: settings.useChunkedSubscriptions,
+          minFaves: settings.minFavesFilter,
         );
 
-        finalNewTweets =
-            response.tweets.where((t) => !seenIds.contains(t.id)).toList();
+
+        finalNewTweets = response.tweets
+            .where((t) => !seenIds.contains(t.id))
+            .map((t) => t.copyWith(source: 'API'))
+            .toList();
         nextCursor = response.cursorBottom;
-        await Repository.insertCachedMedia(finalNewTweets);
+        await Repository.insertCachedMedia(response.tweets);
       } else {
-        finalNewTweets =
-            newTweetsFromCache.take(settings.loadBatchSize).toList();
+        finalNewTweets = newTweetsFromCache
+            .take(settings.loadBatchSize)
+            .map((t) => t.copyWith(source: 'Cache'))
+            .toList();
       }
+
 
       finalNewTweets.shuffle(); // Diversify before appending
       var combined = [...currentTweets, ...finalNewTweets];

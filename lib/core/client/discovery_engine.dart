@@ -1,10 +1,13 @@
 import '../models/tweet.dart';
+import '../utils/app_logger.dart';
 
 class DiscoveryEngine {
   /// Interleaves fresh API items and cached items based on a ratio (0.0 to 1.0).
   /// Ratio represents the target percentage of fresh items in the result.
   static List<Tweet> interleave(
       List<Tweet> fresh, List<Tweet> cached, double ratio) {
+    AppLogger.log(
+        'Discovery: Interleaving ${fresh.length} fresh and ${cached.length} cached items with ratio $ratio');
     final result = <Tweet>[];
     int freshIdx = 0;
     int cacheIdx = 0;
@@ -33,6 +36,7 @@ class DiscoveryEngine {
         }
       }
     }
+    AppLogger.log('Discovery: Interleaving complete. Total: ${result.length}');
     return result;
   }
 
@@ -56,6 +60,7 @@ class DiscoveryEngine {
     if (tweets.length < 2 || playedCountByUser.isEmpty) return tweets;
 
     final result = List<Tweet>.from(tweets);
+    int boosts = 0;
 
     for (int i = 0; i < result.length - 1; i++) {
       final end = (i + lookahead).clamp(i + 1, result.length);
@@ -76,16 +81,20 @@ class DiscoveryEngine {
         final temp = result[i];
         result[i] = result[bestIdx];
         result[bestIdx] = temp;
+        boosts++;
       }
     }
 
+    if (boosts > 0) {
+      AppLogger.log('Discovery: Applied $boosts unseen subscription boosts (Lookahead: $lookahead)');
+    }
     return result;
   }
 
-  static List<Tweet> applySaturation(List<Tweet> tweets, {int threshold = 2}) {
+  static List<Tweet> applySaturation(List<Tweet> tweets,
+      {int threshold = 2, int windowSize = 10}) {
     if (tweets.isEmpty) return tweets;
     final result = List<Tweet>.from(tweets);
-    const windowSize = 10;
 
     int totalSwaps = 0;
     const maxTotalSwaps = 1000;
@@ -177,6 +186,11 @@ class DiscoveryEngine {
         }
       }
     }
+    if (totalSwaps > 0) {
+      AppLogger.log('Discovery: Applied $totalSwaps saturation swaps (Window: $windowSize, Threshold: $threshold)');
+    }
     return result;
   }
+
 }
+

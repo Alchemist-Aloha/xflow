@@ -28,6 +28,12 @@ class SettingsState {
   final bool strictSubscriptionsOnly;
   final bool includeNativeRetweets;
   final bool useChunkedSubscriptions;
+  final bool showDebugInfo;
+
+  // Granular Discovery parameters
+  final int saturationWindow;
+  final int unseenBoostLookahead;
+  final int minFavesFilter;
 
   SettingsState({
     this.filters = const {},
@@ -48,6 +54,10 @@ class SettingsState {
     this.strictSubscriptionsOnly = true,
     this.includeNativeRetweets = false,
     this.useChunkedSubscriptions = true,
+    this.showDebugInfo = false,
+    this.saturationWindow = 10,
+    this.unseenBoostLookahead = 6,
+    this.minFavesFilter = 50,
   });
 
   SettingsState copyWith({
@@ -69,6 +79,10 @@ class SettingsState {
     bool? strictSubscriptionsOnly,
     bool? includeNativeRetweets,
     bool? useChunkedSubscriptions,
+    bool? showDebugInfo,
+    int? saturationWindow,
+    int? unseenBoostLookahead,
+    int? minFavesFilter,
   }) {
     return SettingsState(
       filters: filters ?? this.filters,
@@ -93,6 +107,10 @@ class SettingsState {
           includeNativeRetweets ?? this.includeNativeRetweets,
       useChunkedSubscriptions:
           useChunkedSubscriptions ?? this.useChunkedSubscriptions,
+      showDebugInfo: showDebugInfo ?? this.showDebugInfo,
+      saturationWindow: saturationWindow ?? this.saturationWindow,
+      unseenBoostLookahead: unseenBoostLookahead ?? this.unseenBoostLookahead,
+      minFavesFilter: minFavesFilter ?? this.minFavesFilter,
     );
   }
 }
@@ -143,6 +161,11 @@ class SettingsNotifier extends Notifier<SettingsState> {
         _prefs.getBool('includeNativeRetweets') ?? false;
     final useChunkedSubscriptions =
         _prefs.getBool('useChunkedSubscriptions') ?? true;
+    final showDebugInfo = _prefs.getBool('showDebugInfo') ?? false;
+
+    final saturationWindow = _prefs.getInt('saturationWindow') ?? 10;
+    final unseenBoostLookahead = _prefs.getInt('unseenBoostLookahead') ?? 6;
+    final minFavesFilter = _prefs.getInt('minFavesFilter') ?? 50;
 
     state = SettingsState(
       filters: filters,
@@ -165,8 +188,14 @@ class SettingsNotifier extends Notifier<SettingsState> {
       strictSubscriptionsOnly: strictSubscriptionsOnly,
       includeNativeRetweets: includeNativeRetweets,
       useChunkedSubscriptions: useChunkedSubscriptions,
+      showDebugInfo: showDebugInfo,
+      saturationWindow: saturationWindow,
+      unseenBoostLookahead: unseenBoostLookahead,
+      minFavesFilter: minFavesFilter,
     );
   }
+
+
 
   void updateMediaCacheSize(int megabytes) {
     state = state.copyWith(mediaCacheSizeMB: megabytes);
@@ -208,6 +237,9 @@ class SettingsNotifier extends Notifier<SettingsState> {
     bool? strictSubscriptionsOnly,
     bool? includeNativeRetweets,
     bool? useChunkedSubscriptions,
+    int? saturationWindow,
+    int? unseenBoostLookahead,
+    int? minFavesFilter,
   }) {
     state = state.copyWith(
       avoidWatchedContent: avoidWatchedContent,
@@ -219,6 +251,9 @@ class SettingsNotifier extends Notifier<SettingsState> {
       strictSubscriptionsOnly: strictSubscriptionsOnly,
       includeNativeRetweets: includeNativeRetweets,
       useChunkedSubscriptions: useChunkedSubscriptions,
+      saturationWindow: saturationWindow,
+      unseenBoostLookahead: unseenBoostLookahead,
+      minFavesFilter: minFavesFilter,
     );
     if (avoidWatchedContent != null)
       _prefs.setBool('avoidWatchedContent', avoidWatchedContent);
@@ -237,7 +272,14 @@ class SettingsNotifier extends Notifier<SettingsState> {
       _prefs.setBool('includeNativeRetweets', includeNativeRetweets);
     if (useChunkedSubscriptions != null)
       _prefs.setBool('useChunkedSubscriptions', useChunkedSubscriptions);
+    if (saturationWindow != null)
+      _prefs.setInt('saturationWindow', saturationWindow);
+    if (unseenBoostLookahead != null)
+      _prefs.setInt('unseenBoostLookahead', unseenBoostLookahead);
+    if (minFavesFilter != null)
+      _prefs.setInt('minFavesFilter', minFavesFilter);
   }
+
 
   void toggleFilter(MediaFilter filter) {
     final nextFilters = Set<MediaFilter>.from(state.filters);
@@ -259,7 +301,13 @@ class SettingsNotifier extends Notifier<SettingsState> {
     state = state.copyWith(isListView: value);
     _prefs.setBool('isListView', value);
   }
+
+  void toggleDebugInfo(bool value) {
+    state = state.copyWith(showDebugInfo: value);
+    _prefs.setBool('showDebugInfo', value);
+  }
 }
+
 
 final settingsProvider = NotifierProvider<SettingsNotifier, SettingsState>(
   SettingsNotifier.new,

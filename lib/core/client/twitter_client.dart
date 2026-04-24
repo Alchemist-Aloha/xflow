@@ -311,6 +311,7 @@ class TwitterClient {
     Set<MediaFilter>? filters,
     int count = 20,
     int cooldownMinutes = 15,
+    int? minFaves,
   }) async {
     String finalQuery = query ?? "";
 
@@ -343,7 +344,8 @@ class TwitterClient {
     }
 
     if (sort == FeedSort.popular) {
-      finalQuery += " min_faves:100";
+      final faves = minFaves ?? 100;
+      finalQuery += " min_faves:$faves";
     }
 
     final variables = {
@@ -412,6 +414,7 @@ class TwitterClient {
     bool strictSubscriptionsOnly = true,
     bool includeNativeRetweets = false,
     bool useChunkedSubscriptions = true,
+    int? minFaves,
   }) async {
     var subs = await Repository.getSubscriptions();
 
@@ -436,6 +439,7 @@ class TwitterClient {
         filters: filters,
         count: loadBatchSize,
         cooldownMinutes: cooldownMinutes,
+        minFaves: minFaves,
       );
     }
 
@@ -451,12 +455,11 @@ class TwitterClient {
     }
 
     List<String> buildChunkedQueries(List<Subscription> list) {
-      final sorted = [...list]
-        ..sort((a, b) => a.screenName.compareTo(b.screenName));
+      final shuffled = [...list]..shuffle();
       final queries = <String>[];
 
       String currentUsers = '';
-      for (final sub in sorted) {
+      for (final sub in shuffled) {
         final candidate = currentUsers.isEmpty
             ? 'from:${sub.screenName}'
             : '$currentUsers OR from:${sub.screenName}';
@@ -481,6 +484,7 @@ class TwitterClient {
     if (cursor != null && _lastSubscribedQuery != null) {
       // Continue pagination on the same query chunk.
       query = _lastSubscribedQuery!;
+      AppLogger.log('Fetching subscribed media (Pagination) using last query: $query');
     } else if (useChunkedSubscriptions) {
       final queries = buildChunkedQueries(subs);
       if (queries.isEmpty) {
@@ -491,21 +495,20 @@ class TwitterClient {
           filters: filters,
           count: loadBatchSize,
           cooldownMinutes: cooldownMinutes,
+          minFaves: minFaves,
         );
       }
       final idx = _subscriptionChunkIndex % queries.length;
       query = queries[idx];
+      AppLogger.log('Fetching subscribed media (Chunked): Chunk ${idx + 1} of ${queries.length}. Total Subs: ${subs.length}');
       _subscriptionChunkIndex = (_subscriptionChunkIndex + 1) % queries.length;
       _lastSubscribedQuery = query;
     } else {
       final pickedSubs = (subs.toList()..shuffle()).take(subBatchSize);
       final users = buildUsersClause(pickedSubs);
       query = buildQueryFromUsersClause(users);
+      AppLogger.log('Fetching subscribed media (Random Sample): ${pickedSubs.length} accounts selected');
       _lastSubscribedQuery = query;
-    }
-
-    if (sort == FeedSort.popular) {
-      query += " min_faves:50";
     }
 
     final response = await fetchTrendingMedia(
@@ -515,7 +518,10 @@ class TwitterClient {
       filters: filters,
       count: loadBatchSize,
       cooldownMinutes: cooldownMinutes,
+      minFaves: minFaves,
     );
+
+
 
     if (!strictSubscriptionsOnly &&
         cursor == null &&
@@ -649,12 +655,15 @@ class TwitterClient {
       }
     }
 
+    AppLogger.log('Parsing complete. Processed ${entries.length} entries. Found ${tweets.length} tweets.');
+
     return TweetResponse(
       tweets: tweets,
       cursorTop: cursorTop,
       cursorBottom: cursorBottom,
     );
   }
+
 
   void parseTweetResult(
       Map<String, dynamic> itemContent, String entryId, List<Tweet> tweets) {

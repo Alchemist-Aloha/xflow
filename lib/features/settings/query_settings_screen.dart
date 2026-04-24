@@ -16,7 +16,7 @@ class QuerySettingsScreen extends ConsumerWidget {
       ),
       body: ListView(
         children: [
-          _SectionHeader(title: 'Cache Logic'),
+          const _SectionHeader(title: 'Cache Logic'),
           SwitchListTile(
             title: const Text('Avoid Watched Content'),
             subtitle:
@@ -34,7 +34,7 @@ class QuerySettingsScreen extends ConsumerWidget {
                 notifier.updateDiscoveryParam(unseenSubscriptionBoost: val),
           ),
           const Divider(),
-          _SectionHeader(title: 'Discovery Mix'),
+          const _SectionHeader(title: 'Discovery Mix'),
           ListTile(
             title: const Text('Freshness Mix Ratio'),
             subtitle: Text(
@@ -49,12 +49,38 @@ class QuerySettingsScreen extends ConsumerWidget {
             onChanged: (val) =>
                 notifier.updateDiscoveryParam(freshMixRatio: val),
           ),
-          const Divider(),
-          _SectionHeader(title: 'Diversity & Fetch'),
           ListTile(
-            title: const Text('Account Saturation'),
+            title: const Text('Account Saturation Window'),
+            subtitle: Text('Check for duplicates within the last ${settings.saturationWindow} items'),
+          ),
+          Slider(
+            value: settings.saturationWindow.toDouble(),
+            min: 5,
+            max: 50,
+            divisions: 9,
+            label: '${settings.saturationWindow}',
+            onChanged: (val) =>
+                notifier.updateDiscoveryParam(saturationWindow: val.toInt()),
+          ),
+          ListTile(
+            title: const Text('Unseen Boost Lookahead'),
+            subtitle: Text('Try to promote accounts by looking ahead ${settings.unseenBoostLookahead} items'),
+          ),
+          Slider(
+            value: settings.unseenBoostLookahead.toDouble(),
+            min: 2,
+            max: 20,
+            divisions: 18,
+            label: '${settings.unseenBoostLookahead}',
+            onChanged: (val) =>
+                notifier.updateDiscoveryParam(unseenBoostLookahead: val.toInt()),
+          ),
+          const Divider(),
+          const _SectionHeader(title: 'Diversity & Fetch'),
+          ListTile(
+            title: const Text('Account Saturation Threshold'),
             subtitle: Text(
-                'Max ${settings.saturationThreshold} items from same user in 10-item window'),
+                'Max ${settings.saturationThreshold} items from same user in window'),
           ),
           Slider(
             value: settings.saturationThreshold.toDouble(),
@@ -66,7 +92,25 @@ class QuerySettingsScreen extends ConsumerWidget {
                 notifier.updateDiscoveryParam(saturationThreshold: val.toInt()),
           ),
           ListTile(
+            title: const Text('Popular Strategy Min Faves'),
+            subtitle: const Text('Threshold for "Popular" fetch strategy'),
+            trailing: SizedBox(
+              width: 60,
+              child: TextFormField(
+                initialValue: settings.minFavesFilter.toString(),
+                keyboardType: TextInputType.number,
+                textAlign: TextAlign.center,
+                onFieldSubmitted: (val) {
+                  final v = int.tryParse(val);
+                  if (v != null)
+                    notifier.updateDiscoveryParam(minFavesFilter: v);
+                },
+              ),
+            ),
+          ),
+          ListTile(
             title: const Text('Global Fetch Strategy'),
+
             subtitle:
                 Text('Current: ${settings.fetchStrategy.name.toUpperCase()}'),
             trailing: DropdownButton<FeedSort>(
@@ -125,8 +169,16 @@ class QuerySettingsScreen extends ConsumerWidget {
             onChanged: (val) =>
                 notifier.updateDiscoveryParam(useChunkedSubscriptions: val),
           ),
+          SwitchListTile(
+            title: const Text('Show Discovery Debug Info'),
+            subtitle: const Text(
+                'Show media type, source (API/Cache), and metadata on the feed'),
+            value: settings.showDebugInfo,
+            onChanged: (val) => notifier.toggleDebugInfo(val),
+          ),
           const Divider(),
-          _SectionHeader(title: 'Sync Architecture'),
+          const _SectionHeader(title: 'Sync Architecture'),
+
           ListTile(
             title: const Text('Background Sync Interval'),
             subtitle: Text('${settings.syncInterval} minutes'),

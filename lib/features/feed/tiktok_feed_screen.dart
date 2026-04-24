@@ -6,8 +6,8 @@ import '../player/widgets/media_container.dart';
 import '../../core/models/tweet.dart';
 import '../../core/database/repository.dart';
 import '../settings/settings_screen.dart';
+import '../settings/settings_provider.dart';
 import '../auth/login_screen.dart';
-import '../../core/client/twitter_account.dart';
 import '../../core/navigation/navigation_provider.dart';
 import 'widgets/tweet_text_overlay.dart';
 
@@ -227,20 +227,90 @@ class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
   }
 }
 
-class TiktokFeedItem extends StatelessWidget {
+class TiktokFeedItem extends ConsumerWidget {
   final Tweet tweet;
   final bool isVisible;
 
   const TiktokFeedItem({super.key, required this.tweet, required this.isVisible});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(settingsProvider);
+
     return RepaintBoundary(
-      child: TiktokMediaContainer(
-        tweet: tweet,
-        isVisible: isVisible,
-        overlay: TweetTextOverlay(tweet: tweet),
+      child: Stack(
+        children: [
+          TiktokMediaContainer(
+            tweet: tweet,
+            isVisible: isVisible,
+            overlay: TweetTextOverlay(tweet: tweet),
+          ),
+          if (settings.showDebugInfo)
+            DiscoveryDebugOverlay(tweet: tweet),
+        ],
       ),
     );
   }
 }
+
+class DiscoveryDebugOverlay extends StatelessWidget {
+  final Tweet tweet;
+  const DiscoveryDebugOverlay({super.key, required this.tweet});
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: 100,
+      left: 10,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.greenAccent.withValues(alpha: 0.5), width: 1),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _debugLine('TYPE', tweet.isVideo ? 'VIDEO' : 'IMAGE'),
+            _debugLine('SOURCE', tweet.source ?? 'UNKNOWN'),
+            _debugLine('ID', tweet.id.substring(tweet.id.length - 8)),
+            _debugLine('MEDIA', '${tweet.mediaUrls.length} urls'),
+            if (tweet.createdAt != null)
+              _debugLine('TS', tweet.createdAt!.toLocal().toString().split(' ').last.split('.').first),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _debugLine(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 1),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '$label: ',
+            style: const TextStyle(
+              color: Colors.greenAccent,
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'monospace',
+            ),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 10,
+              fontFamily: 'monospace',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
