@@ -57,9 +57,18 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
     SettingsState settings,
     Map<String, int> playedByUser, {
     int protectedIndex = 0,
+    List<Tweet> currentTweets = const [],
   }) {
-    final seenIds = <String>{};
-    final seenMediaUrls = <String>{};
+    // Initialize seen sets using a sliding window of already visible tweets
+    final dedupeWindow = currentTweets.length > settings.mediaDeduplicationWindow
+        ? currentTweets.sublist(currentTweets.length - settings.mediaDeduplicationWindow)
+        : currentTweets;
+
+    final seenIds = dedupeWindow.map((t) => t.id).toSet();
+    final seenMediaUrls = dedupeWindow
+        .where((t) => t.mediaUrls.isNotEmpty)
+        .map((t) => t.mediaUrls.first)
+        .toSet();
 
     List<Tweet> deduplicate(List<Tweet> pool) {
       return pool.where((t) {
@@ -74,8 +83,8 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
       }).toList();
     }
 
-    final uniqueFresh = deduplicate(freshPool);
-    final uniqueLocal = deduplicate(localPool);
+    final uniqueFresh = deduplicate(freshPool)..shuffle();
+    final uniqueLocal = deduplicate(localPool)..shuffle();
 
     var processed = DiscoveryEngine.interleave(
         uniqueFresh, uniqueLocal, settings.freshMixRatio);
@@ -108,7 +117,7 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
     try {
       // Stage 1: Immediate local candidate retrieval
       final localPool = await Repository.getCachedMediaCandidates(
-        settings.loadBatchSize * 3,
+        settings.loadBatchSize * settings.dbCandidateMultiplier,
         avoidWatchedContent: settings.avoidWatchedContent,
         filters: settings.filters,
       );
@@ -178,7 +187,7 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
 
       // 2. Fetch local pool (now including fresh items)
       final localPool = await Repository.getCachedMediaCandidates(
-        settings.loadBatchSize * 5,
+        settings.loadBatchSize * settings.dbCandidateMultiplier,
         avoidWatchedContent: settings.avoidWatchedContent,
         filters: settings.filters,
       );
@@ -201,6 +210,7 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
           settings,
           playedByUser,
           protectedIndex: 2,
+          currentTweets: current.tweets,
         );
 
         state = AsyncData(current.copyWith(
@@ -220,41 +230,56 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
     }
   }
 
-  Future<void> fetchMore({int retryCount = 0}) async {
+  Future<void> fetchMore() async {
     final currentState = state.value;
-    if (currentState == null || currentState.isLoadingMore || retryCount > 3) {
-      return;
-    }
+    if (currentState == null || currentState.isLoadingMore) return;
 
-    final currentTweets = currentState.tweets;
-    final currentCursor = currentState.cursorBottom;
     final settings = ref.read(settingsProvider);
     final syncBatchSize = await _resolveSyncBatchSize(settings);
-    
+
     state = AsyncData(currentState.copyWith(isLoadingMore: true));
 
     try {
-      // 1. Try to fetch from DB first
-      final allCandidates = await Repository.getCachedMediaCandidates(
-        settings.loadBatchSize * 3,
-        avoidWatchedContent: settings.avoidWatchedContent,
-        filters: settings.filters,
-      );
+      final seenIds = state.value!.tweets.map((t) => t.id).toSet();
       
-      final seenIds = currentTweets.map((t) => t.id).toSet();
-      final seenMedia = currentTweets.where((t) => t.mediaUrls.isNotEmpty).map((t) => t.mediaUrls.first).toSet();
-      
-      var newTweets = allCandidates.where((t) {
-        final isNewId = !seenIds.contains(t.id);
-        final isNewMedia = t.mediaUrls.isEmpty || !seenMedia.contains(t.mediaUrls.first);
-        return isNewId && isNewMedia;
-      }).toList();
+      // Use dynamic deduplication window from settings
+      final dedupeWindow = state.value!.tweets.length > settings.mediaDeduplicationWindow
+          ? state.value!.tweets.sublist(state.value!.tweets.length - settings.mediaDeduplicationWindow)
+          : state.value!.tweets;
+          
+      final seenMedia = dedupeWindow
+          .where((t) => t.mediaUrls.isNotEmpty)
+          .map((t) => t.mediaUrls.first)
+          .toSet();
 
-      String? nextCursor = currentCursor;
+      List<Tweet> allNewTweets = [];
+      String? currentCursor = state.value!.cursorBottom;
+      final seenCursors = <String>{};
+      int apiRetries = 0;
+      int chunkRotations = 0;
 
-      // 2. If local pool is dry or small, hit the API
-      if (newTweets.length < 5) {
+      while (allNewTweets.length < settings.minNewTweetsThreshold && apiRetries < settings.apiRetryLimit && chunkRotations < settings.chunkRotationLimit) {
+        // 1. Try to fetch from DB first (refresh pool)
+        final dbCandidates = await Repository.getCachedMediaCandidates(
+          settings.loadBatchSize * settings.dbCandidateMultiplier,
+          avoidWatchedContent: settings.avoidWatchedContent,
+          filters: settings.filters,
+        );
+
+        var localNew = dbCandidates.where((t) {
+          return !seenIds.contains(t.id) && 
+                 (t.mediaUrls.isEmpty || !seenMedia.contains(t.mediaUrls.first));
+        }).toList();
+
+        if (localNew.isNotEmpty) {
+          allNewTweets.addAll(localNew);
+          if (allNewTweets.length >= settings.minNewTweetsThreshold) break;
+        }
+
+        // 2. Hit the API
         final client = ref.read(twitterClientProvider);
+        if (currentCursor != null) seenCursors.add(currentCursor);
+
         final response = await client.fetchSubscribedMedia(
           cursor: currentCursor,
           sort: settings.fetchStrategy,
@@ -266,48 +291,73 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
           includeNativeRetweets: settings.includeNativeRetweets,
           useChunkedSubscriptions: settings.useChunkedSubscriptions,
           minFaves: settings.minFavesFilter,
+          maxQueryLength: settings.maxQueryLength,
+          timeoutSeconds: settings.apiTimeoutSeconds,
         );
 
         final freshUnique = response.tweets.where((t) {
-          final isNewId = !seenIds.contains(t.id);
-          final isNewMedia = t.mediaUrls.isEmpty || !seenMedia.contains(t.mediaUrls.first);
-          return isNewId && isNewMedia;
+          return !seenIds.contains(t.id) && 
+                 (t.mediaUrls.isEmpty || !seenMedia.contains(t.mediaUrls.first));
         }).toList();
 
-        await Repository.insertCachedMedia(response.tweets);
-        newTweets.addAll(freshUnique);
-        nextCursor = response.cursorBottom;
+        if (response.tweets.isNotEmpty) {
+          await Repository.insertCachedMedia(response.tweets);
+        }
+
+        allNewTweets.addAll(freshUnique);
+        apiRetries++;
+
+        // Handle Pagination vs Rotation
+        if (response.cursorBottom != null && 
+            response.cursorBottom != currentCursor && 
+            !seenCursors.contains(response.cursorBottom!)) {
+          currentCursor = response.cursorBottom;
+        } else {
+          // Chunk exhausted or stuck cursor
+          AppLogger.log('XFLOW: Chunk exhausted or stuck cursor. Rotating to next subscription chunk.');
+          currentCursor = null;
+          chunkRotations++;
+          await Future.delayed(const Duration(milliseconds: 300));
+        }
+
+        if (allNewTweets.length < settings.minNewTweetsThreshold) {
+          await Future.delayed(const Duration(milliseconds: 500));
+        }
       }
 
-      if (newTweets.isEmpty && nextCursor != null) {
-        // Deduplication ate everything, try one more time with the new cursor
-        state = AsyncData(currentState.copyWith(isLoadingMore: false, cursorBottom: nextCursor));
-        return fetchMore(retryCount: retryCount + 1);
+      if (allNewTweets.isEmpty) {
+        state = AsyncData(state.value!.copyWith(isLoadingMore: false));
+        return;
       }
 
-      final finalNewTweets = newTweets
+      // Shuffle candidates BEFORE taking the batch to improve diversity
+      allNewTweets.shuffle();
+
+      final finalNewTweets = allNewTweets
           .take(settings.loadBatchSize)
-          .map((t) => t.copyWith(source: newTweets.first.source ?? 'Mixed'))
+          .map((t) => t.copyWith(source: t.source ?? 'Mixed'))
           .toList();
 
-      finalNewTweets.shuffle();
-      var combined = [...currentTweets, ...finalNewTweets];
-      
+      var combined = [...state.value!.tweets, ...finalNewTweets];
+
       // Apply diversity enforcement to the new tail
       combined = DiscoveryEngine.applySaturation(
         combined,
         threshold: settings.saturationThreshold,
-        startIndex: currentTweets.length,
+        windowSize: settings.saturationWindow,
+        startIndex: state.value!.tweets.length,
+        maxSaturationSwaps: settings.maxSaturationSwaps,
       );
 
-      state = AsyncData(currentState.copyWith(
+      state = AsyncData(state.value!.copyWith(
         tweets: combined,
-        cursorBottom: nextCursor,
+        cursorBottom: currentCursor,
         isLoadingMore: false,
       ));
-    } catch (e) {
-      debugPrint('Error fetching more: $e');
-      state = AsyncData(currentState.copyWith(isLoadingMore: false));
+      debugPrint('XFLOW: fetchMore complete. Added ${finalNewTweets.length} tweets. Total: ${combined.length}');
+    } catch (e, st) {
+      debugPrint('Error fetching more: $e\n$st');
+      state = AsyncData(state.value!.copyWith(isLoadingMore: false));
     }
   }
 }

@@ -35,6 +35,22 @@ class SettingsState {
   final int unseenBoostLookahead;
   final int minFavesFilter;
 
+  // Advanced Tuning
+  final int dbCandidateMultiplier;
+  final int apiRetryLimit;
+  final int chunkRotationLimit;
+  final int pageRetryLimit;
+  final int minNewTweetsThreshold;
+  final int maxQueryLength;
+  final int apiTimeoutSeconds;
+  final int maxSaturationSwaps;
+
+  // Playback & UI Tuning
+  final int playbackRetryLimit;
+  final int autoSkipDelaySeconds;
+  final int lazyLoadThreshold;
+  final int mediaDeduplicationWindow;
+
   SettingsState({
     this.filters = const {},
     this.autoplay = true,
@@ -58,6 +74,18 @@ class SettingsState {
     this.saturationWindow = 10,
     this.unseenBoostLookahead = 6,
     this.minFavesFilter = 50,
+    this.dbCandidateMultiplier = 5,
+    this.apiRetryLimit = 5,
+    this.chunkRotationLimit = 3,
+    this.pageRetryLimit = 3,
+    this.minNewTweetsThreshold = 5,
+    this.maxQueryLength = 480,
+    this.apiTimeoutSeconds = 15,
+    this.maxSaturationSwaps = 1000,
+    this.playbackRetryLimit = 1,
+    this.autoSkipDelaySeconds = 2,
+    this.lazyLoadThreshold = 10,
+    this.mediaDeduplicationWindow = 50,
   });
 
   SettingsState copyWith({
@@ -83,6 +111,18 @@ class SettingsState {
     int? saturationWindow,
     int? unseenBoostLookahead,
     int? minFavesFilter,
+    int? dbCandidateMultiplier,
+    int? apiRetryLimit,
+    int? chunkRotationLimit,
+    int? pageRetryLimit,
+    int? minNewTweetsThreshold,
+    int? maxQueryLength,
+    int? apiTimeoutSeconds,
+    int? maxSaturationSwaps,
+    int? playbackRetryLimit,
+    int? autoSkipDelaySeconds,
+    int? lazyLoadThreshold,
+    int? mediaDeduplicationWindow,
   }) {
     return SettingsState(
       filters: filters ?? this.filters,
@@ -111,9 +151,25 @@ class SettingsState {
       saturationWindow: saturationWindow ?? this.saturationWindow,
       unseenBoostLookahead: unseenBoostLookahead ?? this.unseenBoostLookahead,
       minFavesFilter: minFavesFilter ?? this.minFavesFilter,
+      dbCandidateMultiplier:
+          dbCandidateMultiplier ?? this.dbCandidateMultiplier,
+      apiRetryLimit: apiRetryLimit ?? this.apiRetryLimit,
+      chunkRotationLimit: chunkRotationLimit ?? this.chunkRotationLimit,
+      pageRetryLimit: pageRetryLimit ?? this.pageRetryLimit,
+      minNewTweetsThreshold:
+          minNewTweetsThreshold ?? this.minNewTweetsThreshold,
+      maxQueryLength: maxQueryLength ?? this.maxQueryLength,
+      apiTimeoutSeconds: apiTimeoutSeconds ?? this.apiTimeoutSeconds,
+      maxSaturationSwaps: maxSaturationSwaps ?? this.maxSaturationSwaps,
+      playbackRetryLimit: playbackRetryLimit ?? this.playbackRetryLimit,
+      autoSkipDelaySeconds: autoSkipDelaySeconds ?? this.autoSkipDelaySeconds,
+      lazyLoadThreshold: lazyLoadThreshold ?? this.lazyLoadThreshold,
+      mediaDeduplicationWindow:
+          mediaDeduplicationWindow ?? this.mediaDeduplicationWindow,
     );
   }
 }
+
 
 class SettingsNotifier extends Notifier<SettingsState> {
   late SharedPreferences _prefs;
@@ -143,7 +199,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
     final mediaCacheSizeMB = _prefs.getInt('mediaCacheSizeMB') ?? 500;
 
     final syncInterval = _prefs.getInt('syncInterval') ?? 15;
-    final syncBatchSize = _prefs.getInt('syncBatchSize') ?? 5;
+    final syncBatchSize = _prefs.getInt('syncBatchSize') ?? 10;
     final loadBatchSize = _prefs.getInt('loadBatchSize') ?? 20;
     final cooldownDuration = _prefs.getInt('cooldownDuration') ?? 15;
     final pruneThreshold = _prefs.getInt('pruneThreshold') ?? 50000;
@@ -166,6 +222,19 @@ class SettingsNotifier extends Notifier<SettingsState> {
     final saturationWindow = _prefs.getInt('saturationWindow') ?? 10;
     final unseenBoostLookahead = _prefs.getInt('unseenBoostLookahead') ?? 6;
     final minFavesFilter = _prefs.getInt('minFavesFilter') ?? 50;
+
+    final dbCandidateMultiplier = _prefs.getInt('dbCandidateMultiplier') ?? 5;
+    final apiRetryLimit = _prefs.getInt('apiRetryLimit') ?? 5;
+    final chunkRotationLimit = _prefs.getInt('chunkRotationLimit') ?? 3;
+    final pageRetryLimit = _prefs.getInt('pageRetryLimit') ?? 3;
+    final minNewTweetsThreshold = _prefs.getInt('minNewTweetsThreshold') ?? 5;
+    final maxQueryLength = _prefs.getInt('maxQueryLength') ?? 480;
+    final apiTimeoutSeconds = _prefs.getInt('apiTimeoutSeconds') ?? 15;
+    final maxSaturationSwaps = _prefs.getInt('maxSaturationSwaps') ?? 1000;
+    final playbackRetryLimit = _prefs.getInt('playbackRetryLimit') ?? 1;
+    final autoSkipDelaySeconds = _prefs.getInt('autoSkipDelaySeconds') ?? 2;
+    final lazyLoadThreshold = _prefs.getInt('lazyLoadThreshold') ?? 10;
+    final mediaDeduplicationWindow = _prefs.getInt('mediaDeduplicationWindow') ?? 50;
 
     state = SettingsState(
       filters: filters,
@@ -192,6 +261,18 @@ class SettingsNotifier extends Notifier<SettingsState> {
       saturationWindow: saturationWindow,
       unseenBoostLookahead: unseenBoostLookahead,
       minFavesFilter: minFavesFilter,
+      dbCandidateMultiplier: dbCandidateMultiplier,
+      apiRetryLimit: apiRetryLimit,
+      chunkRotationLimit: chunkRotationLimit,
+      pageRetryLimit: pageRetryLimit,
+      minNewTweetsThreshold: minNewTweetsThreshold,
+      maxQueryLength: maxQueryLength,
+      apiTimeoutSeconds: apiTimeoutSeconds,
+      maxSaturationSwaps: maxSaturationSwaps,
+      playbackRetryLimit: playbackRetryLimit,
+      autoSkipDelaySeconds: autoSkipDelaySeconds,
+      lazyLoadThreshold: lazyLoadThreshold,
+      mediaDeduplicationWindow: mediaDeduplicationWindow,
     );
   }
 
@@ -238,6 +319,18 @@ class SettingsNotifier extends Notifier<SettingsState> {
     int? saturationWindow,
     int? unseenBoostLookahead,
     int? minFavesFilter,
+    int? dbCandidateMultiplier,
+    int? apiRetryLimit,
+    int? chunkRotationLimit,
+    int? pageRetryLimit,
+    int? minNewTweetsThreshold,
+    int? maxQueryLength,
+    int? apiTimeoutSeconds,
+    int? maxSaturationSwaps,
+    int? playbackRetryLimit,
+    int? autoSkipDelaySeconds,
+    int? lazyLoadThreshold,
+    int? mediaDeduplicationWindow,
   }) {
     state = state.copyWith(
       avoidWatchedContent: avoidWatchedContent,
@@ -252,6 +345,18 @@ class SettingsNotifier extends Notifier<SettingsState> {
       saturationWindow: saturationWindow,
       unseenBoostLookahead: unseenBoostLookahead,
       minFavesFilter: minFavesFilter,
+      dbCandidateMultiplier: dbCandidateMultiplier,
+      apiRetryLimit: apiRetryLimit,
+      chunkRotationLimit: chunkRotationLimit,
+      pageRetryLimit: pageRetryLimit,
+      minNewTweetsThreshold: minNewTweetsThreshold,
+      maxQueryLength: maxQueryLength,
+      apiTimeoutSeconds: apiTimeoutSeconds,
+      maxSaturationSwaps: maxSaturationSwaps,
+      playbackRetryLimit: playbackRetryLimit,
+      autoSkipDelaySeconds: autoSkipDelaySeconds,
+      lazyLoadThreshold: lazyLoadThreshold,
+      mediaDeduplicationWindow: mediaDeduplicationWindow,
     );
     if (avoidWatchedContent != null)
       _prefs.setBool('avoidWatchedContent', avoidWatchedContent);
@@ -275,6 +380,28 @@ class SettingsNotifier extends Notifier<SettingsState> {
     if (unseenBoostLookahead != null)
       _prefs.setInt('unseenBoostLookahead', unseenBoostLookahead);
     if (minFavesFilter != null) _prefs.setInt('minFavesFilter', minFavesFilter);
+
+    if (dbCandidateMultiplier != null)
+      _prefs.setInt('dbCandidateMultiplier', dbCandidateMultiplier);
+    if (apiRetryLimit != null) _prefs.setInt('apiRetryLimit', apiRetryLimit);
+    if (chunkRotationLimit != null)
+      _prefs.setInt('chunkRotationLimit', chunkRotationLimit);
+    if (pageRetryLimit != null) _prefs.setInt('pageRetryLimit', pageRetryLimit);
+    if (minNewTweetsThreshold != null)
+      _prefs.setInt('minNewTweetsThreshold', minNewTweetsThreshold);
+    if (maxQueryLength != null) _prefs.setInt('maxQueryLength', maxQueryLength);
+    if (apiTimeoutSeconds != null)
+      _prefs.setInt('apiTimeoutSeconds', apiTimeoutSeconds);
+    if (maxSaturationSwaps != null)
+      _prefs.setInt('maxSaturationSwaps', maxSaturationSwaps);
+    if (playbackRetryLimit != null)
+      _prefs.setInt('playbackRetryLimit', playbackRetryLimit);
+    if (autoSkipDelaySeconds != null)
+      _prefs.setInt('autoSkipDelaySeconds', autoSkipDelaySeconds);
+    if (lazyLoadThreshold != null)
+      _prefs.setInt('lazyLoadThreshold', lazyLoadThreshold);
+    if (mediaDeduplicationWindow != null)
+      _prefs.setInt('mediaDeduplicationWindow', mediaDeduplicationWindow);
   }
 
   void toggleFilter(MediaFilter filter) {

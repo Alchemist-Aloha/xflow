@@ -93,32 +93,39 @@ class DiscoveryEngine {
   }
 
   static List<Tweet> applySaturation(List<Tweet> tweets,
-      {int threshold = 2, int windowSize = 10, int startIndex = 0}) {
+      {int threshold = 2,
+      int windowSize = 10,
+      int startIndex = 0,
+      int maxSaturationSwaps = 1000}) {
     if (tweets.isEmpty) return tweets;
     final result = List<Tweet>.from(tweets);
 
     int totalSwaps = 0;
-    const maxTotalSwaps = 1000;
 
-    for (int i = startIndex; i < result.length && totalSwaps < maxTotalSwaps; i++) {
-      final handle = result[i].userHandle;
+    for (int i = startIndex; i < result.length && totalSwaps < maxSaturationSwaps; i++) {
+      final handle = _normalizeHandle(result[i].userHandle);
       final start = (i - windowSize + 1).clamp(0, result.length);
       final window = result.sublist(start, i);
-      final count = window.where((t) => t.userHandle == handle).length;
+      final count = window.where((t) => _normalizeHandle(t.userHandle) == handle).length;
 
-      final isConsecutive = i > 0 && result[i - 1].userHandle == handle;
+      final isConsecutive = i > 0 && _normalizeHandle(result[i - 1].userHandle) == handle;
 
       if (count >= threshold || isConsecutive) {
         int swapIdx = -1;
 
         // Try to find someone who is NOT the same as previous AND doesn't violate saturation
-        for (int j = i + 1; j < result.length; j++) {
-          final candHandle = result[j].userHandle;
-          final prevHandle = i > 0 ? result[i - 1].userHandle : null;
+        // Use a dynamic lookahead based on windowSize for better stability
+        final lookahead = windowSize + 5;
+        for (int j = i + 1; j < result.length && j < i + lookahead; j++) {
+          final candHandle = _normalizeHandle(result[j].userHandle);
+          final prevHandle = i > 0 ? _normalizeHandle(result[i - 1].userHandle) : null;
 
           if (candHandle != handle && candHandle != prevHandle) {
-            final candCount =
-                window.where((t) => t.userHandle == candHandle).length;
+            // Check if swapping candHandle to position i would violate its own saturation
+            final candStart = (i - windowSize + 1).clamp(0, result.length);
+            final candWindow = result.sublist(candStart, i);
+            final candCount = candWindow.where((t) => _normalizeHandle(t.userHandle) == candHandle).length;
+            
             if (candCount < threshold) {
               swapIdx = j;
               break;
@@ -138,52 +145,12 @@ class DiscoveryEngine {
           }
         }
 
-        // Last resort: anyone different from current
-        if (swapIdx == -1) {
-          for (int j = i + 1; j < result.length; j++) {
-            if (result[j].userHandle != handle) {
-              swapIdx = j;
-              break;
-            }
-          }
-        }
-
         if (swapIdx != -1) {
           final temp = result[i];
           result[i] = result[swapIdx];
           result[swapIdx] = temp;
           totalSwaps++;
-          i--;
-        } else if (isConsecutive || count >= threshold) {
-          // TRAPPED! No candidates forward. Try to find a spot backwards but NOT before startIndex
-          for (int k = i - 1; k > startIndex; k--) {
-            final targetHandle = result[k].userHandle;
-            if (targetHandle != handle) {
-              // Can we swap result[i] and result[k]?
-              // New result[k] would be handle (@A)
-              // Check if result[k-1] and result[k+1] are @A
-              final prevOk = result[k - 1].userHandle != handle;
-              final nextOk =
-                  k + 1 < result.length && result[k + 1].userHandle != handle;
-
-              if (prevOk && nextOk) {
-                // Also check saturation at k
-                final kStart = (k - windowSize + 1).clamp(0, result.length);
-                final kWindow = result.sublist(kStart, k);
-                final kCount =
-                    kWindow.where((t) => t.userHandle == handle).length;
-
-                if (kCount < threshold) {
-                  final temp = result[i];
-                  result[i] = result[k];
-                  result[k] = temp;
-                  totalSwaps++;
-                  // Don't i-- here as it might cause loops, but the swap fixed i's consecutive/count usually
-                  break;
-                }
-              }
-            }
-          }
+          // We don't i-- anymore to avoid loops. The current i is now a better candidate.
         }
       }
     }

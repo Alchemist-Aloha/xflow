@@ -100,7 +100,7 @@ class QuerySettingsScreen extends ConsumerWidget {
                 initialValue: settings.minFavesFilter.toString(),
                 keyboardType: TextInputType.number,
                 textAlign: TextAlign.center,
-                onFieldSubmitted: (val) {
+                onChanged: (val) {
                   final v = int.tryParse(val);
                   if (v != null)
                     notifier.updateDiscoveryParam(minFavesFilter: v);
@@ -137,7 +137,7 @@ class QuerySettingsScreen extends ConsumerWidget {
                 initialValue: settings.initialSyncCount.toString(),
                 keyboardType: TextInputType.number,
                 textAlign: TextAlign.center,
-                onFieldSubmitted: (val) {
+                onChanged: (val) {
                   final count = int.tryParse(val);
                   if (count != null)
                     notifier.updateDiscoveryParam(initialSyncCount: count);
@@ -188,7 +188,7 @@ class QuerySettingsScreen extends ConsumerWidget {
                 initialValue: settings.syncInterval.toString(),
                 keyboardType: TextInputType.number,
                 textAlign: TextAlign.center,
-                onFieldSubmitted: (val) {
+                onChanged: (val) {
                   final v = int.tryParse(val);
                   if (v != null) notifier.updateSyncInterval(v);
                 },
@@ -204,7 +204,7 @@ class QuerySettingsScreen extends ConsumerWidget {
                 initialValue: settings.syncBatchSize.toString(),
                 keyboardType: TextInputType.number,
                 textAlign: TextAlign.center,
-                onFieldSubmitted: (val) {
+                onChanged: (val) {
                   final v = int.tryParse(val);
                   if (v != null) notifier.updateSyncBatchSize(v);
                 },
@@ -220,7 +220,7 @@ class QuerySettingsScreen extends ConsumerWidget {
                 initialValue: settings.loadBatchSize.toString(),
                 keyboardType: TextInputType.number,
                 textAlign: TextAlign.center,
-                onFieldSubmitted: (val) {
+                onChanged: (val) {
                   final v = int.tryParse(val);
                   if (v != null) notifier.updateLoadBatchSize(v);
                 },
@@ -237,7 +237,7 @@ class QuerySettingsScreen extends ConsumerWidget {
                 initialValue: settings.cooldownDuration.toString(),
                 keyboardType: TextInputType.number,
                 textAlign: TextAlign.center,
-                onFieldSubmitted: (val) {
+                onChanged: (val) {
                   final v = int.tryParse(val);
                   if (v != null) notifier.updateCooldownDuration(v);
                 },
@@ -253,15 +253,120 @@ class QuerySettingsScreen extends ConsumerWidget {
                 initialValue: settings.pruneThreshold.toString(),
                 keyboardType: TextInputType.number,
                 textAlign: TextAlign.center,
-                onFieldSubmitted: (val) {
+                onChanged: (val) {
                   final v = int.tryParse(val);
                   if (v != null) notifier.updatePruneThreshold(v);
                 },
               ),
             ),
           ),
+          const Divider(),
+          const _SectionHeader(title: 'Advanced Tuning'),
+          _NumericSetting(
+            title: 'DB Candidate Multiplier',
+            subtitle: 'Scale of local pool vs Load Batch Size',
+            initialValue: settings.dbCandidateMultiplier,
+            onChanged: (v) => notifier.updateDiscoveryParam(dbCandidateMultiplier: v),
+          ),
+          _NumericSetting(
+            title: 'Min New Tweets Threshold',
+            subtitle: 'Items needed before stopping fetch cycle',
+            initialValue: settings.minNewTweetsThreshold,
+            onChanged: (v) => notifier.updateDiscoveryParam(minNewTweetsThreshold: v),
+          ),
+          _NumericSetting(
+            title: 'API Retry Limit',
+            subtitle: 'Max attempts per pagination cycle',
+            initialValue: settings.apiRetryLimit,
+            onChanged: (v) => notifier.updateDiscoveryParam(apiRetryLimit: v),
+          ),
+          _NumericSetting(
+            title: 'Chunk Rotation Limit',
+            subtitle: 'Max subscription chunks to try if dry',
+            initialValue: settings.chunkRotationLimit,
+            onChanged: (v) => notifier.updateDiscoveryParam(chunkRotationLimit: v),
+          ),
+          _NumericSetting(
+            title: 'Max Query Length',
+            subtitle: 'Characters allowed in subscription chunks',
+            initialValue: settings.maxQueryLength,
+            onChanged: (v) => notifier.updateDiscoveryParam(maxQueryLength: v),
+          ),
+          _NumericSetting(
+            title: 'API Timeout (Seconds)',
+            initialValue: settings.apiTimeoutSeconds,
+            onChanged: (v) => notifier.updateDiscoveryParam(apiTimeoutSeconds: v),
+          ),
+          const Divider(),
+          const _SectionHeader(title: 'Discovery Engine Tuning'),
+          _NumericSetting(
+            title: 'Max Saturation Swaps',
+            subtitle: 'Safety limit for account diversity logic',
+            initialValue: settings.maxSaturationSwaps,
+            onChanged: (v) => notifier.updateDiscoveryParam(maxSaturationSwaps: v),
+          ),
+          const Divider(),
+          const _SectionHeader(title: 'Playback & UI Tuning'),
+          _NumericSetting(
+            title: 'Media Deduplication Window',
+            subtitle: 'Number of recent items to check for duplicate media',
+            initialValue: settings.mediaDeduplicationWindow,
+            onChanged: (v) => notifier.updateDiscoveryParam(mediaDeduplicationWindow: v),
+          ),
+          _NumericSetting(
+            title: 'Lazy Load Threshold',
+            subtitle: 'Scroll items remaining before fetching more',
+            initialValue: settings.lazyLoadThreshold,
+            onChanged: (v) => notifier.updateDiscoveryParam(lazyLoadThreshold: v),
+          ),
+          _NumericSetting(
+            title: 'Playback Retry Limit',
+            subtitle: 'Max attempts to play a failing video',
+            initialValue: settings.playbackRetryLimit,
+            onChanged: (v) => notifier.updateDiscoveryParam(playbackRetryLimit: v),
+          ),
+          _NumericSetting(
+            title: 'Auto Skip Delay (Seconds)',
+            subtitle: 'Time to wait before skipping a failed video',
+            initialValue: settings.autoSkipDelaySeconds,
+            onChanged: (v) => notifier.updateDiscoveryParam(autoSkipDelaySeconds: v),
+          ),
           const SizedBox(height: 32),
         ],
+      ),
+    );
+  }
+}
+
+class _NumericSetting extends StatelessWidget {
+  final String title;
+  final String? subtitle;
+  final int initialValue;
+  final ValueChanged<int> onChanged;
+
+  const _NumericSetting({
+    required this.title,
+    this.subtitle,
+    required this.initialValue,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      title: Text(title),
+      subtitle: subtitle != null ? Text(subtitle!) : null,
+      trailing: SizedBox(
+        width: 60,
+        child: TextFormField(
+          initialValue: initialValue.toString(),
+          keyboardType: TextInputType.number,
+          textAlign: TextAlign.center,
+          onChanged: (val) {
+            final v = int.tryParse(val);
+            if (v != null) onChanged(v);
+          },
+        ),
       ),
     );
   }

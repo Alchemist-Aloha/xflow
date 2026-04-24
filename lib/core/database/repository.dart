@@ -360,6 +360,35 @@ class Repository {
     ''', [DateTime.now().millisecondsSinceEpoch, id]);
   }
 
+  static Future<int> getMediaPlayedCount(String id) async {
+    final db = await database;
+    final maps = await db.query(
+      tableCachedMedia,
+      columns: ['played_count'],
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    if (maps.isNotEmpty) {
+      return (maps.first['played_count'] as int?) ?? 0;
+    }
+    return 0;
+  }
+
+  static Future<int> getUserPlayedCount(String userHandle) async {
+    final db = await database;
+    final normalized = userHandle.replaceAll('@', '').toLowerCase();
+    final rows = await db.rawQuery('''
+      SELECT SUM(played_count) AS total_played
+      FROM $tableCachedMedia
+      WHERE LOWER(REPLACE(user_handle, '@', '')) = ?
+    ''', [normalized]);
+
+    if (rows.isNotEmpty) {
+      return (rows.first['total_played'] as int?) ?? 0;
+    }
+    return 0;
+  }
+
   static Future<int> getCachedMediaCount() async {
     final db = await database;
     final countSq =

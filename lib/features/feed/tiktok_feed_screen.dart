@@ -53,8 +53,11 @@ class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
           Repository.markMediaAsPlayed(tweets[page].id);
         }
 
-        // Trigger lazy load earlier (10 items from end) to handle deduplication overhead
-        if (page >= tweets.length - 10) {
+        final settings = ref.read(settingsProvider);
+
+        // Trigger lazy load earlier to handle deduplication overhead
+        // But only if we aren't already refreshing the initial feed
+        if (page >= tweets.length - settings.lazyLoadThreshold && !feedAsync.value!.isRefreshing) {
           ref.read(feedNotifierProvider.notifier).fetchMore();
         }
       }
@@ -169,9 +172,23 @@ class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
           scrollDirection: Axis.vertical,
           itemCount: tweets.length,
           itemBuilder: (context, index) {
+            final settings = ref.read(settingsProvider);
             return TiktokFeedItem(
               tweet: tweets[index],
               isVisible: index == _currentIndex && isScreenActive,
+              onPlaybackError: () {
+                if (index == _currentIndex && mounted) {
+                  // Wait autoSkipDelaySeconds then scroll to next
+                  Future.delayed(Duration(seconds: settings.autoSkipDelaySeconds), () {
+                    if (mounted && _currentIndex == index) {
+                      _pageController.nextPage(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    }
+                  });
+                }
+              },
             );
           },
         );
@@ -231,8 +248,14 @@ class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
 class TiktokFeedItem extends ConsumerWidget {
   final Tweet tweet;
   final bool isVisible;
+  final VoidCallback? onPlaybackError;
 
-  const TiktokFeedItem({super.key, required this.tweet, required this.isVisible});
+  const TiktokFeedItem({
+    super.key,
+    required this.tweet,
+    required this.isVisible,
+    this.onPlaybackError,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -245,6 +268,7 @@ class TiktokFeedItem extends ConsumerWidget {
             tweet: tweet,
             isVisible: isVisible,
             overlay: TweetTextOverlay(tweet: tweet),
+            onPlaybackError: onPlaybackError,
           ),
           if (settings.showDebugInfo)
             DiscoveryDebugOverlay(tweet: tweet),
@@ -258,30 +282,44 @@ class DiscoveryDebugOverlay extends StatelessWidget {
   final Tweet tweet;
   const DiscoveryDebugOverlay({super.key, required this.tweet});
 
+  Future<(int, int)> _fetchDebugStats() async {
+    final mediaCount = await Repository.getMediaPlayedCount(tweet.id);
+    final userCount = await Repository.getUserPlayedCount(tweet.userHandle);
+    return (mediaCount, userCount);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Positioned(
       top: 100,
       left: 10,
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.6),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.greenAccent.withValues(alpha: 0.5), width: 1),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _debugLine('TYPE', tweet.isVideo ? 'VIDEO' : 'IMAGE'),
-            _debugLine('SOURCE', tweet.source ?? 'UNKNOWN'),
-            _debugLine('ID', tweet.id.substring(tweet.id.length - 8)),
-            _debugLine('MEDIA', '${tweet.mediaUrls.length} urls'),
-            if (tweet.createdAt != null)
-              _debugLine('TS', tweet.createdAt!.toLocal().toString().split(' ').last.split('.').first),
-          ],
-        ),
+      child: FutureBuilder<(int, int)>(
+        future: _fetchDebugStats(),
+        builder: (context, snapshot) {
+          final stats = snapshot.data ?? (0, 0);
+          return Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.greenAccent.withValues(alpha: 0.5), width: 1),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _debugLine('TYPE', tweet.isVideo ? 'VIDEO' : 'IMAGE'),
+                _debugLine('SOURCE', tweet.source ?? 'UNKNOWN'),
+                _debugLine('ID', tweet.id.substring(tweet.id.length - 8)),
+                _debugLine('MEDIA', '${tweet.mediaUrls.length} urls'),
+                _debugLine('SEEN', '${stats.$1} times'),
+                _debugLine('ACCT_SEEN', '${stats.$2} times'),
+                if (tweet.createdAt != null)
+                  _debugLine('TS', tweet.createdAt!.toLocal().toString().split(' ').last.split('.').first),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

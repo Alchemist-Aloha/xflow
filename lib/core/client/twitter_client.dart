@@ -195,12 +195,18 @@ class TwitterClient {
   }
 
   Future<TweetResponse> fetchUserTweets(String screenName,
-      {String? cursor, FeedSort? sort, Set<MediaFilter>? filters}) async {
+      {String? cursor,
+      FeedSort? sort,
+      Set<MediaFilter>? filters,
+      int count = 20,
+      int timeoutSeconds = 15}) async {
     return fetchTrendingMedia(
       query: "from:$screenName",
       cursor: cursor,
       sort: sort,
       filters: filters,
+      count: count,
+      timeoutSeconds: timeoutSeconds,
     );
   }
 
@@ -312,6 +318,7 @@ class TwitterClient {
     int count = 20,
     int cooldownMinutes = 15,
     int? minFaves,
+    int timeoutSeconds = 15,
   }) async {
     String finalQuery = query ?? "";
 
@@ -372,8 +379,8 @@ class TwitterClient {
           'Fetching media with query: $finalQuery and cursor: $cursor, sort: $sort');
 
       await _waitForTurn();
-      final response =
-          await TwitterAccount.fetch(uri).timeout(const Duration(seconds: 15));
+      final response = await TwitterAccount.fetch(uri)
+          .timeout(Duration(seconds: timeoutSeconds));
       _releaseTurn();
 
       if (response.statusCode == 429) {
@@ -417,6 +424,8 @@ class TwitterClient {
     bool includeNativeRetweets = false,
     bool useChunkedSubscriptions = true,
     int? minFaves,
+    int maxQueryLength = 480,
+    int timeoutSeconds = 15,
   }) async {
     var subs = await Repository.getSubscriptions();
 
@@ -468,7 +477,7 @@ class TwitterClient {
         final candidateQuery = buildQueryFromUsersClause(candidate);
 
         // Keep query comfortably below API query size limits.
-        if (candidateQuery.length > 480 && currentUsers.isNotEmpty) {
+        if (candidateQuery.length > maxQueryLength && currentUsers.isNotEmpty) {
           queries.add(buildQueryFromUsersClause(currentUsers));
           currentUsers = 'from:${sub.screenName}';
         } else {
@@ -499,6 +508,7 @@ class TwitterClient {
           count: loadBatchSize,
           cooldownMinutes: cooldownMinutes,
           minFaves: minFaves,
+          timeoutSeconds: timeoutSeconds,
         );
       }
       final idx = _subscriptionChunkIndex % queries.length;
@@ -524,6 +534,7 @@ class TwitterClient {
       count: loadBatchSize,
       cooldownMinutes: cooldownMinutes,
       minFaves: minFaves,
+      timeoutSeconds: timeoutSeconds,
     );
 
     if (!strictSubscriptionsOnly &&
@@ -534,6 +545,7 @@ class TwitterClient {
         filters: filters,
         count: loadBatchSize,
         cooldownMinutes: cooldownMinutes,
+        timeoutSeconds: timeoutSeconds,
       );
       final combined = [...response.tweets];
       final seenIds = response.tweets.map((t) => t.id).toSet();
@@ -551,10 +563,10 @@ class TwitterClient {
   }
 
   Future<TweetResponse> fetchUserTimeline(String userId,
-      {String? cursor, int cooldownMinutes = 15}) async {
+      {String? cursor, int cooldownMinutes = 15, int count = 20, int timeoutSeconds = 15}) async {
     final variables = {
       "userId": userId,
-      "count": 20,
+      "count": count,
       "includePromotedContent": false,
       "withQuickPromoteEligibilityTweetFields": true,
       "withVoice": true,
@@ -571,7 +583,8 @@ class TwitterClient {
 
     try {
       await _waitForTurn();
-      final response = await TwitterAccount.fetch(uri);
+      final response = await TwitterAccount.fetch(uri)
+          .timeout(Duration(seconds: timeoutSeconds));
       _releaseTurn();
 
       if (response.statusCode == 429) {
@@ -627,12 +640,12 @@ class TwitterClient {
 
       if (entryId.startsWith('cursor-top-') ||
           entryId.startsWith('sq-cursor-top-')) {
-        cursorTop =
-            entry['content']?['value'] ?? entry['content']?['cursorType'];
+        cursorTop = entry['content']?['value'] ??
+            entry['content']?['itemContent']?['value'];
       } else if (entryId.startsWith('cursor-bottom-') ||
           entryId.startsWith('sq-cursor-bottom-')) {
-        cursorBottom =
-            entry['content']?['value'] ?? entry['content']?['cursorType'];
+        cursorBottom = entry['content']?['value'] ??
+            entry['content']?['itemContent']?['value'];
       }
 
       try {
