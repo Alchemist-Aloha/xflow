@@ -70,7 +70,7 @@ class SettingsState {
     this.freshMixRatio = 0.3,
     this.saturationThreshold = 2,
     this.mediaSaturationThreshold = 1,
-    this.fetchStrategy = FeedSort.latest,
+    this.fetchStrategy = FeedSort.chronological,
     this.initialSyncCount = 10,
     this.strictSubscriptionsOnly = true,
     this.includeNativeRetweets = false,

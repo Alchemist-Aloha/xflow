@@ -400,12 +400,6 @@ class TwitterClient {
 
       final tweetResponse = _parseTweets(timeline);
 
-      if (sort == FeedSort.random) {
-        tweetResponse.tweets.shuffle();
-      } else if (sort == FeedSort.oldest) {
-        tweetResponse.tweets.sort((a, b) => a.id.compareTo(b.id));
-      }
-
       return tweetResponse;
     } catch (e) {
       AppLogger.log('Exception in fetchTrendingMedia: $e');

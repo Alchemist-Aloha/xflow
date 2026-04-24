@@ -16,101 +16,10 @@ class QuerySettingsScreen extends ConsumerWidget {
       ),
       body: ListView(
         children: [
-          const _SectionHeader(title: 'Cache Logic'),
-          SwitchListTile(
-            title: const Text('Avoid Watched Content'),
-            subtitle:
-                const Text('Exclude already played items from candidate pool'),
-            value: settings.avoidWatchedContent,
-            onChanged: (val) =>
-                notifier.updateDiscoveryParam(avoidWatchedContent: val),
-          ),
-          SwitchListTile(
-            title: const Text('Unseen Subscription Boost'),
-            subtitle: const Text(
-                'Prioritize items from accounts you haven\'t watched much'),
-            value: settings.unseenSubscriptionBoost,
-            onChanged: (val) =>
-                notifier.updateDiscoveryParam(unseenSubscriptionBoost: val),
-          ),
-          const Divider(),
-          const _SectionHeader(title: 'Discovery Mix'),
-          ListTile(
-            title: const Text('Freshness Mix Ratio'),
-            subtitle: Text(
-                '${(settings.freshMixRatio * 100).toInt()}% Fresh API / ${(100 - settings.freshMixRatio * 100).toInt()}% Local Cache'),
-          ),
-          Slider(
-            value: settings.freshMixRatio,
-            min: 0.0,
-            max: 1.0,
-            divisions: 10,
-            label: '${(settings.freshMixRatio * 100).toInt()}%',
-            onChanged: (val) =>
-                notifier.updateDiscoveryParam(freshMixRatio: val),
-          ),
-          ListTile(
-            title: const Text('Account Saturation Window'),
-            subtitle: Text('Check for duplicates within the last ${settings.saturationWindow} items'),
-          ),
-          Slider(
-            value: settings.saturationWindow.toDouble(),
-            min: 5,
-            max: 50,
-            divisions: 9,
-            label: '${settings.saturationWindow}',
-            onChanged: (val) =>
-                notifier.updateDiscoveryParam(saturationWindow: val.toInt()),
-          ),
-          ListTile(
-            title: const Text('Unseen Boost Lookahead'),
-            subtitle: Text('Try to promote accounts by looking ahead ${settings.unseenBoostLookahead} items'),
-          ),
-          Slider(
-            value: settings.unseenBoostLookahead.toDouble(),
-            min: 2,
-            max: 20,
-            divisions: 18,
-            label: '${settings.unseenBoostLookahead}',
-            onChanged: (val) =>
-                notifier.updateDiscoveryParam(unseenBoostLookahead: val.toInt()),
-          ),
-          const Divider(),
-          const _SectionHeader(title: 'Diversity & Fetch'),
-          ListTile(
-            title: const Text('Account Saturation Threshold'),
-            subtitle: Text(
-                'Max ${settings.saturationThreshold} items from same user in window'),
-          ),
-          Slider(
-            value: settings.saturationThreshold.toDouble(),
-            min: 1,
-            max: 5,
-            divisions: 4,
-            label: '${settings.saturationThreshold}',
-            onChanged: (val) =>
-                notifier.updateDiscoveryParam(saturationThreshold: val.toInt()),
-          ),
-          ListTile(
-            title: const Text('Popular Strategy Min Faves'),
-            subtitle: const Text('Threshold for "Popular" fetch strategy'),
-            trailing: SizedBox(
-              width: 60,
-              child: TextFormField(
-                initialValue: settings.minFavesFilter.toString(),
-                keyboardType: TextInputType.number,
-                textAlign: TextAlign.center,
-                onChanged: (val) {
-                  final v = int.tryParse(val);
-                  if (v != null)
-                    notifier.updateDiscoveryParam(minFavesFilter: v);
-                },
-              ),
-            ),
-          ),
+          // GROUP 1: GLOBAL STRATEGY
+          const _SectionHeader(title: 'Global Discovery Strategy'),
           ListTile(
             title: const Text('Global Fetch Strategy'),
-
             subtitle:
                 Text('Current: ${settings.fetchStrategy.name.toUpperCase()}'),
             trailing: DropdownButton<FeedSort>(
@@ -127,247 +36,303 @@ class QuerySettingsScreen extends ConsumerWidget {
               },
             ),
           ),
+          _SliderSetting(
+            title: 'Initial Launch Fetch Count',
+            subtitle: 'Items to "pepper" into feed on app start',
+            value: settings.initialSyncCount.toDouble(),
+            min: 1,
+            max: 100,
+            onChanged: (v) => notifier.updateDiscoveryParam(initialSyncCount: v.toInt()),
+          ),
           ListTile(
-            title: const Text('Initial Launch Fetch Count'),
-            subtitle:
-                const Text('Number of items to "pepper" into feed on start'),
-            trailing: SizedBox(
-              width: 60,
-              child: TextFormField(
-                initialValue: settings.initialSyncCount.toString(),
-                keyboardType: TextInputType.number,
-                textAlign: TextAlign.center,
-                onChanged: (val) {
-                  final count = int.tryParse(val);
-                  if (count != null)
-                    notifier.updateDiscoveryParam(initialSyncCount: count);
-                },
-              ),
-            ),
+            title: const Text('Freshness Mix Ratio'),
+            subtitle: Text(
+                '${(settings.freshMixRatio * 100).toInt()}% Fresh API / ${(100 - settings.freshMixRatio * 100).toInt()}% Local Cache'),
+          ),
+          Slider(
+            value: settings.freshMixRatio,
+            min: 0.0,
+            max: 1.0,
+            divisions: 10,
+            label: '${(settings.freshMixRatio * 100).toInt()}%',
+            onChanged: (val) =>
+                notifier.updateDiscoveryParam(freshMixRatio: val),
+          ),
+          _SliderSetting(
+            title: 'UI Load Batch Size',
+            subtitle: 'Items to fetch when scrolling ends',
+            value: settings.loadBatchSize.toDouble(),
+            min: 5,
+            max: 100,
+            onChanged: (v) => notifier.updateLoadBatchSize(v.toInt()),
+          ),
+
+          const Divider(),
+          // GROUP 2: FEED DIVERSITY (SATURATION)
+          const _SectionHeader(title: 'Feed Diversity & Saturation'),
+          SwitchListTile(
+            title: const Text('Avoid Watched Content'),
+            subtitle: const Text('Exclude already played items (Media-Key based)'),
+            value: settings.avoidWatchedContent,
+            onChanged: (val) =>
+                notifier.updateDiscoveryParam(avoidWatchedContent: val),
           ),
           SwitchListTile(
+            title: const Text('Unseen Subscription Boost'),
+            subtitle: const Text('Prioritize accounts with low play counts'),
+            value: settings.unseenSubscriptionBoost,
+            onChanged: (val) =>
+                notifier.updateDiscoveryParam(unseenSubscriptionBoost: val),
+          ),
+          _SliderSetting(
+            title: 'Account Saturation Threshold',
+            subtitle: 'Max items from same user in window',
+            value: settings.saturationThreshold.toDouble(),
+            min: 1,
+            max: 10,
+            onChanged: (v) => notifier.updateDiscoveryParam(saturationThreshold: v.toInt()),
+          ),
+          _SliderSetting(
+            title: 'Media Saturation Threshold',
+            subtitle: 'Max copies of same video in window',
+            value: settings.mediaSaturationThreshold.toDouble(),
+            min: 1,
+            max: 5,
+            onChanged: (v) => notifier.updateDiscoveryParam(mediaSaturationThreshold: v.toInt()),
+          ),
+          _SliderSetting(
+            title: 'Saturation Window',
+            subtitle: 'Number of recent items to check for diversity',
+            value: settings.saturationWindow.toDouble(),
+            min: 5,
+            max: 100,
+            onChanged: (v) => notifier.updateDiscoveryParam(saturationWindow: v.toInt()),
+          ),
+          _SliderSetting(
+            title: 'Media Deduplication Window',
+            subtitle: 'Sliding window for strict ID/URL deduplication',
+            value: settings.mediaDeduplicationWindow.toDouble(),
+            min: 10,
+            max: 200,
+            onChanged: (v) => notifier.updateDiscoveryParam(mediaDeduplicationWindow: v.toInt()),
+          ),
+          _SliderSetting(
+            title: 'Unseen Boost Lookahead',
+            subtitle: 'Search depth for finding promoted accounts',
+            value: settings.unseenBoostLookahead.toDouble(),
+            min: 2,
+            max: 50,
+            onChanged: (v) => notifier.updateDiscoveryParam(unseenBoostLookahead: v.toInt()),
+          ),
+
+          const Divider(),
+          // GROUP 3: BACKGROUND SYNC & CACHE
+          const _SectionHeader(title: 'Background Sync & Cache'),
+          _SliderSetting(
+            title: 'Sync Interval (Minutes)',
+            value: settings.syncInterval.toDouble(),
+            min: 1,
+            max: 120,
+            onChanged: (v) => notifier.updateSyncInterval(v.toInt()),
+          ),
+          _SliderSetting(
+            title: 'Sync Batch Size',
+            subtitle: 'Accounts to crawl per interval',
+            value: settings.syncBatchSize.toDouble(),
+            min: 1,
+            max: 50,
+            onChanged: (v) => notifier.updateSyncBatchSize(v.toInt()),
+          ),
+          _SliderSetting(
+            title: 'Account Cooldown',
+            subtitle: 'Minutes to wait before re-fetching an account',
+            value: settings.cooldownDuration.toDouble(),
+            min: 0,
+            max: 240,
+            onChanged: (v) => notifier.updateCooldownDuration(v.toInt()),
+          ),
+          _SliderSetting(
+            title: 'DB Candidate Multiplier',
+            subtitle: 'Local pool size relative to batch size',
+            value: settings.dbCandidateMultiplier.toDouble(),
+            min: 1,
+            max: 20,
+            onChanged: (v) => notifier.updateDiscoveryParam(dbCandidateMultiplier: v.toInt()),
+          ),
+          _SliderSetting(
+            title: 'Prune Threshold',
+            subtitle: 'Max metadata entries to keep in database',
+            value: settings.pruneThreshold.toDouble(),
+            min: 1000,
+            max: 100000,
+            divisions: 99,
+            onChanged: (v) => notifier.updatePruneThreshold(v.toInt()),
+          ),
+
+          const Divider(),
+          // GROUP 4: NETWORK & PERFORMANCE
+          const _SectionHeader(title: 'Network & Performance'),
+          _SliderSetting(
+            title: 'API Timeout (Seconds)',
+            value: settings.apiTimeoutSeconds.toDouble(),
+            min: 5,
+            max: 60,
+            onChanged: (v) => notifier.updateDiscoveryParam(apiTimeoutSeconds: v.toInt()),
+          ),
+          _SliderSetting(
+            title: 'API Retry Limit',
+            subtitle: 'Max attempts per pagination cycle',
+            value: settings.apiRetryLimit.toDouble(),
+            min: 1,
+            max: 10,
+            onChanged: (v) => notifier.updateDiscoveryParam(apiRetryLimit: v.toInt()),
+          ),
+          _SliderSetting(
+            title: 'Playback Retry Limit',
+            subtitle: 'Max attempts to play a failing video',
+            value: settings.playbackRetryLimit.toDouble(),
+            min: 0,
+            max: 5,
+            onChanged: (v) => notifier.updateDiscoveryParam(playbackRetryLimit: v.toInt()),
+          ),
+          _SliderSetting(
+            title: 'Auto Skip Delay (Seconds)',
+            subtitle: 'Wait time before skipping failed media',
+            value: settings.autoSkipDelaySeconds.toDouble(),
+            min: 1,
+            max: 10,
+            onChanged: (v) => notifier.updateDiscoveryParam(autoSkipDelaySeconds: v.toInt()),
+          ),
+          _SliderSetting(
+            title: 'Lazy Load Threshold',
+            subtitle: 'Items remaining before pre-fetching next batch',
+            value: settings.lazyLoadThreshold.toDouble(),
+            min: 1,
+            max: 50,
+            onChanged: (v) => notifier.updateDiscoveryParam(lazyLoadThreshold: v.toInt()),
+          ),
+
+          const Divider(),
+          // GROUP 5: LEGACY CHUNK SEARCH
+          const _SectionHeader(title: 'Legacy Search Feed (Chunked)'),
+          SwitchListTile(
             title: const Text('Strict Subscriptions Only'),
-            subtitle: const Text(
-                'Do not inject global trending when subscription query is sparse'),
+            subtitle: const Text('Disable trending fallback for empty queries'),
             value: settings.strictSubscriptionsOnly,
             onChanged: (val) =>
                 notifier.updateDiscoveryParam(strictSubscriptionsOnly: val),
           ),
           SwitchListTile(
             title: const Text('Include Native Retweets'),
-            subtitle: const Text(
-                'Allow retweets from followed accounts in subscription feed query'),
             value: settings.includeNativeRetweets,
             onChanged: (val) =>
                 notifier.updateDiscoveryParam(includeNativeRetweets: val),
           ),
           SwitchListTile(
-            title: const Text('Use Chunked Subscription Queries'),
-            subtitle: const Text(
-                'Build query chunks from all subscriptions instead of random sampling'),
+            title: const Text('Use Chunked Subscriptions'),
+            subtitle: const Text('Iterate through all subs in blocks'),
             value: settings.useChunkedSubscriptions,
             onChanged: (val) =>
                 notifier.updateDiscoveryParam(useChunkedSubscriptions: val),
           ),
+          _SliderSetting(
+            title: 'Popular Min Faves',
+            value: settings.minFavesFilter.toDouble(),
+            min: 0,
+            max: 1000,
+            divisions: 20,
+            onChanged: (v) => notifier.updateDiscoveryParam(minFavesFilter: v.toInt()),
+          ),
+          _SliderSetting(
+            title: 'Max Query Length',
+            value: settings.maxQueryLength.toDouble(),
+            min: 100,
+            max: 1000,
+            divisions: 18,
+            onChanged: (v) => notifier.updateDiscoveryParam(maxQueryLength: v.toInt()),
+          ),
+          _SliderSetting(
+            title: 'Chunk Rotation Limit',
+            value: settings.chunkRotationLimit.toDouble(),
+            min: 1,
+            max: 10,
+            onChanged: (v) => notifier.updateDiscoveryParam(chunkRotationLimit: v.toInt()),
+          ),
+          _SliderSetting(
+            title: 'Min New Tweets Threshold',
+            subtitle: 'Required yield before finishing fetch loop',
+            value: settings.minNewTweetsThreshold.toDouble(),
+            min: 1,
+            max: 20,
+            onChanged: (v) => notifier.updateDiscoveryParam(minNewTweetsThreshold: v.toInt()),
+          ),
+
+          const Divider(),
+          // GROUP 6: DIAGNOSTICS
+          const _SectionHeader(title: 'Diagnostics'),
           SwitchListTile(
             title: const Text('Show Discovery Debug Info'),
-            subtitle: const Text(
-                'Show media type, source (API/Cache), and metadata on the feed'),
+            subtitle: const Text('Overlay source and metadata on feed'),
             value: settings.showDebugInfo,
             onChanged: (val) => notifier.toggleDebugInfo(val),
           ),
-          const Divider(),
-          const _SectionHeader(title: 'Sync Architecture'),
-
-          ListTile(
-            title: const Text('Background Sync Interval'),
-            subtitle: Text('${settings.syncInterval} minutes'),
-            trailing: SizedBox(
-              width: 60,
-              child: TextFormField(
-                initialValue: settings.syncInterval.toString(),
-                keyboardType: TextInputType.number,
-                textAlign: TextAlign.center,
-                onChanged: (val) {
-                  final v = int.tryParse(val);
-                  if (v != null) notifier.updateSyncInterval(v);
-                },
-              ),
-            ),
-          ),
-          ListTile(
-            title: const Text('Background Sync Batch Size'),
-            subtitle: const Text('Number of accounts to sync per interval'),
-            trailing: SizedBox(
-              width: 60,
-              child: TextFormField(
-                initialValue: settings.syncBatchSize.toString(),
-                keyboardType: TextInputType.number,
-                textAlign: TextAlign.center,
-                onChanged: (val) {
-                  final v = int.tryParse(val);
-                  if (v != null) notifier.updateSyncBatchSize(v);
-                },
-              ),
-            ),
-          ),
-          ListTile(
-            title: const Text('UI Load Batch Size'),
-            subtitle: const Text('Number of items to fetch when scrolling'),
-            trailing: SizedBox(
-              width: 60,
-              child: TextFormField(
-                initialValue: settings.loadBatchSize.toString(),
-                keyboardType: TextInputType.number,
-                textAlign: TextAlign.center,
-                onChanged: (val) {
-                  final v = int.tryParse(val);
-                  if (v != null) notifier.updateLoadBatchSize(v);
-                },
-              ),
-            ),
-          ),
-          ListTile(
-            title: const Text('Account Cooldown'),
-            subtitle:
-                const Text('Minutes to wait before re-fetching an account'),
-            trailing: SizedBox(
-              width: 60,
-              child: TextFormField(
-                initialValue: settings.cooldownDuration.toString(),
-                keyboardType: TextInputType.number,
-                textAlign: TextAlign.center,
-                onChanged: (val) {
-                  final v = int.tryParse(val);
-                  if (v != null) notifier.updateCooldownDuration(v);
-                },
-              ),
-            ),
-          ),
-          ListTile(
-            title: const Text('Prune Threshold'),
-            subtitle: const Text('Max metadata entries to keep in DB'),
-            trailing: SizedBox(
-              width: 80,
-              child: TextFormField(
-                initialValue: settings.pruneThreshold.toString(),
-                keyboardType: TextInputType.number,
-                textAlign: TextAlign.center,
-                onChanged: (val) {
-                  final v = int.tryParse(val);
-                  if (v != null) notifier.updatePruneThreshold(v);
-                },
-              ),
-            ),
-          ),
-          const Divider(),
-          const _SectionHeader(title: 'Advanced Tuning'),
-          _NumericSetting(
-            title: 'DB Candidate Multiplier',
-            subtitle: 'Scale of local pool vs Load Batch Size',
-            initialValue: settings.dbCandidateMultiplier,
-            onChanged: (v) => notifier.updateDiscoveryParam(dbCandidateMultiplier: v),
-          ),
-          _NumericSetting(
-            title: 'Min New Tweets Threshold',
-            subtitle: 'Items needed before stopping fetch cycle',
-            initialValue: settings.minNewTweetsThreshold,
-            onChanged: (v) => notifier.updateDiscoveryParam(minNewTweetsThreshold: v),
-          ),
-          _NumericSetting(
-            title: 'API Retry Limit',
-            subtitle: 'Max attempts per pagination cycle',
-            initialValue: settings.apiRetryLimit,
-            onChanged: (v) => notifier.updateDiscoveryParam(apiRetryLimit: v),
-          ),
-          _NumericSetting(
-            title: 'Chunk Rotation Limit',
-            subtitle: 'Max subscription chunks to try if dry',
-            initialValue: settings.chunkRotationLimit,
-            onChanged: (v) => notifier.updateDiscoveryParam(chunkRotationLimit: v),
-          ),
-          _NumericSetting(
-            title: 'Max Query Length',
-            subtitle: 'Characters allowed in subscription chunks',
-            initialValue: settings.maxQueryLength,
-            onChanged: (v) => notifier.updateDiscoveryParam(maxQueryLength: v),
-          ),
-          _NumericSetting(
-            title: 'API Timeout (Seconds)',
-            initialValue: settings.apiTimeoutSeconds,
-            onChanged: (v) => notifier.updateDiscoveryParam(apiTimeoutSeconds: v),
-          ),
-          const Divider(),
-          const _SectionHeader(title: 'Discovery Engine Tuning'),
-          _NumericSetting(
+          _SliderSetting(
             title: 'Max Saturation Swaps',
-            subtitle: 'Safety limit for account diversity logic',
-            initialValue: settings.maxSaturationSwaps,
-            onChanged: (v) => notifier.updateDiscoveryParam(maxSaturationSwaps: v),
+            subtitle: 'Safety limit for diversity logic loops',
+            value: settings.maxSaturationSwaps.toDouble(),
+            min: 100,
+            max: 5000,
+            divisions: 49,
+            onChanged: (v) => notifier.updateDiscoveryParam(maxSaturationSwaps: v.toInt()),
           ),
-          const Divider(),
-          const _SectionHeader(title: 'Playback & UI Tuning'),
-          _NumericSetting(
-            title: 'Media Deduplication Window',
-            subtitle: 'Number of recent items to check for duplicate media',
-            initialValue: settings.mediaDeduplicationWindow,
-            onChanged: (v) => notifier.updateDiscoveryParam(mediaDeduplicationWindow: v),
-          ),
-          _NumericSetting(
-            title: 'Lazy Load Threshold',
-            subtitle: 'Scroll items remaining before fetching more',
-            initialValue: settings.lazyLoadThreshold,
-            onChanged: (v) => notifier.updateDiscoveryParam(lazyLoadThreshold: v),
-          ),
-          _NumericSetting(
-            title: 'Playback Retry Limit',
-            subtitle: 'Max attempts to play a failing video',
-            initialValue: settings.playbackRetryLimit,
-            onChanged: (v) => notifier.updateDiscoveryParam(playbackRetryLimit: v),
-          ),
-          _NumericSetting(
-            title: 'Auto Skip Delay (Seconds)',
-            subtitle: 'Time to wait before skipping a failed video',
-            initialValue: settings.autoSkipDelaySeconds,
-            onChanged: (v) => notifier.updateDiscoveryParam(autoSkipDelaySeconds: v),
-          ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 48),
         ],
       ),
     );
   }
 }
 
-class _NumericSetting extends StatelessWidget {
+class _SliderSetting extends StatelessWidget {
   final String title;
   final String? subtitle;
-  final int initialValue;
-  final ValueChanged<int> onChanged;
+  final double value;
+  final double min;
+  final double max;
+  final int? divisions;
+  final ValueChanged<double> onChanged;
 
-  const _NumericSetting({
+  const _SliderSetting({
     required this.title,
     this.subtitle,
-    required this.initialValue,
+    required this.value,
+    required this.min,
+    required this.max,
+    this.divisions,
     required this.onChanged,
   });
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      title: Text(title),
-      subtitle: subtitle != null ? Text(subtitle!) : null,
-      trailing: SizedBox(
-        width: 60,
-        child: TextFormField(
-          initialValue: initialValue.toString(),
-          keyboardType: TextInputType.number,
-          textAlign: TextAlign.center,
-          onChanged: (val) {
-            final v = int.tryParse(val);
-            if (v != null) onChanged(v);
-          },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ListTile(
+          title: Text(title),
+          subtitle: subtitle != null ? Text(subtitle!) : null,
+          trailing: Text(
+            value.toInt().toString(),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
         ),
-      ),
+        Slider(
+          value: value.clamp(min, max),
+          min: min,
+          max: max,
+          divisions: divisions ?? (max - min).toInt(),
+          label: value.toInt().toString(),
+          onChanged: onChanged,
+        ),
+      ],
     );
   }
 }
@@ -379,12 +344,13 @@ class _SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
       child: Text(
         title.toUpperCase(),
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
               color: Theme.of(context).colorScheme.primary,
               fontWeight: FontWeight.bold,
+              letterSpacing: 1.2,
             ),
       ),
     );
