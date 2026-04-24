@@ -62,14 +62,11 @@ class MockSettingsNotifier extends SettingsNotifier {
   @override
   SettingsState build() {
     return SettingsState(
-      sort: FeedSort.latest,
+      fetchStrategy: FeedSort.latest,
       autoplay: true,
       mediaCacheSizeMB: 500,
     );
   }
-
-  @override
-  void updateSort(FeedSort sort) {}
 
   @override
   void updateMediaCacheSize(int megabytes) {
@@ -81,4 +78,20 @@ class MockSettingsNotifier extends SettingsNotifier {
   
   @override
   void toggleFilter(MediaFilter filter) {}
+
+  @override
+  void updateDiscoveryParam({
+    bool? avoidWatchedContent,
+    bool? unseenSubscriptionBoost,
+    double? freshMixRatio,
+    int? saturationThreshold,
+    FeedSort? fetchStrategy,
+    int? initialSyncCount,
+    bool? strictSubscriptionsOnly,
+    bool? includeNativeRetweets,
+    bool? useChunkedSubscriptions,
+    int? saturationWindow,
+    int? unseenBoostLookahead,
+    int? minFavesFilter,
+  }) {}
 }
