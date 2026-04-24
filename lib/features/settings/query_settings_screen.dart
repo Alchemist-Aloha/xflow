@@ -66,6 +66,14 @@ class QuerySettingsScreen extends ConsumerWidget {
             max: 100,
             onChanged: (v) => notifier.updateLoadBatchSize(v.toInt()),
           ),
+          _SliderSetting(
+            title: 'Timeline Batch Size',
+            subtitle: 'Items per request for Home/Mixer strategies',
+            value: settings.timelineBatchSize.toDouble(),
+            min: 5,
+            max: 200,
+            onChanged: (v) => notifier.updateTimelineBatchSize(v.toInt()),
+          ),
 
           const Divider(),
           // GROUP 2: FEED DIVERSITY (SATURATION)

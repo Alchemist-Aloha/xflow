@@ -16,6 +16,7 @@ class SettingsState {
   final int syncInterval;
   final int syncBatchSize;
   final int loadBatchSize;
+  final int timelineBatchSize;
   final int cooldownDuration;
   final int pruneThreshold;
 
@@ -63,6 +64,7 @@ class SettingsState {
     this.syncInterval = 15,
     this.syncBatchSize = 10,
     this.loadBatchSize = 20,
+    this.timelineBatchSize = 20,
     this.cooldownDuration = 15,
     this.pruneThreshold = 50000,
     this.avoidWatchedContent = true,
@@ -103,6 +105,7 @@ class SettingsState {
     int? syncInterval,
     int? syncBatchSize,
     int? loadBatchSize,
+    int? timelineBatchSize,
     int? cooldownDuration,
     int? pruneThreshold,
     bool? avoidWatchedContent,
@@ -142,6 +145,7 @@ class SettingsState {
       syncInterval: syncInterval ?? this.syncInterval,
       syncBatchSize: syncBatchSize ?? this.syncBatchSize,
       loadBatchSize: loadBatchSize ?? this.loadBatchSize,
+      timelineBatchSize: timelineBatchSize ?? this.timelineBatchSize,
       cooldownDuration: cooldownDuration ?? this.cooldownDuration,
       pruneThreshold: pruneThreshold ?? this.pruneThreshold,
       avoidWatchedContent: avoidWatchedContent ?? this.avoidWatchedContent,
@@ -213,6 +217,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
     final syncInterval = _prefs.getInt('syncInterval') ?? 15;
     final syncBatchSize = _prefs.getInt('syncBatchSize') ?? 10;
     final loadBatchSize = _prefs.getInt('loadBatchSize') ?? 20;
+    final timelineBatchSize = _prefs.getInt('timelineBatchSize') ?? 20;
     final cooldownDuration = _prefs.getInt('cooldownDuration') ?? 15;
     final pruneThreshold = _prefs.getInt('pruneThreshold') ?? 50000;
 
@@ -261,6 +266,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
       syncInterval: syncInterval,
       syncBatchSize: syncBatchSize,
       loadBatchSize: loadBatchSize,
+      timelineBatchSize: timelineBatchSize,
       cooldownDuration: cooldownDuration,
       pruneThreshold: pruneThreshold,
       avoidWatchedContent: avoidWatchedContent,
@@ -313,6 +319,11 @@ class SettingsNotifier extends Notifier<SettingsState> {
   void updateLoadBatchSize(int size) {
     state = state.copyWith(loadBatchSize: size);
     _prefs.setInt('loadBatchSize', size);
+  }
+
+  void updateTimelineBatchSize(int size) {
+    state = state.copyWith(timelineBatchSize: size);
+    _prefs.setInt('timelineBatchSize', size);
   }
 
   void updateCooldownDuration(int minutes) {

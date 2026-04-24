@@ -182,17 +182,17 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
       final TweetResponse freshResponse;
       if (settings.fetchStrategy == FeedSort.videomixer) {
         freshResponse = await client.fetchVideoMixer(
-          count: settings.initialSyncCount,
+          count: settings.timelineBatchSize,
           filters: settings.filters,
         );
       } else if (settings.fetchStrategy == FeedSort.algorithmic) {
         freshResponse = await client.fetchAlgorithmicTimeline(
-          count: settings.initialSyncCount,
+          count: settings.timelineBatchSize,
           filters: settings.filters,
         );
       } else if (settings.fetchStrategy == FeedSort.chronological) {
         freshResponse = await client.fetchChronologicalTimeline(
-          count: settings.initialSyncCount,
+          count: settings.timelineBatchSize,
           filters: settings.filters,
         );
       } else {
@@ -319,19 +319,19 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
         if (settings.fetchStrategy == FeedSort.videomixer) {
           response = await client.fetchVideoMixer(
             cursor: currentCursor,
-            count: settings.loadBatchSize,
+            count: settings.timelineBatchSize,
             filters: settings.filters,
           );
         } else if (settings.fetchStrategy == FeedSort.algorithmic) {
           response = await client.fetchAlgorithmicTimeline(
             cursor: currentCursor,
-            count: settings.loadBatchSize,
+            count: settings.timelineBatchSize,
             filters: settings.filters,
           );
         } else if (settings.fetchStrategy == FeedSort.chronological) {
           response = await client.fetchChronologicalTimeline(
             cursor: currentCursor,
-            count: settings.loadBatchSize,
+            count: settings.timelineBatchSize,
             filters: settings.filters,
           );
         } else {
