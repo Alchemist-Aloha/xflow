@@ -19,22 +19,26 @@ class QuerySettingsScreen extends ConsumerWidget {
           _SectionHeader(title: 'Cache Logic'),
           SwitchListTile(
             title: const Text('Avoid Watched Content'),
-            subtitle: const Text('Exclude already played items from candidate pool'),
+            subtitle:
+                const Text('Exclude already played items from candidate pool'),
             value: settings.avoidWatchedContent,
-            onChanged: (val) => notifier.updateDiscoveryParam(avoidWatchedContent: val),
+            onChanged: (val) =>
+                notifier.updateDiscoveryParam(avoidWatchedContent: val),
           ),
           SwitchListTile(
             title: const Text('Unseen Subscription Boost'),
-            subtitle: const Text('Prioritize items from accounts you haven\'t watched much'),
+            subtitle: const Text(
+                'Prioritize items from accounts you haven\'t watched much'),
             value: settings.unseenSubscriptionBoost,
-            onChanged: (val) => notifier.updateDiscoveryParam(unseenSubscriptionBoost: val),
+            onChanged: (val) =>
+                notifier.updateDiscoveryParam(unseenSubscriptionBoost: val),
           ),
-          
           const Divider(),
           _SectionHeader(title: 'Discovery Mix'),
           ListTile(
             title: const Text('Freshness Mix Ratio'),
-            subtitle: Text('${(settings.freshMixRatio * 100).toInt()}% Fresh API / ${(100 - settings.freshMixRatio * 100).toInt()}% Local Cache'),
+            subtitle: Text(
+                '${(settings.freshMixRatio * 100).toInt()}% Fresh API / ${(100 - settings.freshMixRatio * 100).toInt()}% Local Cache'),
           ),
           Slider(
             value: settings.freshMixRatio,
@@ -42,14 +46,15 @@ class QuerySettingsScreen extends ConsumerWidget {
             max: 1.0,
             divisions: 10,
             label: '${(settings.freshMixRatio * 100).toInt()}%',
-            onChanged: (val) => notifier.updateDiscoveryParam(freshMixRatio: val),
+            onChanged: (val) =>
+                notifier.updateDiscoveryParam(freshMixRatio: val),
           ),
-          
           const Divider(),
           _SectionHeader(title: 'Diversity & Fetch'),
           ListTile(
             title: const Text('Account Saturation'),
-            subtitle: Text('Max ${settings.saturationThreshold} items from same user in 10-item window'),
+            subtitle: Text(
+                'Max ${settings.saturationThreshold} items from same user in 10-item window'),
           ),
           Slider(
             value: settings.saturationThreshold.toDouble(),
@@ -57,11 +62,13 @@ class QuerySettingsScreen extends ConsumerWidget {
             max: 5,
             divisions: 4,
             label: '${settings.saturationThreshold}',
-            onChanged: (val) => notifier.updateDiscoveryParam(saturationThreshold: val.toInt()),
+            onChanged: (val) =>
+                notifier.updateDiscoveryParam(saturationThreshold: val.toInt()),
           ),
           ListTile(
             title: const Text('Global Fetch Strategy'),
-            subtitle: Text('Current: ${settings.fetchStrategy.name.toUpperCase()}'),
+            subtitle:
+                Text('Current: ${settings.fetchStrategy.name.toUpperCase()}'),
             trailing: DropdownButton<FeedSort>(
               value: settings.fetchStrategy,
               items: FeedSort.values.map((sort) {
@@ -71,13 +78,15 @@ class QuerySettingsScreen extends ConsumerWidget {
                 );
               }).toList(),
               onChanged: (val) {
-                if (val != null) notifier.updateDiscoveryParam(fetchStrategy: val);
+                if (val != null)
+                  notifier.updateDiscoveryParam(fetchStrategy: val);
               },
             ),
           ),
           ListTile(
             title: const Text('Initial Launch Fetch Count'),
-            subtitle: const Text('Number of items to "pepper" into feed on start'),
+            subtitle:
+                const Text('Number of items to "pepper" into feed on start'),
             trailing: SizedBox(
               width: 60,
               child: TextFormField(
@@ -86,30 +95,36 @@ class QuerySettingsScreen extends ConsumerWidget {
                 textAlign: TextAlign.center,
                 onFieldSubmitted: (val) {
                   final count = int.tryParse(val);
-                  if (count != null) notifier.updateDiscoveryParam(initialSyncCount: count);
+                  if (count != null)
+                    notifier.updateDiscoveryParam(initialSyncCount: count);
                 },
               ),
             ),
           ),
           SwitchListTile(
             title: const Text('Strict Subscriptions Only'),
-            subtitle: const Text('Do not inject global trending when subscription query is sparse'),
+            subtitle: const Text(
+                'Do not inject global trending when subscription query is sparse'),
             value: settings.strictSubscriptionsOnly,
-            onChanged: (val) => notifier.updateDiscoveryParam(strictSubscriptionsOnly: val),
+            onChanged: (val) =>
+                notifier.updateDiscoveryParam(strictSubscriptionsOnly: val),
           ),
           SwitchListTile(
             title: const Text('Include Native Retweets'),
-            subtitle: const Text('Allow retweets from followed accounts in subscription feed query'),
+            subtitle: const Text(
+                'Allow retweets from followed accounts in subscription feed query'),
             value: settings.includeNativeRetweets,
-            onChanged: (val) => notifier.updateDiscoveryParam(includeNativeRetweets: val),
+            onChanged: (val) =>
+                notifier.updateDiscoveryParam(includeNativeRetweets: val),
           ),
           SwitchListTile(
             title: const Text('Use Chunked Subscription Queries'),
-            subtitle: const Text('Build query chunks from all subscriptions instead of random sampling'),
+            subtitle: const Text(
+                'Build query chunks from all subscriptions instead of random sampling'),
             value: settings.useChunkedSubscriptions,
-            onChanged: (val) => notifier.updateDiscoveryParam(useChunkedSubscriptions: val),
+            onChanged: (val) =>
+                notifier.updateDiscoveryParam(useChunkedSubscriptions: val),
           ),
-
           const Divider(),
           _SectionHeader(title: 'Sync Architecture'),
           ListTile(
@@ -162,7 +177,8 @@ class QuerySettingsScreen extends ConsumerWidget {
           ),
           ListTile(
             title: const Text('Account Cooldown'),
-            subtitle: const Text('Minutes to wait before re-fetching an account'),
+            subtitle:
+                const Text('Minutes to wait before re-fetching an account'),
             trailing: SizedBox(
               width: 60,
               child: TextFormField(
@@ -210,9 +226,9 @@ class _SectionHeader extends StatelessWidget {
       child: Text(
         title.toUpperCase(),
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-          color: Theme.of(context).colorScheme.primary,
-          fontWeight: FontWeight.bold,
-        ),
+              color: Theme.of(context).colorScheme.primary,
+              fontWeight: FontWeight.bold,
+            ),
       ),
     );
   }

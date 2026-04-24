@@ -21,15 +21,13 @@ class BackgroundSync {
 
   static void start(TwitterClient client, SettingsState settings) {
     if (_syncTimer != null) return;
-    
+
     // Initial sync
     _sync(client, settings);
-    
-    _syncTimer = Timer.periodic(
-      Duration(minutes: settings.syncInterval), 
-      (_) => _sync(client, settings)
-    );
-    
+
+    _syncTimer = Timer.periodic(Duration(minutes: settings.syncInterval),
+        (_) => _sync(client, settings));
+
     // Prune DB 1 minute after start
     Future.delayed(const Duration(minutes: 1), () {
       Repository.pruneCachedMedia(threshold: settings.pruneThreshold);
@@ -46,7 +44,8 @@ class BackgroundSync {
     _syncTimer = null;
   }
 
-  static Future<void> _sync(TwitterClient client, SettingsState settings) async {
+  static Future<void> _sync(
+      TwitterClient client, SettingsState settings) async {
     if (_isSyncing) return;
     _isSyncing = true;
 
@@ -58,7 +57,8 @@ class BackgroundSync {
       // Pick a random subset from settings
       subs.shuffle();
       final targets = subs.take(syncBatchSize);
-      final usersQuery = targets.map((s) => 'from:${s.screenName}').join(' OR ');
+      final usersQuery =
+          targets.map((s) => 'from:${s.screenName}').join(' OR ');
       final query = "include:nativeretweets ($usersQuery) -filter:replies";
 
       // Fetch latest
@@ -67,7 +67,7 @@ class BackgroundSync {
         count: settings.loadBatchSize,
         cooldownMinutes: settings.cooldownDuration,
       );
-      
+
       if (response.tweets.isNotEmpty) {
         await Repository.insertCachedMedia(response.tweets);
       }

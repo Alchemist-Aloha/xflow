@@ -151,6 +151,9 @@ class MockTwitterClient extends _i1.Mock implements _i2.TwitterClient {
     int? subBatchSize = 10,
     int? loadBatchSize = 20,
     int? cooldownMinutes = 15,
+    bool? strictSubscriptionsOnly = true,
+    bool? includeNativeRetweets = false,
+    bool? useChunkedSubscriptions = true,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -163,6 +166,9 @@ class MockTwitterClient extends _i1.Mock implements _i2.TwitterClient {
             #subBatchSize: subBatchSize,
             #loadBatchSize: loadBatchSize,
             #cooldownMinutes: cooldownMinutes,
+            #strictSubscriptionsOnly: strictSubscriptionsOnly,
+            #includeNativeRetweets: includeNativeRetweets,
+            #useChunkedSubscriptions: useChunkedSubscriptions,
           },
         ),
         returnValue: _i3.Future<_i2.TweetResponse>.value(_FakeTweetResponse_0(
@@ -177,6 +183,9 @@ class MockTwitterClient extends _i1.Mock implements _i2.TwitterClient {
               #subBatchSize: subBatchSize,
               #loadBatchSize: loadBatchSize,
               #cooldownMinutes: cooldownMinutes,
+              #strictSubscriptionsOnly: strictSubscriptionsOnly,
+              #includeNativeRetweets: includeNativeRetweets,
+              #useChunkedSubscriptions: useChunkedSubscriptions,
             },
           ),
         )),

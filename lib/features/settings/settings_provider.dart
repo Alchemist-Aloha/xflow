@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 enum FeedSort { latest, popular, oldest, random, trending }
+
 enum MediaFilter { video, image, text }
 
 class SettingsState {
@@ -9,7 +10,7 @@ class SettingsState {
   final bool autoplay;
   final bool isListView;
   final int mediaCacheSizeMB;
-  
+
   // New architectural parameters
   final int syncInterval;
   final int syncBatchSize;
@@ -80,14 +81,18 @@ class SettingsState {
       cooldownDuration: cooldownDuration ?? this.cooldownDuration,
       pruneThreshold: pruneThreshold ?? this.pruneThreshold,
       avoidWatchedContent: avoidWatchedContent ?? this.avoidWatchedContent,
-      unseenSubscriptionBoost: unseenSubscriptionBoost ?? this.unseenSubscriptionBoost,
+      unseenSubscriptionBoost:
+          unseenSubscriptionBoost ?? this.unseenSubscriptionBoost,
       freshMixRatio: freshMixRatio ?? this.freshMixRatio,
       saturationThreshold: saturationThreshold ?? this.saturationThreshold,
       fetchStrategy: fetchStrategy ?? this.fetchStrategy,
       initialSyncCount: initialSyncCount ?? this.initialSyncCount,
-      strictSubscriptionsOnly: strictSubscriptionsOnly ?? this.strictSubscriptionsOnly,
-      includeNativeRetweets: includeNativeRetweets ?? this.includeNativeRetweets,
-      useChunkedSubscriptions: useChunkedSubscriptions ?? this.useChunkedSubscriptions,
+      strictSubscriptionsOnly:
+          strictSubscriptionsOnly ?? this.strictSubscriptionsOnly,
+      includeNativeRetweets:
+          includeNativeRetweets ?? this.includeNativeRetweets,
+      useChunkedSubscriptions:
+          useChunkedSubscriptions ?? this.useChunkedSubscriptions,
     );
   }
 }
@@ -104,7 +109,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
   Future<void> _init() async {
     _prefs = await SharedPreferences.getInstance();
     final filterStrings = _prefs.getStringList('filters') ?? [];
-    
+
     final filters = filterStrings
         .map((s) {
           try {
@@ -118,7 +123,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
 
     final isListView = _prefs.getBool('isListView') ?? false;
     final mediaCacheSizeMB = _prefs.getInt('mediaCacheSizeMB') ?? 500;
-    
+
     final syncInterval = _prefs.getInt('syncInterval') ?? 15;
     final syncBatchSize = _prefs.getInt('syncBatchSize') ?? 5;
     final loadBatchSize = _prefs.getInt('loadBatchSize') ?? 20;
@@ -126,14 +131,18 @@ class SettingsNotifier extends Notifier<SettingsState> {
     final pruneThreshold = _prefs.getInt('pruneThreshold') ?? 50000;
 
     final avoidWatchedContent = _prefs.getBool('avoidWatchedContent') ?? true;
-    final unseenSubscriptionBoost = _prefs.getBool('unseenSubscriptionBoost') ?? true;
+    final unseenSubscriptionBoost =
+        _prefs.getBool('unseenSubscriptionBoost') ?? true;
     final freshMixRatio = _prefs.getDouble('freshMixRatio') ?? 0.3;
     final saturationThreshold = _prefs.getInt('saturationThreshold') ?? 2;
     final fetchStrategyIdx = _prefs.getInt('fetchStrategy') ?? 0;
     final initialSyncCount = _prefs.getInt('initialSyncCount') ?? 10;
-    final strictSubscriptionsOnly = _prefs.getBool('strictSubscriptionsOnly') ?? true;
-    final includeNativeRetweets = _prefs.getBool('includeNativeRetweets') ?? false;
-    final useChunkedSubscriptions = _prefs.getBool('useChunkedSubscriptions') ?? true;
+    final strictSubscriptionsOnly =
+        _prefs.getBool('strictSubscriptionsOnly') ?? true;
+    final includeNativeRetweets =
+        _prefs.getBool('includeNativeRetweets') ?? false;
+    final useChunkedSubscriptions =
+        _prefs.getBool('useChunkedSubscriptions') ?? true;
 
     state = SettingsState(
       filters: filters,
@@ -149,7 +158,9 @@ class SettingsNotifier extends Notifier<SettingsState> {
       unseenSubscriptionBoost: unseenSubscriptionBoost,
       freshMixRatio: freshMixRatio,
       saturationThreshold: saturationThreshold,
-      fetchStrategy: fetchStrategyIdx < FeedSort.values.length ? FeedSort.values[fetchStrategyIdx] : FeedSort.latest,
+      fetchStrategy: fetchStrategyIdx < FeedSort.values.length
+          ? FeedSort.values[fetchStrategyIdx]
+          : FeedSort.latest,
       initialSyncCount: initialSyncCount,
       strictSubscriptionsOnly: strictSubscriptionsOnly,
       includeNativeRetweets: includeNativeRetweets,
@@ -209,15 +220,23 @@ class SettingsNotifier extends Notifier<SettingsState> {
       includeNativeRetweets: includeNativeRetweets,
       useChunkedSubscriptions: useChunkedSubscriptions,
     );
-    if (avoidWatchedContent != null) _prefs.setBool('avoidWatchedContent', avoidWatchedContent);
-    if (unseenSubscriptionBoost != null) _prefs.setBool('unseenSubscriptionBoost', unseenSubscriptionBoost);
+    if (avoidWatchedContent != null)
+      _prefs.setBool('avoidWatchedContent', avoidWatchedContent);
+    if (unseenSubscriptionBoost != null)
+      _prefs.setBool('unseenSubscriptionBoost', unseenSubscriptionBoost);
     if (freshMixRatio != null) _prefs.setDouble('freshMixRatio', freshMixRatio);
-    if (saturationThreshold != null) _prefs.setInt('saturationThreshold', saturationThreshold);
-    if (fetchStrategy != null) _prefs.setInt('fetchStrategy', fetchStrategy.index);
-    if (initialSyncCount != null) _prefs.setInt('initialSyncCount', initialSyncCount);
-    if (strictSubscriptionsOnly != null) _prefs.setBool('strictSubscriptionsOnly', strictSubscriptionsOnly);
-    if (includeNativeRetweets != null) _prefs.setBool('includeNativeRetweets', includeNativeRetweets);
-    if (useChunkedSubscriptions != null) _prefs.setBool('useChunkedSubscriptions', useChunkedSubscriptions);
+    if (saturationThreshold != null)
+      _prefs.setInt('saturationThreshold', saturationThreshold);
+    if (fetchStrategy != null)
+      _prefs.setInt('fetchStrategy', fetchStrategy.index);
+    if (initialSyncCount != null)
+      _prefs.setInt('initialSyncCount', initialSyncCount);
+    if (strictSubscriptionsOnly != null)
+      _prefs.setBool('strictSubscriptionsOnly', strictSubscriptionsOnly);
+    if (includeNativeRetweets != null)
+      _prefs.setBool('includeNativeRetweets', includeNativeRetweets);
+    if (useChunkedSubscriptions != null)
+      _prefs.setBool('useChunkedSubscriptions', useChunkedSubscriptions);
   }
 
   void toggleFilter(MediaFilter filter) {

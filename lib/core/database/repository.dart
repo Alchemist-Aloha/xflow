@@ -49,7 +49,8 @@ class Repository {
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
-          await db.execute('ALTER TABLE $tableAccounts ADD COLUMN rest_id TEXT');
+          await db
+              .execute('ALTER TABLE $tableAccounts ADD COLUMN rest_id TEXT');
         }
         if (oldVersion < 3) {
           await db.execute(
@@ -57,9 +58,12 @@ class Repository {
           );
         }
         if (oldVersion < 4) {
-          await db.execute('ALTER TABLE $tableSubscriptions ADD COLUMN description TEXT');
-          await db.execute('ALTER TABLE $tableSubscriptions ADD COLUMN followers_count INTEGER');
-          await db.execute('ALTER TABLE $tableSubscriptions ADD COLUMN following_count INTEGER');
+          await db.execute(
+              'ALTER TABLE $tableSubscriptions ADD COLUMN description TEXT');
+          await db.execute(
+              'ALTER TABLE $tableSubscriptions ADD COLUMN followers_count INTEGER');
+          await db.execute(
+              'ALTER TABLE $tableSubscriptions ADD COLUMN following_count INTEGER');
         }
         if (oldVersion < 5) {
           await db.execute('''
@@ -112,7 +116,8 @@ class Repository {
     final db = await database;
     final batch = db.batch();
     for (var sub in subs) {
-      batch.insert(tableSubscriptions, sub.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+      batch.insert(tableSubscriptions, sub.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace);
     }
     await batch.commit(noResult: true);
   }
@@ -146,15 +151,17 @@ class Repository {
           'is_video': tweet.isVideo ? 1 : 0,
           'created_at': tweet.createdAt?.millisecondsSinceEpoch,
         },
-        conflictAlgorithm: ConflictAlgorithm.ignore, // Don't overwrite play counts if already exists
+        conflictAlgorithm: ConflictAlgorithm
+            .ignore, // Don't overwrite play counts if already exists
       );
     }
     await batch.commit(noResult: true);
   }
 
-  static Future<List<Tweet>> getUnplayedCachedMedia(int limit, {Set<MediaFilter>? filters}) async {
+  static Future<List<Tweet>> getUnplayedCachedMedia(int limit,
+      {Set<MediaFilter>? filters}) async {
     final db = await database;
-    
+
     String whereClause = 'played_count = ?';
     List<dynamic> whereArgs = [0];
 
@@ -192,10 +199,13 @@ class Repository {
         text: maps[i]['text'] as String,
         userHandle: maps[i]['user_handle'] as String,
         userAvatarUrl: maps[i]['user_avatar_url'] as String?,
-        mediaUrls: List<String>.from(jsonDecode(maps[i]['media_urls'] as String)),
+        mediaUrls:
+            List<String>.from(jsonDecode(maps[i]['media_urls'] as String)),
         thumbnailUrl: maps[i]['thumbnail_url'] as String?,
         isVideo: (maps[i]['is_video'] as int) == 1,
-        createdAt: maps[i]['created_at'] != null ? DateTime.fromMillisecondsSinceEpoch(maps[i]['created_at'] as int) : null,
+        createdAt: maps[i]['created_at'] != null
+            ? DateTime.fromMillisecondsSinceEpoch(maps[i]['created_at'] as int)
+            : null,
       );
     });
   }
@@ -248,10 +258,13 @@ class Repository {
         text: maps[i]['text'] as String,
         userHandle: maps[i]['user_handle'] as String,
         userAvatarUrl: maps[i]['user_avatar_url'] as String?,
-        mediaUrls: List<String>.from(jsonDecode(maps[i]['media_urls'] as String)),
+        mediaUrls:
+            List<String>.from(jsonDecode(maps[i]['media_urls'] as String)),
         thumbnailUrl: maps[i]['thumbnail_url'] as String?,
         isVideo: (maps[i]['is_video'] as int) == 1,
-        createdAt: maps[i]['created_at'] != null ? DateTime.fromMillisecondsSinceEpoch(maps[i]['created_at'] as int) : null,
+        createdAt: maps[i]['created_at'] != null
+            ? DateTime.fromMillisecondsSinceEpoch(maps[i]['created_at'] as int)
+            : null,
       );
     });
   }
@@ -274,12 +287,14 @@ class Repository {
     return out;
   }
 
-  static Future<List<Tweet>> getUserCachedMedia(String userHandle, int limit, {Set<MediaFilter>? filters}) async {
+  static Future<List<Tweet>> getUserCachedMedia(String userHandle, int limit,
+      {Set<MediaFilter>? filters}) async {
     final db = await database;
     // Strip @ if present for normalization
-    final rawHandle = userHandle.startsWith('@') ? userHandle.substring(1) : userHandle;
+    final rawHandle =
+        userHandle.startsWith('@') ? userHandle.substring(1) : userHandle;
     final handleWithAt = '@$rawHandle';
-    
+
     String whereClause = '(user_handle = ? OR user_handle = ?)';
     List<dynamic> whereArgs = [rawHandle, handleWithAt];
 
@@ -317,10 +332,13 @@ class Repository {
         text: maps[i]['text'] as String,
         userHandle: maps[i]['user_handle'] as String,
         userAvatarUrl: maps[i]['user_avatar_url'] as String?,
-        mediaUrls: List<String>.from(jsonDecode(maps[i]['media_urls'] as String)),
+        mediaUrls:
+            List<String>.from(jsonDecode(maps[i]['media_urls'] as String)),
         thumbnailUrl: maps[i]['thumbnail_url'] as String?,
         isVideo: (maps[i]['is_video'] as int) == 1,
-        createdAt: maps[i]['created_at'] != null ? DateTime.fromMillisecondsSinceEpoch(maps[i]['created_at'] as int) : null,
+        createdAt: maps[i]['created_at'] != null
+            ? DateTime.fromMillisecondsSinceEpoch(maps[i]['created_at'] as int)
+            : null,
       );
     });
   }
@@ -336,13 +354,15 @@ class Repository {
 
   static Future<int> getCachedMediaCount() async {
     final db = await database;
-    final countSq = await db.rawQuery('SELECT COUNT(*) as count FROM $tableCachedMedia');
+    final countSq =
+        await db.rawQuery('SELECT COUNT(*) as count FROM $tableCachedMedia');
     return countSq.first['count'] as int;
   }
 
   static Future<void> pruneCachedMedia({int threshold = 50000}) async {
     final db = await database;
-    final countSq = await db.rawQuery('SELECT COUNT(*) as count FROM $tableCachedMedia');
+    final countSq =
+        await db.rawQuery('SELECT COUNT(*) as count FROM $tableCachedMedia');
     final count = countSq.first['count'] as int;
 
     if (count > threshold) {

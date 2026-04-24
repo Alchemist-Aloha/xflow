@@ -18,15 +18,15 @@ class FeedState {
   final bool isRefreshing;
 
   FeedState({
-    required this.tweets, 
-    this.cursorBottom, 
+    required this.tweets,
+    this.cursorBottom,
     this.isLoadingMore = false,
     this.isRefreshing = false,
   });
 
   FeedState copyWith({
-    List<Tweet>? tweets, 
-    String? cursorBottom, 
+    List<Tweet>? tweets,
+    String? cursorBottom,
     bool? isLoadingMore,
     bool? isRefreshing,
   }) {
@@ -56,10 +56,36 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
     SettingsState settings,
     Map<String, int> playedByUser,
   ) {
-    var processed = DiscoveryEngine.interleave(freshPool, localPool, settings.freshMixRatio);
-    processed = DiscoveryEngine.applySaturation(processed, threshold: settings.saturationThreshold);
+    final seenIds = <String>{};
+    final seenMediaUrls = <String>{};
+
+    final uniqueFresh = freshPool.where((t) {
+      if (seenIds.contains(t.id)) return false;
+      if (t.mediaUrls.isNotEmpty && seenMediaUrls.contains(t.mediaUrls.first)) {
+        return false;
+      }
+      seenIds.add(t.id);
+      if (t.mediaUrls.isNotEmpty) seenMediaUrls.add(t.mediaUrls.first);
+      return true;
+    }).toList();
+
+    final uniqueLocal = localPool.where((t) {
+      if (seenIds.contains(t.id)) return false;
+      if (t.mediaUrls.isNotEmpty && seenMediaUrls.contains(t.mediaUrls.first)) {
+        return false;
+      }
+      seenIds.add(t.id);
+      if (t.mediaUrls.isNotEmpty) seenMediaUrls.add(t.mediaUrls.first);
+      return true;
+    }).toList();
+
+    var processed = DiscoveryEngine.interleave(
+        uniqueFresh, uniqueLocal, settings.freshMixRatio);
+    processed = DiscoveryEngine.applySaturation(processed,
+        threshold: settings.saturationThreshold);
     if (settings.unseenSubscriptionBoost) {
-      processed = DiscoveryEngine.applyUnseenSubscriptionBoost(processed, playedByUser);
+      processed =
+          DiscoveryEngine.applyUnseenSubscriptionBoost(processed, playedByUser);
     }
     return processed;
   }
@@ -69,8 +95,9 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
     final client = ref.watch(twitterClientProvider);
     final settings = ref.watch(settingsProvider);
     final syncBatchSize = await _resolveSyncBatchSize(settings);
-    
-    debugPrint('XFLOW: Building FeedNotifier. fetchStrategy: ${settings.fetchStrategy}');
+
+    debugPrint(
+        'XFLOW: Building FeedNotifier. fetchStrategy: ${settings.fetchStrategy}');
 
     try {
       // Stage 1: candidate retrieval (local + fresh)
@@ -101,13 +128,15 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
           ? await Repository.getPlayedCountsByUser()
           : const <String, int>{};
 
-      var tweets = _runDiscoveryPipeline(freshPool, localPool, settings, playedByUser);
+      var tweets =
+          _runDiscoveryPipeline(freshPool, localPool, settings, playedByUser);
 
       debugPrint('XFLOW: Local pool size after pipeline: ${tweets.length}');
 
       // If discovery produced nothing, make one fallback API call to avoid blank screen.
       if (tweets.isEmpty) {
-        debugPrint('XFLOW: Discovery produced empty pool, performing fallback sync...');
+        debugPrint(
+            'XFLOW: Discovery produced empty pool, performing fallback sync...');
         final response = await client.fetchSubscribedMedia(
           sort: settings.fetchStrategy,
           filters: settings.filters,
@@ -138,11 +167,12 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
           pool.warmup(tweet.id, tweet.mediaUrls.first);
         }
       }
-      
+
       return FeedState(
         tweets: processed,
         cursorBottom: null,
-        isRefreshing: tweets.isEmpty, // Only refreshing if we started with nothing
+        isRefreshing:
+            tweets.isEmpty, // Only refreshing if we started with nothing
       );
     } catch (e, st) {
       debugPrint('XFLOW: Error in build(): $e\n$st');
@@ -178,7 +208,8 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
       );
 
       final freshPool = freshResponse.tweets;
-      debugPrint('XFLOW: Background refresh returned ${freshPool.length} fresh tweets');
+      debugPrint(
+          'XFLOW: Background refresh returned ${freshPool.length} fresh tweets');
 
       if (freshPool.isNotEmpty) {
         await Repository.insertCachedMedia(freshPool);
@@ -192,14 +223,16 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
             ? await Repository.getPlayedCountsByUser()
             : const <String, int>{};
 
-        final processed = _runDiscoveryPipeline(freshPool, localPool, settings, playedByUser);
+        final processed =
+            _runDiscoveryPipeline(freshPool, localPool, settings, playedByUser);
 
         state = AsyncData(current.copyWith(
           tweets: processed,
           cursorBottom: freshResponse.cursorBottom,
           isRefreshing: false,
         ));
-        debugPrint('XFLOW: Feed state updated from background refresh. Total: ${processed.length}');
+        debugPrint(
+            'XFLOW: Feed state updated from background refresh. Total: ${processed.length}');
       }
     } catch (e) {
       debugPrint('XFLOW: Background refresh error: $e');
@@ -231,7 +264,8 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
         filters: settings.filters,
       );
       final seenIds = currentTweets.map((t) => t.id).toSet();
-      var newTweetsFromCache = allCandidates.where((t) => !seenIds.contains(t.id)).toList();
+      var newTweetsFromCache =
+          allCandidates.where((t) => !seenIds.contains(t.id)).toList();
 
       String? nextCursor = currentCursor;
       List<Tweet> finalNewTweets = [];
@@ -252,17 +286,20 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
           includeNativeRetweets: settings.includeNativeRetweets,
           useChunkedSubscriptions: settings.useChunkedSubscriptions,
         );
-        
-        finalNewTweets = response.tweets.where((t) => !seenIds.contains(t.id)).toList();
+
+        finalNewTweets =
+            response.tweets.where((t) => !seenIds.contains(t.id)).toList();
         nextCursor = response.cursorBottom;
         await Repository.insertCachedMedia(finalNewTweets);
       } else {
-        finalNewTweets = newTweetsFromCache.take(settings.loadBatchSize).toList();
+        finalNewTweets =
+            newTweetsFromCache.take(settings.loadBatchSize).toList();
       }
-      
+
       finalNewTweets.shuffle(); // Diversify before appending
       var combined = [...currentTweets, ...finalNewTweets];
-      combined = DiscoveryEngine.applySaturation(combined, threshold: settings.saturationThreshold);
+      combined = DiscoveryEngine.applySaturation(combined,
+          threshold: settings.saturationThreshold);
 
       state = AsyncData(currentState.copyWith(
         tweets: combined,
@@ -276,7 +313,9 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
   }
 }
 
-final feedNotifierProvider = AutoDisposeAsyncNotifierProvider<FeedNotifier, FeedState>(() => FeedNotifier());
+final feedNotifierProvider =
+    AutoDisposeAsyncNotifierProvider<FeedNotifier, FeedState>(
+        () => FeedNotifier());
 
 // Legacy support for parts of the code that still expect feedProvider
 final feedProvider = Provider.autoDispose<AsyncValue<List<Tweet>>>((ref) {
