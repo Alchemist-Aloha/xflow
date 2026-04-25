@@ -19,16 +19,15 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('FEED MIX', skipOffstage: true), findsOneWidget);
+      expect(find.textContaining('Mix & Delivery', skipOffstage: true), findsOneWidget);
       
       // Scroll to find Variety header
-      await tester.scrollUntilVisible(find.textContaining('VARIETY'), 100);
-      expect(find.textContaining('VARIETY'), findsOneWidget);
+      await tester.scrollUntilVisible(find.textContaining('Variety Engine'), 100);
+      expect(find.textContaining('Variety Engine'), findsOneWidget);
       
-      // Scroll to find Account Cool-off
-      await tester.scrollUntilVisible(find.text('Account Cool-off'), 100);
-      expect(find.textContaining('REFRESH & STORAGE'), findsOneWidget);
-      expect(find.text('Account Cool-off'), findsOneWidget);
+      // Scroll to find Search Tuning
+      await tester.scrollUntilVisible(find.textContaining('Search Tuning'), 100);
+      expect(find.textContaining('Search Tuning'), findsOneWidget);
     });
 
     testWidgets('updating a slider updates the displayed value', (WidgetTester tester) async {
@@ -75,6 +74,11 @@ class MockSettingsNotifier extends SettingsNotifier {
   @override
   void updateLoadBatchSize(int size) {
     state = state.copyWith(loadBatchSize: size);
+  }
+
+  @override
+  void updateTimelineBatchSize(int size) {
+    state = state.copyWith(timelineBatchSize: size);
   }
 
   @override

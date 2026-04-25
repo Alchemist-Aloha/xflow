@@ -168,7 +168,15 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
     }
   }
 
-  Future<void> _refreshInBackground() async {
+  Future<void> refresh() async {
+    final currentState = state.value;
+    if (currentState == null || currentState.isRefreshing) return;
+
+    state = AsyncData(currentState.copyWith(isRefreshing: true));
+    await _refreshInBackground(resetHead: true);
+  }
+
+  Future<void> _refreshInBackground({bool resetHead = false}) async {
     if (!ref.exists(feedNotifierProvider)) return;
 
     final client = ref.read(twitterClientProvider);
@@ -244,8 +252,8 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
           localTagged,
           settings,
           playedByUser,
-          protectedIndex: 2,
-          currentTweets: current.tweets,
+          protectedIndex: resetHead ? 0 : 2,
+          currentTweets: resetHead ? [] : current.tweets,
         );
 
         state = AsyncData(current.copyWith(

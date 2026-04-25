@@ -9,21 +9,16 @@ import 'core/navigation/navigation_provider.dart';
 import 'core/client/background_sync.dart';
 import 'core/client/twitter_client.dart';
 import 'features/settings/settings_provider.dart';
-
 import 'core/client/twitter_account.dart';
-
 import 'core/database/repository.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // MediaKit.ensureInitialized() is typically synchronous or its return value is not needed to be awaited in this context
   MediaKit.ensureInitialized();
 
-  // Parallelize core engine and data layer initialization
   await Future.wait([
     TwitterAccount.init(),
-    Repository.database, // Pre-warm DB connection
+    Repository.database,
   ]);
   
   runApp(const ProviderScope(child: XFlowApp()));
@@ -34,8 +29,6 @@ class XFlowApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    debugPrint('XFLOW: Building XFlowApp');
-    // Manage BackgroundSync lifecycle
     ref.listen(settingsProvider, (prev, next) {
       if (prev?.syncInterval != next.syncInterval || 
           prev?.syncBatchSize != next.syncBatchSize ||
@@ -44,7 +37,6 @@ class XFlowApp extends ConsumerWidget {
       }
     });
 
-    // Start on boot if not already started
     WidgetsBinding.instance.addPostFrameCallback((_) {
       BackgroundSync.start(TwitterClient(), ref.read(settingsProvider));
     });
@@ -54,8 +46,24 @@ class XFlowApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        colorSchemeSeed: Colors.blue,
-        brightness: Brightness.dark,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue,
+          brightness: Brightness.dark,
+          surface: Colors.black,
+        ),
+        scaffoldBackgroundColor: Colors.black,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.black,
+          elevation: 0,
+          centerTitle: true,
+        ),
+        navigationBarTheme: NavigationBarThemeData(
+          backgroundColor: Colors.black,
+          indicatorColor: Colors.blue.withOpacity(0.2),
+          labelTextStyle: WidgetStateProperty.all(
+            const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+          ),
+        ),
       ),
       home: const MainScaffold(),
     );
@@ -100,7 +108,6 @@ class MainScaffold extends ConsumerWidget {
       ],
     );
 
-    // Handle back button
     return PopScope(
       canPop: nav.selectedUser == null,
       onPopInvokedWithResult: (didPop, result) {
@@ -109,22 +116,26 @@ class MainScaffold extends ConsumerWidget {
         }
       },
       child: Scaffold(
-        backgroundColor: Colors.black,
         body: body,
-        bottomNavigationBar: BottomNavigationBar(
-          currentIndex: nav.currentTab.index,
-          onTap: (index) {
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: nav.currentTab.index,
+          onDestinationSelected: (index) {
             navNotifier.setTab(MainTab.values[index]);
             if (index == 1) {
               ref.invalidate(subscriptionListProvider);
             }
           },
-          backgroundColor: Colors.black,
-          selectedItemColor: Colors.white,
-          unselectedItemColor: Colors.white54,
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.video_library), label: 'Media'),
-            BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Subscriptions'),
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.video_library_outlined),
+              selectedIcon: Icon(Icons.video_library, color: Colors.blue),
+              label: 'Media',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.people_outline),
+              selectedIcon: Icon(Icons.people, color: Colors.blue),
+              label: 'Subscriptions',
+            ),
           ],
         ),
       ),

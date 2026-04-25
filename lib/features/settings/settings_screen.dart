@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'settings_provider.dart';
-import '../../core/client/twitter_account.dart';
+import '../../core/client/account_provider.dart';
 import '../../core/database/repository.dart';
 import '../../core/utils/media_cache_manager.dart';
 import '../feed/feed_provider.dart';
@@ -69,7 +69,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             children: [
               _SettingsTile(
                 icon: Icons.sync_outlined,
-                title: 'Background Refresh',
+                title: 'Background Fetch',
                 subtitle: 'Sync intervals and background crawling',
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => const SyncSettingsPage())),
               ),
@@ -96,7 +96,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
               _SettingsTile(
                 icon: Icons.search_outlined,
-                title: 'Search Engine',
+                title: 'Legacy Fetch',
                 subtitle: 'Advanced subscription crawling parameters',
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => const SearchSettingsPage())),
               ),
@@ -122,7 +122,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 title: 'Logout',
                 titleColor: Colors.redAccent,
                 onTap: () async {
-                  await TwitterAccount.logout();
+                  await ref.read(accountProvider.notifier).logout();
                   ref.invalidate(feedNotifierProvider);
                   if (mounted) Navigator.pop(context);
                 },
@@ -208,6 +208,17 @@ class _SettingsTile extends StatelessWidget {
 class PlaybackSettingsPage extends ConsumerWidget {
   const PlaybackSettingsPage({super.key});
 
+  String _getFeedSortLabel(FeedSort sort) {
+    switch (sort) {
+      case FeedSort.latest: return 'Subs: Latest';
+      case FeedSort.popular: return 'Subs: Popular';
+      case FeedSort.trending: return 'Subs: Trending';
+      case FeedSort.algorithmic: return 'For You (X)';
+      case FeedSort.chronological: return 'Following (X)';
+      case FeedSort.videomixer: return 'Video Mixer (X)';
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
@@ -218,13 +229,13 @@ class PlaybackSettingsPage extends ConsumerWidget {
       body: ListView(
         children: [
           ListTile(
-            title: const Text('Content Sorting'),
-            subtitle: Text('Current: ${settings.fetchStrategy.name.toUpperCase()}'),
+            title: const Text('Content Strategy'),
+            subtitle: Text('Current: ${_getFeedSortLabel(settings.fetchStrategy)}'),
             trailing: DropdownButton<FeedSort>(
               value: settings.fetchStrategy,
               items: FeedSort.values.map((sort) => DropdownMenuItem(
                 value: sort,
-                child: Text(sort.name.toUpperCase()),
+                child: Text(_getFeedSortLabel(sort)),
               )).toList(),
               onChanged: (val) => val != null ? notifier.updateDiscoveryParam(fetchStrategy: val) : null,
             ),
@@ -382,7 +393,7 @@ class SyncSettingsPage extends ConsumerWidget {
     final notifier = ref.read(settingsProvider.notifier);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Background Refresh')),
+      appBar: AppBar(title: const Text('Background Fetch')),
       body: ListView(
         children: [
           _SliderSetting(
@@ -565,7 +576,7 @@ class SearchSettingsPage extends ConsumerWidget {
     final notifier = ref.read(settingsProvider.notifier);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Search Engine')),
+      appBar: AppBar(title: const Text('Legacy Fetch')),
       body: ListView(
         children: [
           SwitchListTile(

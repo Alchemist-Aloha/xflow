@@ -3,21 +3,22 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_cookie_manager_plus/webview_cookie_manager_plus.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/client/account_provider.dart';
 import '../../core/database/entities.dart';
 import '../../core/database/repository.dart';
-import '../../core/client/twitter_account.dart';
 import '../../core/client/twitter_client.dart';
 
 const String bearerToken = "Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA";
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   late final WebViewController _controller;
   final _cookieManager = WebviewCookieManager();
   bool _userFound = false;
@@ -90,7 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
               );
 
               await Repository.insertAccount(account);
-              TwitterAccount.setCurrentAccount(account);
+              ref.read(accountProvider.notifier).login(account);
 
               if (mounted) {
                 Navigator.pop(context, true);

@@ -33,6 +33,7 @@ dependencies:
   crypto: ^3.0.3
   collection: ^1.18.0
   path: ^1.9.1
+  flutter_svg: ^2.2.4
 
 dev_dependencies:
   flutter_test:
@@ -42,6 +43,14 @@ dev_dependencies:
   json_serializable: ^6.8.0
   sqflite_common_ffi: ^2.3.2+1
   mockito: ^5.4.4
+  flutter_launcher_icons: ^0.14.4
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: false
+  image_path: "assets/app_icon.png"
+  adaptive_icon_background: "#000000"
+  adaptive_icon_foreground: "assets/app_icon.png"
 
 flutter:
   uses-material-design: true

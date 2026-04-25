@@ -32,6 +32,7 @@ class UserDetailsScreen extends ConsumerWidget {
                   icon: const Icon(Icons.arrow_back),
                   onPressed: () => ref.read(navigationProvider.notifier).back(),
                 ),
+                title: Text(profile.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 actions: [
                   IconButton(
                     icon: Icon(settings.isListView ? Icons.grid_view : Icons.view_list),
@@ -41,6 +42,7 @@ class UserDetailsScreen extends ConsumerWidget {
                 floating: true,
                 pinned: true,
                 snap: true,
+                centerTitle: true,
               ),
               SliverToBoxAdapter(
                 child: Padding(
@@ -50,17 +52,24 @@ class UserDetailsScreen extends ConsumerWidget {
                     children: [
                       Row(
                         children: [
-                          CircleAvatar(
-                            radius: 40,
-                            backgroundImage: profile.profileImageUrlHighRes != null
-                                ? CachedNetworkImageProvider(
-                                    profile.profileImageUrlHighRes!,
-                                    cacheManager: CustomMediaCacheManager.getInstance(),
-                                  )
-                                : null,
-                            child: profile.profileImageUrlHighRes == null
-                                ? const Icon(Icons.person, size: 40)
-                                : null,
+                          Container(
+                            padding: const EdgeInsets.all(3),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Theme.of(context).colorScheme.primary, width: 2),
+                            ),
+                            child: CircleAvatar(
+                              radius: 40,
+                              backgroundImage: profile.profileImageUrlHighRes != null
+                                  ? CachedNetworkImageProvider(
+                                      profile.profileImageUrlHighRes!,
+                                      cacheManager: CustomMediaCacheManager.getInstance(),
+                                    )
+                                  : null,
+                              child: profile.profileImageUrlHighRes == null
+                                  ? const Icon(Icons.person, size: 40)
+                                  : null,
+                            ),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
@@ -76,7 +85,7 @@ class UserDetailsScreen extends ConsumerWidget {
                                 Text(
                                   '@${profile.screenName}',
                                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                    color: Colors.white70,
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                                   ),
                                 ),
                               ],
@@ -95,9 +104,9 @@ class UserDetailsScreen extends ConsumerWidget {
                         ),
                       Row(
                         children: [
-                          _buildStat(context, '${profile.followingCount ?? 0}', 'Following'),
+                          _buildStat(context, '${_formatCount(profile.followingCount ?? 0)}', 'Following'),
                           const SizedBox(width: 24),
-                          _buildStat(context, '${profile.followersCount ?? 0}', 'Followers'),
+                          _buildStat(context, '${_formatCount(profile.followersCount ?? 0)}', 'Followers'),
                         ],
                       ),
                       const Divider(height: 32),
@@ -115,7 +124,7 @@ class UserDetailsScreen extends ConsumerWidget {
                       child: Center(
                         child: Padding(
                           padding: EdgeInsets.all(32.0),
-                          child: Text('No tweets found'),
+                          child: Text('No media found'),
                         ),
                       ),
                     );
@@ -150,46 +159,61 @@ class UserDetailsScreen extends ConsumerWidget {
                           ),
                         )
                       else if (settings.isListView)
-                        SliverList(
-                          delegate: SliverChildBuilderDelegate(
-                            (context, index) {
-                              if (index == tweets.length - 1) {
-                                WidgetsBinding.instance.addPostFrameCallback((_) {
-                                  ref.read(userMediaNotifierProvider(screenName).notifier).fetchMore();
-                                });
-                              }
-                              final tweet = tweets[index];
-                              return ListTile(
-                                key: ValueKey(tweet.id),
-                                leading: tweet.mediaUrls.isNotEmpty 
-                                  ? SizedBox(
-                                      width: 50,
-                                      height: 50,
-                                      child: CachedNetworkImage(
-                                        cacheManager: CustomMediaCacheManager.getInstance(),
-                                        imageUrl: tweet.thumbnailUrl ?? tweet.mediaUrls.first,
-                                        fit: BoxFit.cover,
-                                        memCacheWidth: 150,
-                                        memCacheHeight: 150,
-                                      ),
-                                    )
-                                  : const Icon(Icons.text_fields),
-                                title: Text(tweet.text, maxLines: 2, overflow: TextOverflow.ellipsis),
-                                subtitle: Text(tweet.createdAt?.toString().split('.').first ?? ''),
-                                onTap: () => ref.read(navigationProvider.notifier).openUserMedia(screenName, index),
-                              );
-                            },
-                            childCount: tweets.length,
+                        SliverPadding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          sliver: SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                if (index == tweets.length - 1) {
+                                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                                    ref.read(userMediaNotifierProvider(screenName).notifier).fetchMore();
+                                  });
+                                }
+                                final tweet = tweets[index];
+                                return Card(
+                                  elevation: 0,
+                                  color: Theme.of(context).colorScheme.surfaceContainerLow,
+                                  margin: const EdgeInsets.symmetric(vertical: 4),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  child: ListTile(
+                                    key: ValueKey(tweet.id),
+                                    leading: ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: tweet.mediaUrls.isNotEmpty 
+                                        ? SizedBox(
+                                            width: 50,
+                                            height: 50,
+                                            child: CachedNetworkImage(
+                                              cacheManager: CustomMediaCacheManager.getInstance(),
+                                              imageUrl: tweet.thumbnailUrl ?? tweet.mediaUrls.first,
+                                              fit: BoxFit.cover,
+                                              memCacheWidth: 150,
+                                              memCacheHeight: 150,
+                                            ),
+                                          )
+                                        : const Icon(Icons.text_fields),
+                                    ),
+                                    title: Text(tweet.text, maxLines: 2, overflow: TextOverflow.ellipsis),
+                                    subtitle: Text(
+                                      _formatDate(tweet.createdAt),
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                                    ),
+                                    onTap: () => ref.read(navigationProvider.notifier).openUserMedia(screenName, index),
+                                  ),
+                                );
+                              },
+                              childCount: tweets.length,
+                            ),
                           ),
                         )
                       else
                         SliverPadding(
-                          padding: const EdgeInsets.symmetric(horizontal: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
                           sliver: SliverGrid(
                             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: 3,
-                              crossAxisSpacing: 2,
-                              mainAxisSpacing: 2,
+                              crossAxisSpacing: 4,
+                              mainAxisSpacing: 4,
                               childAspectRatio: 1,
                             ),
                             delegate: SliverChildBuilderDelegate(
@@ -207,7 +231,11 @@ class UserDetailsScreen extends ConsumerWidget {
                                     ref.read(navigationProvider.notifier).openUserMedia(screenName, index);
                                   },
                                   child: Container(
-                                    color: Colors.black12,
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    clipBehavior: Clip.antiAlias,
                                     child: Stack(
                                       fit: StackFit.expand,
                                       children: [
@@ -286,10 +314,21 @@ class UserDetailsScreen extends ConsumerWidget {
         Text(
           label,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Colors.white70,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
       ],
     );
+  }
+
+  String _formatCount(int count) {
+    if (count >= 1000000) return '${(count / 1000000).toStringAsFixed(1)}M';
+    if (count >= 1000) return '${(count / 1000).toStringAsFixed(1)}K';
+    return count.toString();
+  }
+
+  String _formatDate(DateTime? dt) {
+    if (dt == null) return '';
+    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
   }
 }

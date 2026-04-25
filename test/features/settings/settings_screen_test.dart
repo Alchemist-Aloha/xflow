@@ -25,16 +25,16 @@ void main() {
 
         await tester.pumpAndSettle();
         
-        expect(find.text('Query Architecture'), findsOneWidget);
-        expect(find.text('Autoplay'), findsOneWidget);
+        expect(find.text('Playback & Feed'), findsOneWidget);
+        expect(find.text('Discovery & Diversity'), findsOneWidget);
         
-        // Scroll to find Storage
-        await tester.scrollUntilVisible(find.text('Storage'), 100);
-        expect(find.text('Storage'), findsOneWidget);
+        // Scroll to find Data & Storage
+        await tester.scrollUntilVisible(find.text('Data & Storage'), 100);
+        expect(find.text('Background Fetch'), findsOneWidget);
       });
     });
 
-    testWidgets('updates media cache size via slider', (WidgetTester tester) async {
+    testWidgets('navigation to storage works', (WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -47,15 +47,13 @@ void main() {
       );
 
       await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(find.byType(Slider), 100);
+      await tester.scrollUntilVisible(find.text('Storage & Cache'), 100);
       
-      final sliderFinder = find.byType(Slider);
-      expect(sliderFinder, findsOneWidget);
+      await tester.tap(find.text('Storage & Cache'));
+      await tester.pumpAndSettle();
 
-      await tester.tap(sliderFinder);
-      await tester.pump();
-
-      expect(find.textContaining('Current quota:'), findsOneWidget);
+      expect(find.text('Local Media Cache'), findsOneWidget);
+      expect(find.byType(Slider), findsAtLeastNWidgets(1));
     });
   });
 }

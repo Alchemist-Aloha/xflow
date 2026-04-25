@@ -7,6 +7,8 @@ import '../../core/utils/media_cache_manager.dart';
 import '../profile/user_details_screen.dart';
 import '../../core/navigation/navigation_provider.dart';
 import '../settings/settings_screen.dart';
+import '../../core/client/account_provider.dart';
+import '../auth/login_screen.dart';
 
 enum SubscriptionSort {
   name,
@@ -134,6 +136,7 @@ class SubscriptionListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(subscriptionListProvider);
+    final account = ref.watch(accountProvider);
 
     if (state.isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -143,70 +146,95 @@ class SubscriptionListScreen extends ConsumerWidget {
 
     Widget content = subs.isEmpty
         ? Center(
-            child: Text(
-              state.searchQuery.isEmpty ? 'No subscriptions found.' : 'No results matching "${state.searchQuery}"',
-              style: const TextStyle(color: Colors.white70),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  state.searchQuery.isEmpty ? 'No subscriptions found.' : 'No results matching "${state.searchQuery}"',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                ),
+                if (account == null) ...[
+                  const SizedBox(height: 16),
+                  FilledButton.tonal(
+                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (c) => const LoginScreen())),
+                    child: const Text('Login to X'),
+                  ),
+                ],
+              ],
             ),
           )
         : ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             itemCount: subs.length,
             itemBuilder: (context, index) {
               final sub = subs[index];
               final views = state.userViews[sub.screenName.toLowerCase()] ?? 0;
               
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundImage: sub.profileImageUrl != null
-                      ? CachedNetworkImageProvider(
-                          sub.profileImageUrl!,
-                          cacheManager: CustomMediaCacheManager.getInstance(),
-                        )
-                      : null,
-                  child: sub.profileImageUrl == null ? const Icon(Icons.person, size: 20) : null,
+              return Card(
+                elevation: 0,
+                color: Theme.of(context).colorScheme.surfaceContainerLow,
+                margin: const EdgeInsets.symmetric(vertical: 4),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  leading: CircleAvatar(
+                    radius: 24,
+                    backgroundImage: sub.profileImageUrl != null
+                        ? CachedNetworkImageProvider(
+                            sub.profileImageUrl!,
+                            cacheManager: CustomMediaCacheManager.getInstance(),
+                          )
+                        : null,
+                    child: sub.profileImageUrl == null ? const Icon(Icons.person, size: 24) : null,
+                  ),
+                  title: Text(
+                    sub.name,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text(
+                    '@${sub.screenName}${sub.followersCount != null ? " • ${_formatCount(sub.followersCount!)} followers" : ""}${views > 0 ? " • $views views" : ""}',
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  ),
+                  onTap: () {
+                    if (isStandalone) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => UserDetailsScreen(screenName: sub.screenName),
+                        ),
+                      );
+                    } else {
+                      ref.read(navigationProvider.notifier).selectUser(sub.screenName);
+                    }
+                  },
                 ),
-                title: Text(
-                  sub.name,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                ),
-                subtitle: Text(
-                  '@${sub.screenName}${sub.followersCount != null ? " • ${_formatCount(sub.followersCount!)} followers" : ""}${views > 0 ? " • $views views" : ""}',
-                  style: const TextStyle(color: Colors.white70),
-                ),
-                onTap: () {
-                  if (isStandalone) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => UserDetailsScreen(screenName: sub.screenName),
-                      ),
-                    );
-                  } else {
-                    ref.read(navigationProvider.notifier).selectUser(sub.screenName);
-                  }
-                },
               );
             },
           );
 
-    if (isStandalone) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Subscriptions'),
-          bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(110),
-            child: _buildSearchAndSort(context, ref),
-          ),
+    return Scaffold(
+      appBar: AppBar(
+        leading: isStandalone ? null : IconButton(
+          icon: const Icon(Icons.refresh),
+          onPressed: () => ref.read(subscriptionListProvider.notifier).refresh(),
         ),
-        body: content,
-      );
-    }
-
-    return Column(
-      children: [
-        _buildTopPanel(context, ref),
-        _buildSearchAndSort(context, ref),
-        Expanded(child: content),
-      ],
+        title: Text(isStandalone ? 'Subscriptions' : 'My Subscriptions'),
+        actions: [
+          if (!isStandalone)
+            IconButton(
+              icon: const Icon(Icons.settings_outlined),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (c) => const SettingsScreen()),
+              ),
+            ),
+        ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(110),
+          child: _buildSearchAndSort(context, ref),
+        ),
+      ),
+      body: content,
     );
   }
 
@@ -221,67 +249,23 @@ class SubscriptionListScreen extends ConsumerWidget {
 
   Widget _buildSearchAndSort(BuildContext context, WidgetRef ref) {
     final notifier = ref.read(subscriptionListProvider.notifier);
+    final state = ref.watch(subscriptionListProvider);
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: Colors.black,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       child: Column(
         children: [
-          TextField(
+          SearchBar(
+            hintText: 'Search subscriptions...',
             onChanged: notifier.setSearchQuery,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: 'Search subscriptions...',
-              hintStyle: const TextStyle(color: Colors.white54),
-              prefixIcon: const Icon(Icons.search, color: Colors.white54),
-              filled: true,
-              fillColor: Colors.white.withOpacity(0.1),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.symmetric(vertical: 0),
-            ),
+            leading: const Icon(Icons.search),
+            elevation: WidgetStateProperty.all(0),
+            backgroundColor: WidgetStateProperty.all(Theme.of(context).colorScheme.surfaceContainerHigh),
+            padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 16)),
           ),
           const SizedBox(height: 8),
           const SubscriptionSortSettings(),
         ],
-      ),
-    );
-  }
-
-  Widget _buildTopPanel(BuildContext context, WidgetRef ref) {
-    return SafeArea(
-      bottom: false,
-      child: Container(
-        height: 56,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        decoration: const BoxDecoration(
-          color: Colors.black,
-          border: Border(bottom: BorderSide(color: Colors.white10, width: 0.5)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.refresh, color: Colors.white70),
-              onPressed: () {
-                ref.read(subscriptionListProvider.notifier).refresh();
-              },
-            ),
-            const Text(
-              "My Subscriptions",
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            IconButton(
-              icon: const Icon(Icons.settings, color: Colors.white70),
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (c) => const SettingsScreen()),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -299,7 +283,10 @@ class SubscriptionSortSettings extends ConsumerWidget {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          const Text('Sort by: ', style: TextStyle(color: Colors.white54, fontSize: 12)),
+          Text(
+            'Sort by: ',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+          ),
           _SortChip(
             label: 'Name',
             isSelected: state.sort == SubscriptionSort.name,
@@ -323,14 +310,14 @@ class SubscriptionSortSettings extends ConsumerWidget {
             isSelected: state.sort == SubscriptionSort.views,
             onTap: () => notifier.setSort(SubscriptionSort.views),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           IconButton(
             visualDensity: VisualDensity.compact,
             padding: EdgeInsets.zero,
             icon: Icon(
               state.isAscending ? Icons.arrow_upward : Icons.arrow_downward,
-              color: Colors.blue,
-              size: 18,
+              color: Theme.of(context).colorScheme.primary,
+              size: 20,
             ),
             onPressed: notifier.toggleOrder,
             tooltip: state.isAscending ? 'Ascending' : 'Descending',
@@ -354,20 +341,18 @@ class _SortChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Chip(
-        label: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? Colors.white : Colors.white70,
-            fontSize: 12,
-          ),
-        ),
-        backgroundColor: isSelected ? Colors.blue : Colors.white.withOpacity(0.1),
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    return FilterChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (_) => onTap(),
+      labelStyle: TextStyle(
+        fontSize: 12,
+        color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface,
       ),
+      padding: EdgeInsets.zero,
+      visualDensity: VisualDensity.compact,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      showCheckmark: false,
     );
   }
 }
