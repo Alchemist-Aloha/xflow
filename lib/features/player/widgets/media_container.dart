@@ -16,17 +16,19 @@ import '../../feed/feed_provider.dart';
 class TiktokMediaContainer extends ConsumerStatefulWidget {
   final Tweet tweet;
   final bool isVisible;
+  final bool autoFullscreen;
   final Widget Function(
           BuildContext context, VoidCallback? onFullscreen, bool isFullscreen)?
       overlayBuilder;
   final VoidCallback? onPlaybackError;
-  final VoidCallback? onNext;
-  final VoidCallback? onPrevious;
+  final void Function({bool fromFullscreen})? onNext;
+  final void Function({bool fromFullscreen})? onPrevious;
 
   const TiktokMediaContainer({
     super.key,
     required this.tweet,
     required this.isVisible,
+    this.autoFullscreen = false,
     this.overlayBuilder,
     this.onPlaybackError,
     this.onNext,
@@ -42,8 +44,17 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
   final GlobalKey<VideoState> _videoKey = GlobalKey<VideoState>();
   int _imageIndex = 0;
   int _retryCount = 0;
+  bool _isAutoFullscreenDone = false;
   StreamSubscription? _errorSubscription;
   StreamSubscription? _completedSubscription;
+
+  @override
+  void didUpdateWidget(TiktokMediaContainer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.isVisible && widget.isVisible) {
+      _isAutoFullscreenDone = false;
+    }
+  }
 
   @override
   void dispose() {
@@ -194,7 +205,7 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
             if (state != null && state.isFullscreen()) {
               await state.exitFullscreen();
             }
-            widget.onNext?.call();
+            widget.onNext?.call(fromFullscreen: true);
           };
 
           final handlePrevious = () async {
@@ -202,7 +213,7 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
             if (state != null && state.isFullscreen()) {
               await state.exitFullscreen();
             }
-            widget.onPrevious?.call();
+            widget.onPrevious?.call(fromFullscreen: true);
           };
 
           final onFullscreen = () async {
@@ -216,8 +227,12 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
                   // 1. Get latest dimensions
                   final width = instance.player.state.width;
                   final height = instance.player.state.height;
-                  final isLandscape =
-                      width != null && height != null && width > height;
+                  
+                  // Use aspect ratio for better detection. User says aspect ratio = 1 should be portrait.
+                  final double aspectRatio = (width != null && height != null && height != 0) 
+                      ? width / height 
+                      : 1.0;
+                  final isLandscape = aspectRatio > 1.0;
 
                   // 2. Start orientation change immediately
                   if (isLandscape) {
@@ -240,6 +255,19 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
             }
           };
 
+          // Handle auto-fullscreen if requested
+          if (widget.isVisible && widget.autoFullscreen && !_isAutoFullscreenDone) {
+            _isAutoFullscreenDone = true;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                final state = _videoKey.currentState;
+                if (state != null && !state.isFullscreen()) {
+                  onFullscreen();
+                }
+              }
+            });
+          }
+
           return Stack(
             children: [
               Positioned.fill(
@@ -257,6 +285,23 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
                         automaticallyImplySkipPreviousButton: false,
                         buttonBarHeight: 100.0,
                         bottomButtonBarMargin: EdgeInsets.zero,
+                        primaryButtonBar: [
+                          const Spacer(),
+                          if (widget.onPrevious != null)
+                            MaterialCustomButton(
+                              onPressed: handlePrevious,
+                              icon: const Icon(Icons.skip_previous,
+                                  color: Colors.white, size: 48),
+                            ),
+                          const MaterialPlayOrPauseButton(iconSize: 64),
+                          if (widget.onNext != null)
+                            MaterialCustomButton(
+                              onPressed: handleNext,
+                              icon: const Icon(Icons.skip_next,
+                                  color: Colors.white, size: 48),
+                            ),
+                          const Spacer(),
+                        ],
                         bottomButtonBar: [
                           Expanded(
                             child: Container(
@@ -270,20 +315,7 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
                                   const MaterialSeekBar(),
                                   Row(
                                     children: [
-                                      const MaterialPlayOrPauseButton(),
                                       const MaterialPositionIndicator(),
-                                      if (widget.onPrevious != null)
-                                        MaterialCustomButton(
-                                          onPressed: handlePrevious,
-                                          icon: const Icon(Icons.arrow_upward,
-                                              color: Colors.white),
-                                        ),
-                                      if (widget.onNext != null)
-                                        MaterialCustomButton(
-                                          onPressed: handleNext,
-                                          icon: const Icon(Icons.arrow_downward,
-                                              color: Colors.white),
-                                        ),
                                       const Spacer(),
                                       // Like Button
                                       MaterialCustomButton(

@@ -147,6 +147,7 @@ class _HashtagMediaFeedScreenState
     extends ConsumerState<HashtagMediaFeedScreen> {
   final PageController _pageController = PageController();
   int _currentIndex = 0;
+  bool _pendingAutoFullscreen = false;
 
   @override
   void initState() {
@@ -167,6 +168,7 @@ class _HashtagMediaFeedScreenState
     if (page != _currentIndex) {
       setState(() {
         _currentIndex = page;
+        _pendingAutoFullscreen = false;
       });
       _managePool();
 
@@ -264,7 +266,11 @@ class _HashtagMediaFeedScreenState
                     key: ValueKey('hash_feed_${tweets[index].id}'),
                     tweet: tweets[index],
                     isVisible: index == _currentIndex,
-                    onNext: () {
+                    autoFullscreen: index == _currentIndex && _pendingAutoFullscreen,
+                    onNext: ({bool fromFullscreen = false}) {
+                      if (fromFullscreen) {
+                        setState(() => _pendingAutoFullscreen = true);
+                      }
                       if (_pageController.hasClients) {
                         _pageController.nextPage(
                           duration: const Duration(milliseconds: 300),
@@ -272,7 +278,10 @@ class _HashtagMediaFeedScreenState
                         );
                       }
                     },
-                    onPrevious: () {
+                    onPrevious: ({bool fromFullscreen = false}) {
+                      if (fromFullscreen) {
+                        setState(() => _pendingAutoFullscreen = true);
+                      }
                       if (_pageController.hasClients) {
                         _pageController.previousPage(
                           duration: const Duration(milliseconds: 300),
@@ -334,14 +343,16 @@ class _HashtagMediaFeedScreenState
 class HashtagFeedItem extends StatelessWidget {
   final Tweet tweet;
   final bool isVisible;
+  final bool autoFullscreen;
   final VoidCallback? onPlaybackError;
-  final VoidCallback? onNext;
-  final VoidCallback? onPrevious;
+  final void Function({bool fromFullscreen})? onNext;
+  final void Function({bool fromFullscreen})? onPrevious;
 
   const HashtagFeedItem({
     super.key,
     required this.tweet,
     required this.isVisible,
+    this.autoFullscreen = false,
     this.onPlaybackError,
     this.onNext,
     this.onPrevious,
@@ -352,6 +363,7 @@ class HashtagFeedItem extends StatelessWidget {
     return TiktokMediaContainer(
       tweet: tweet,
       isVisible: isVisible,
+      autoFullscreen: autoFullscreen,
       overlayBuilder: (context, onFullscreen, isFullscreen) => TweetTextOverlay(
         tweet: tweet,
         onFullscreen: onFullscreen,

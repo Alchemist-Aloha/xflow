@@ -31,6 +31,7 @@ class _UserMediaFeedScreenState extends ConsumerState<UserMediaFeedScreen> {
   late PageController _pageController;
   late int _currentIndex;
   bool _initialized = false;
+  bool _pendingAutoFullscreen = false;
 
   @override
   void initState() {
@@ -53,6 +54,7 @@ class _UserMediaFeedScreenState extends ConsumerState<UserMediaFeedScreen> {
     if (page != _currentIndex) {
       setState(() {
         _currentIndex = page;
+        _pendingAutoFullscreen = false;
       });
       _managePool();
 
@@ -206,7 +208,11 @@ class _UserMediaFeedScreenState extends ConsumerState<UserMediaFeedScreen> {
                     key: ValueKey('user_feed_${tweet.id}'),
                     tweet: tweet,
                     isVisible: index == _currentIndex,
-                    onNext: () {
+                    autoFullscreen: index == _currentIndex && _pendingAutoFullscreen,
+                    onNext: ({bool fromFullscreen = false}) {
+                      if (fromFullscreen) {
+                        setState(() => _pendingAutoFullscreen = true);
+                      }
                       if (_pageController.hasClients) {
                         _pageController.nextPage(
                           duration: const Duration(milliseconds: 300),
@@ -214,7 +220,10 @@ class _UserMediaFeedScreenState extends ConsumerState<UserMediaFeedScreen> {
                         );
                       }
                     },
-                    onPrevious: () {
+                    onPrevious: ({bool fromFullscreen = false}) {
+                      if (fromFullscreen) {
+                        setState(() => _pendingAutoFullscreen = true);
+                      }
                       if (_pageController.hasClients) {
                         _pageController.previousPage(
                           duration: const Duration(milliseconds: 300),
@@ -276,14 +285,16 @@ class _UserMediaFeedScreenState extends ConsumerState<UserMediaFeedScreen> {
 class UserMediaFeedItem extends StatelessWidget {
   final Tweet tweet;
   final bool isVisible;
+  final bool autoFullscreen;
   final VoidCallback? onPlaybackError;
-  final VoidCallback? onNext;
-  final VoidCallback? onPrevious;
+  final void Function({bool fromFullscreen})? onNext;
+  final void Function({bool fromFullscreen})? onPrevious;
 
   const UserMediaFeedItem({
     super.key,
     required this.tweet,
     required this.isVisible,
+    this.autoFullscreen = false,
     this.onPlaybackError,
     this.onNext,
     this.onPrevious,
@@ -294,6 +305,7 @@ class UserMediaFeedItem extends StatelessWidget {
     return TiktokMediaContainer(
       tweet: tweet,
       isVisible: isVisible,
+      autoFullscreen: autoFullscreen,
       overlayBuilder: (context, onFullscreen, isFullscreen) => TweetTextOverlay(
         tweet: tweet,
         onFullscreen: onFullscreen,
