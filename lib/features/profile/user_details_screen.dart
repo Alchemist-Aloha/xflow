@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/navigation/navigation_provider.dart';
 import '../../core/utils/media_cache_manager.dart';
 import '../settings/settings_provider.dart';
+import '../settings/settings_screen.dart';
 import '../subscriptions/subscription_list_screen.dart';
 import '../../core/database/entities.dart';
 import 'profile_provider.dart';
@@ -50,6 +51,13 @@ class UserDetailsScreen extends ConsumerWidget {
                         : Icons.view_list),
                     onPressed: () =>
                         settingsNotifier.toggleListView(!settings.isListView),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.settings_outlined),
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (c) => const SettingsScreen()),
+                    ),
                   ),
                 ],
                 floating: true,

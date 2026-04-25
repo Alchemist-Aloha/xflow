@@ -6,6 +6,7 @@ import '../player/player_pool_provider.dart';
 import '../player/widgets/media_container.dart';
 import '../../core/models/tweet.dart';
 import '../settings/settings_provider.dart';
+import '../settings/settings_screen.dart';
 import 'hashtag_provider.dart';
 import 'widgets/tweet_text_overlay.dart';
 
@@ -57,6 +58,13 @@ class HashtagListScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () => _showAddHashtagDialog(context, ref),
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (c) => const SettingsScreen()),
+            ),
           ),
         ],
       ),
@@ -223,6 +231,13 @@ class _HashtagMediaFeedScreenState
               _pageController.jumpToPage(0);
               ref.read(hashtagMediaProvider(widget.hashtag).notifier).refresh();
             },
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings_outlined, color: Colors.white),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (c) => const SettingsScreen()),
+            ),
           ),
         ],
       ),

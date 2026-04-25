@@ -8,6 +8,7 @@ import '../player/widgets/media_container.dart';
 import '../../core/models/tweet.dart';
 import '../feed/widgets/tweet_text_overlay.dart';
 import '../settings/settings_provider.dart';
+import '../settings/settings_screen.dart';
 
 class UserMediaFeedScreen extends ConsumerStatefulWidget {
   final String screenName;
@@ -153,6 +154,13 @@ class _UserMediaFeedScreenState extends ConsumerState<UserMediaFeedScreen> {
             onPressed: () => ref
                 .read(userMediaNotifierProvider(widget.screenName).notifier)
                 .refresh(),
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings_outlined, color: Colors.white),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (c) => const SettingsScreen()),
+            ),
           ),
         ],
       ),
