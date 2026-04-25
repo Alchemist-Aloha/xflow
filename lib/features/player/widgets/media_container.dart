@@ -11,6 +11,7 @@ import '../../../core/utils/app_logger.dart';
 import '../../feed/widgets/text_tweet_card.dart';
 import '../player_pool_provider.dart';
 import '../../settings/settings_provider.dart';
+import '../../feed/feed_provider.dart';
 
 class TiktokMediaContainer extends ConsumerStatefulWidget {
   final Tweet tweet;
@@ -188,14 +189,14 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
               if (state.isFullscreen()) {
                 await state.exitFullscreen();
               } else {
-                // 1. Start orientation change immediately (don't await)
+                // 1. Start orientation change immediately
                 if (isLandscape) {
-                  SystemChrome.setPreferredOrientations([
+                  await SystemChrome.setPreferredOrientations([
                     DeviceOrientation.landscapeLeft,
                     DeviceOrientation.landscapeRight,
                   ]);
                 } else {
-                  SystemChrome.setPreferredOrientations([
+                  await SystemChrome.setPreferredOrientations([
                     DeviceOrientation.portraitUp,
                   ]);
                 }
@@ -229,10 +230,40 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
                         automaticallyImplySkipNextButton: false,
                         automaticallyImplySkipPreviousButton: false,
                       ),
-                      fullscreen: const MaterialVideoControlsThemeData(
-                        displaySeekBar: true,
+                      fullscreen: MaterialVideoControlsThemeData(
+                        displaySeekBar: false,
                         automaticallyImplySkipNextButton: false,
                         automaticallyImplySkipPreviousButton: false,
+                        bottomButtonBar: [
+                          const MaterialPlayOrPauseButton(),
+                          const MaterialPositionIndicator(),
+                          const MaterialSeekBar(),
+                          const MaterialDesktopVolumeButton(),
+                          // Like Button
+                          MaterialCustomButton(
+                            onPressed: () {
+                              ref
+                                  .read(feedNotifierProvider.notifier)
+                                  .toggleLike(widget.tweet.id);
+                            },
+                            icon: Consumer(
+                              builder: (context, ref, child) {
+                                final isLiked = ref.watch(feedNotifierProvider
+                                    .select((s) => s.value?.tweets
+                                        .firstWhere(
+                                            (t) => t.id == widget.tweet.id)
+                                        .isLiked ?? false));
+                                return Icon(
+                                  isLiked
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
+                                  color: isLiked ? Colors.red : Colors.white,
+                                );
+                              },
+                            ),
+                          ),
+                          const MaterialFullscreenButton(),
+                        ],
                       ),
                       child: Video(
                         key: _videoKey,
@@ -242,7 +273,8 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
                             children: [
                               if (state.isFullscreen())
                                 MaterialVideoControls(state),
-                              if (widget.overlayBuilder != null)
+                              if (widget.overlayBuilder != null &&
+                                  !state.isFullscreen())
                                 Positioned.fill(
                                   child: widget.overlayBuilder!(
                                     context,

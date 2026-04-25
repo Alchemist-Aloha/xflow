@@ -362,9 +362,9 @@ class _ActionButton extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.black.withValues(alpha: 0.1),
+                color: Colors.transparent,
               ),
               child: Icon(
                 icon,
