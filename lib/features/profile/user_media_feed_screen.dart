@@ -268,11 +268,12 @@ class UserMediaFeedItem extends StatelessWidget {
       child: TiktokMediaContainer(
         tweet: tweet,
         isVisible: isVisible,
-        overlayBuilder: (context, onFullscreen) => TweetTextOverlay(
+        overlayBuilder: (context, onFullscreen, isFullscreen) =>
+            TweetTextOverlay(
           tweet: tweet,
           onFullscreen: onFullscreen,
-        ),
-        onPlaybackError: onPlaybackError,
+          isFullscreen: isFullscreen,
+        ),        onPlaybackError: onPlaybackError,
       ),
     );
   }

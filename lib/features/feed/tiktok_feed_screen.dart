@@ -285,9 +285,11 @@ class TiktokFeedItem extends ConsumerWidget {
           TiktokMediaContainer(
             tweet: tweet,
             isVisible: isVisible,
-            overlayBuilder: (context, onFullscreen) => TweetTextOverlay(
+            overlayBuilder: (context, onFullscreen, isFullscreen) =>
+                TweetTextOverlay(
               tweet: tweet,
               onFullscreen: onFullscreen,
+              isFullscreen: isFullscreen,
             ),
             onPlaybackError: onPlaybackError,
           ),

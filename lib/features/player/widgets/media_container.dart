@@ -15,7 +15,8 @@ import '../../settings/settings_provider.dart';
 class TiktokMediaContainer extends ConsumerStatefulWidget {
   final Tweet tweet;
   final bool isVisible;
-  final Widget Function(BuildContext context, VoidCallback? onFullscreen)?
+  final Widget Function(
+          BuildContext context, VoidCallback? onFullscreen, bool isFullscreen)?
       overlayBuilder;
   final VoidCallback? onPlaybackError;
 
@@ -94,7 +95,7 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
         children: [
           TextTweetCard(text: widget.tweet.text),
           if (widget.overlayBuilder != null)
-            Positioned.fill(child: widget.overlayBuilder!(context, null)),
+            Positioned.fill(child: widget.overlayBuilder!(context, null, false)),
         ],
       );
     }
@@ -126,7 +127,7 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
               ),
             ),
           if (widget.overlayBuilder != null)
-            Positioned.fill(child: widget.overlayBuilder!(context, null)),
+            Positioned.fill(child: widget.overlayBuilder!(context, null, false)),
         ],
       );
     }
@@ -180,26 +181,31 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
         final isLandscape = (width ?? 0) > (height ?? 0);
 
         final onFullscreen = () async {
-          AppLogger.log('XFLOW: Entering fullscreen for ${widget.tweet.id}');
+          AppLogger.log('XFLOW: Fullscreen requested for ${widget.tweet.id}');
           final state = _videoKey.currentState;
           if (state != null) {
             try {
-              await state.enterFullscreen();
-              if (isLandscape) {
-                await SystemChrome.setPreferredOrientations([
-                  DeviceOrientation.landscapeLeft,
-                  DeviceOrientation.landscapeRight,
-                ]);
+              if (state.isFullscreen()) {
+                await state.exitFullscreen();
               } else {
-                await SystemChrome.setPreferredOrientations([
-                  DeviceOrientation.portraitUp,
-                ]);
+                // 1. Start orientation change immediately (don't await)
+                if (isLandscape) {
+                  SystemChrome.setPreferredOrientations([
+                    DeviceOrientation.landscapeLeft,
+                    DeviceOrientation.landscapeRight,
+                  ]);
+                } else {
+                  SystemChrome.setPreferredOrientations([
+                    DeviceOrientation.portraitUp,
+                  ]);
+                }
+
+                // 2. Enter fullscreen
+                await state.enterFullscreen();
               }
             } catch (e) {
-              AppLogger.log('XFLOW: Error entering fullscreen: $e');
+              AppLogger.log('XFLOW: Error toggling fullscreen: $e');
             }
-          } else {
-            AppLogger.log('XFLOW: VideoState is null, cannot enter fullscreen');
           }
         };
 
@@ -217,30 +223,55 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
                 behavior: HitTestBehavior.opaque,
                 child: Center(
                   child: RepaintBoundary(
-                    child: Video(
-                      key: _videoKey,
-                      controller: instance.controller,
-                      controls: NoVideoControls, // Use NoVideoControls to avoid internal conflicts
-                      onExitFullscreen: () async {
-                        await SystemChrome.setPreferredOrientations([
-                          DeviceOrientation.portraitUp,
-                        ]);
-                      },
+                    child: MaterialVideoControlsTheme(
+                      normal: const MaterialVideoControlsThemeData(
+                        displaySeekBar: false,
+                        automaticallyImplySkipNextButton: false,
+                        automaticallyImplySkipPreviousButton: false,
+                      ),
+                      fullscreen: const MaterialVideoControlsThemeData(
+                        displaySeekBar: true,
+                        automaticallyImplySkipNextButton: false,
+                        automaticallyImplySkipPreviousButton: false,
+                      ),
+                      child: Video(
+                        key: _videoKey,
+                        controller: instance.controller,
+                        controls: (state) {
+                          return Stack(
+                            children: [
+                              if (state.isFullscreen())
+                                MaterialVideoControls(state),
+                              if (widget.overlayBuilder != null)
+                                Positioned.fill(
+                                  child: widget.overlayBuilder!(
+                                    context,
+                                    onFullscreen,
+                                    state.isFullscreen(),
+                                  ),
+                                ),
+                            ],
+                          );
+                        },
+                        onExitFullscreen: () async {
+                          await SystemChrome.setPreferredOrientations([
+                            DeviceOrientation.portraitUp,
+                          ]);
+                        },
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-            if (widget.overlayBuilder != null)
-              Positioned.fill(
-                child: widget.overlayBuilder!(context, onFullscreen),
-              ),
             // Progress Bar at the very bottom
             Positioned(
               bottom: 0,
               left: 0,
               right: 0,
-              child: _buildProgressBar(instance),
+              child: IgnorePointer(
+                child: _buildProgressBar(instance),
+              ),
             ),
           ],
         );

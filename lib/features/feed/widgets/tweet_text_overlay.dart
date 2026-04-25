@@ -13,8 +13,14 @@ import '../tweet_detail_screen.dart';
 class TweetTextOverlay extends ConsumerStatefulWidget {
   final Tweet tweet;
   final VoidCallback? onFullscreen;
+  final bool isFullscreen;
 
-  const TweetTextOverlay({super.key, required this.tweet, this.onFullscreen});
+  const TweetTextOverlay({
+    super.key,
+    required this.tweet,
+    this.onFullscreen,
+    this.isFullscreen = false,
+  });
 
   @override
   ConsumerState<TweetTextOverlay> createState() => _TweetTextOverlayState();
@@ -25,14 +31,11 @@ class _TweetTextOverlayState extends ConsumerState<TweetTextOverlay> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomPadding = widget.isFullscreen ? 48.0 : 24.0;
+    final rightPadding = widget.isFullscreen ? 24.0 : 12.0;
+
     return Stack(
       children: [
-        // Action Buttons (Right Side)
-        Positioned(
-          right: 12,
-          bottom: 110,
-          child: _buildActionButtons(),
-        ),
         // Text Overlay (Bottom)
         Positioned(
           bottom: 0,
@@ -52,7 +55,7 @@ class _TweetTextOverlayState extends ConsumerState<TweetTextOverlay> {
                 stops: const [0.0, 0.3, 0.6, 1.0],
               ),
             ),
-            padding: const EdgeInsets.fromLTRB(16, 100, 80, 24),
+            padding: EdgeInsets.fromLTRB(16, 100, 80, bottomPadding),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -63,6 +66,12 @@ class _TweetTextOverlayState extends ConsumerState<TweetTextOverlay> {
               ],
             ),
           ),
+        ),
+        // Action Buttons (Right Side)
+        Positioned(
+          right: rightPadding,
+          bottom: widget.isFullscreen ? 60 : 110,
+          child: _buildActionButtons(),
         ),
       ],
     );
@@ -93,14 +102,20 @@ class _TweetTextOverlayState extends ConsumerState<TweetTextOverlay> {
           icon: Icons.share_outlined,
           label: "Share",
           onTap: () {
-            // TODO: Implement share
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("Share functionality coming soon!"),
+                duration: Duration(seconds: 1),
+              ),
+            );
           },
         ),
         if (widget.onFullscreen != null && widget.tweet.isVideo) ...[
           const SizedBox(height: 16),
           _ActionButton(
-            icon: Icons.fullscreen,
-            label: "Full",
+            icon:
+                widget.isFullscreen ? Icons.fullscreen_exit : Icons.fullscreen,
+            label: widget.isFullscreen ? "Exit" : "Full",
             onTap: widget.onFullscreen!,
           ),
         ],
