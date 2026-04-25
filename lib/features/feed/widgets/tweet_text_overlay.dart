@@ -5,7 +5,10 @@ import 'package:intl/intl.dart';
 import '../../../core/models/tweet.dart';
 import '../../../core/navigation/navigation_provider.dart';
 import '../../../core/utils/app_logger.dart';
+import '../../../core/database/entities.dart';
+import '../../subscriptions/subscription_list_screen.dart';
 import '../feed_provider.dart';
+import '../tweet_detail_screen.dart';
 
 class TweetTextOverlay extends ConsumerStatefulWidget {
   final Tweet tweet;
@@ -82,7 +85,7 @@ class _TweetTextOverlayState extends ConsumerState<TweetTextOverlay> {
           icon: Icons.chat_bubble_outline,
           label: _formatCount(widget.tweet.replyCount),
           onTap: () {
-            ref.read(navigationProvider.notifier).selectTweet(widget.tweet);
+            TweetRepliesSheet.show(context, widget.tweet);
           },
         ),
         const SizedBox(height: 16),
@@ -115,6 +118,9 @@ class _TweetTextOverlayState extends ConsumerState<TweetTextOverlay> {
   }
 
   Widget _buildUserHeader(BuildContext context) {
+    final subscriptionState = ref.watch(subscriptionListProvider);
+    final isSubscribed = subscriptionState.isSubscribed(widget.tweet.userHandle);
+
     String dateStr = "";
     if (widget.tweet.createdAt != null) {
       try {
@@ -126,14 +132,14 @@ class _TweetTextOverlayState extends ConsumerState<TweetTextOverlay> {
       }
     }
 
-    return GestureDetector(
-      onTap: () {
-        final handle = widget.tweet.userHandle.replaceFirst('@', '');
-        ref.read(navigationProvider.notifier).selectUser(handle);
-      },
-      child: Row(
-        children: [
-          CircleAvatar(
+    return Row(
+      children: [
+        GestureDetector(
+          onTap: () {
+            final handle = widget.tweet.userHandle.replaceFirst('@', '');
+            ref.read(navigationProvider.notifier).selectUser(handle);
+          },
+          child: CircleAvatar(
             radius: 20,
             backgroundColor: Colors.white24,
             backgroundImage: widget.tweet.userAvatarUrlHighRes != null
@@ -143,17 +149,50 @@ class _TweetTextOverlayState extends ConsumerState<TweetTextOverlay> {
                 ? const Icon(Icons.person, color: Colors.white, size: 20)
                 : null,
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              GestureDetector(
+                onTap: () {
+                  final handle = widget.tweet.userHandle.replaceFirst('@', '');
+                  ref.read(navigationProvider.notifier).selectUser(handle);
+                },
+                child: Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        widget.tweet.userHandle,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          shadows: [
+                            Shadow(
+                                offset: Offset(0, 1),
+                                blurRadius: 2,
+                                color: Colors.black54),
+                          ],
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (isSubscribed) ...[
+                      const SizedBox(width: 4),
+                      const Icon(Icons.check_circle,
+                          color: Colors.blueAccent, size: 16),
+                    ],
+                  ],
+                ),
+              ),
+              if (dateStr.isNotEmpty)
                 Text(
-                  widget.tweet.userHandle,
+                  dateStr.replaceFirst(" • ", ""),
                   style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                    color: Colors.white70,
+                    fontSize: 12,
                     shadows: [
                       Shadow(
                           offset: Offset(0, 1),
@@ -161,27 +200,32 @@ class _TweetTextOverlayState extends ConsumerState<TweetTextOverlay> {
                           color: Colors.black54),
                     ],
                   ),
-                  overflow: TextOverflow.ellipsis,
                 ),
-                if (dateStr.isNotEmpty)
-                  Text(
-                    dateStr.replaceFirst(" • ", ""),
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                      shadows: [
-                        Shadow(
-                            offset: Offset(0, 1),
-                            blurRadius: 2,
-                            color: Colors.black54),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
+            ],
           ),
-        ],
-      ),
+        ),
+        if (!isSubscribed)
+          TextButton(
+            onPressed: () {
+              ref.read(subscriptionListProvider.notifier).toggleSubscription(
+                    Subscription(
+                      id: widget.tweet.userHandle,
+                      screenName: widget.tweet.userHandle.replaceFirst('@', ''),
+                      name: widget.tweet.userHandle,
+                      profileImageUrl: widget.tweet.userAvatarUrl,
+                    ),
+                  );
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.white,
+              backgroundColor: Colors.blueAccent.withValues(alpha: 0.6),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+              minimumSize: const Size(0, 30),
+              visualDensity: VisualDensity.compact,
+            ),
+            child: const Text('Subscribe', style: TextStyle(fontSize: 12)),
+          ),
+      ],
     );
   }
 

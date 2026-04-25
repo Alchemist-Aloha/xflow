@@ -94,7 +94,7 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
         children: [
           TextTweetCard(text: widget.tweet.text),
           if (widget.overlayBuilder != null)
-            widget.overlayBuilder!(context, null),
+            Positioned.fill(child: widget.overlayBuilder!(context, null)),
         ],
       );
     }
@@ -126,7 +126,7 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
               ),
             ),
           if (widget.overlayBuilder != null)
-            widget.overlayBuilder!(context, null),
+            Positioned.fill(child: widget.overlayBuilder!(context, null)),
         ],
       );
     }
@@ -179,37 +179,48 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
         final height = instance.player.state.height;
         final isLandscape = (width ?? 0) > (height ?? 0);
 
-        final onFullscreen = () {
-          _videoKey.currentState?.enterFullscreen();
-          if (isLandscape) {
-            SystemChrome.setPreferredOrientations([
-              DeviceOrientation.landscapeLeft,
-              DeviceOrientation.landscapeRight,
-            ]);
+        final onFullscreen = () async {
+          AppLogger.log('XFLOW: Entering fullscreen for ${widget.tweet.id}');
+          final state = _videoKey.currentState;
+          if (state != null) {
+            try {
+              await state.enterFullscreen();
+              if (isLandscape) {
+                await SystemChrome.setPreferredOrientations([
+                  DeviceOrientation.landscapeLeft,
+                  DeviceOrientation.landscapeRight,
+                ]);
+              } else {
+                await SystemChrome.setPreferredOrientations([
+                  DeviceOrientation.portraitUp,
+                ]);
+              }
+            } catch (e) {
+              AppLogger.log('XFLOW: Error entering fullscreen: $e');
+            }
           } else {
-            SystemChrome.setPreferredOrientations([
-              DeviceOrientation.portraitUp,
-            ]);
+            AppLogger.log('XFLOW: VideoState is null, cannot enter fullscreen');
           }
         };
 
         return Stack(
           children: [
-            GestureDetector(
-              onTap: () {
-                if (instance.player.state.playing) {
-                  instance.player.pause();
-                } else {
-                  instance.player.play();
-                }
-              },
-              child: SizedBox.expand(
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: () {
+                  if (instance.player.state.playing) {
+                    instance.player.pause();
+                  } else {
+                    instance.player.play();
+                  }
+                },
+                behavior: HitTestBehavior.opaque,
                 child: Center(
                   child: RepaintBoundary(
                     child: Video(
                       key: _videoKey,
                       controller: instance.controller,
-                      controls: MaterialVideoControls,
+                      controls: NoVideoControls, // Use NoVideoControls to avoid internal conflicts
                       onExitFullscreen: () async {
                         await SystemChrome.setPreferredOrientations([
                           DeviceOrientation.portraitUp,
@@ -221,7 +232,9 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
               ),
             ),
             if (widget.overlayBuilder != null)
-              widget.overlayBuilder!(context, onFullscreen),
+              Positioned.fill(
+                child: widget.overlayBuilder!(context, onFullscreen),
+              ),
             // Progress Bar at the very bottom
             Positioned(
               bottom: 0,

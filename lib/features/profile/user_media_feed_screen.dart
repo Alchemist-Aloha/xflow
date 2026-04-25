@@ -105,25 +105,34 @@ class _UserMediaFeedScreenState extends ConsumerState<UserMediaFeedScreen> {
 
     // Listen for data arrival to handle initial index adjustment if list shifted
     ref.listen(userMediaNotifierProvider(widget.screenName), (prev, next) {
-      if (next.hasValue && !_initialized && widget.initialTweetId != null) {
+      if (next.hasValue && !_initialized) {
         final tweets = next.value!.tweets;
-        final actualIndex =
-            tweets.indexWhere((t) => t.id == widget.initialTweetId);
-        if (actualIndex != -1 && actualIndex != _currentIndex) {
+        int targetIndex = widget.initialIndex;
+
+        if (widget.initialTweetId != null) {
+          final foundIndex =
+              tweets.indexWhere((t) => t.id == widget.initialTweetId);
+          if (foundIndex != -1) {
+            targetIndex = foundIndex;
+          }
+        }
+
+        if (targetIndex < tweets.length) {
+          if (_pageController.hasClients) {
+            _pageController.jumpToPage(targetIndex);
+          }
           setState(() {
-            _currentIndex = actualIndex;
-            _pageController.jumpToPage(actualIndex);
+            _currentIndex = targetIndex;
           });
         }
         _initialized = true;
       }
-      
+
       // Always manage pool when data changes
       if (next.hasValue) {
         _managePool();
       }
     });
-
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(

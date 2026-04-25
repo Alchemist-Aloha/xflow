@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/database/repository.dart';
 import '../../core/database/entities.dart';
 import '../../core/utils/media_cache_manager.dart';
+import '../../core/utils/app_logger.dart';
 import '../profile/user_details_screen.dart';
 import '../../core/navigation/navigation_provider.dart';
 import '../settings/settings_screen.dart';
@@ -72,6 +73,14 @@ class SubscriptionListState {
     return filtered;
   }
 
+  bool isSubscribed(String screenName) {
+    final normalized =
+        screenName.startsWith('@') ? screenName.substring(1) : screenName;
+    final lower = normalized.toLowerCase();
+    return allSubscriptions
+        .any((sub) => sub.screenName.toLowerCase() == lower);
+  }
+
   SubscriptionListState copyWith({
     List<Subscription>? allSubscriptions,
     Map<String, int>? userViews,
@@ -126,6 +135,43 @@ class SubscriptionListNotifier extends Notifier<SubscriptionListState> {
   Future<void> refresh() async {
     state = state.copyWith(isLoading: true);
     await _load();
+  }
+
+  Future<void> toggleSubscription(Subscription sub) async {
+    final exists = isSubscribed(sub.screenName);
+
+    // Optimistic update for immediate UI feedback
+    final currentSubs = List<Subscription>.from(state.allSubscriptions);
+    if (exists) {
+      currentSubs.removeWhere(
+          (s) => s.screenName.toLowerCase() == sub.screenName.toLowerCase());
+    } else {
+      currentSubs.add(sub);
+    }
+    state = state.copyWith(allSubscriptions: currentSubs);
+
+    try {
+      if (exists) {
+        final db = await Repository.database;
+        await db.delete('subscriptions',
+            where: 'LOWER(screen_name) = ?',
+            whereArgs: [sub.screenName.toLowerCase()]);
+      } else {
+        await Repository.insertSubscription(sub);
+      }
+    } catch (e) {
+      AppLogger.log('XFLOW: Error toggling subscription: $e');
+      // Rollback on error
+      await _load();
+      return;
+    }
+
+    // Refresh to ensure everything (including views) is in sync
+    await _load();
+  }
+
+  bool isSubscribed(String screenName) {
+    return state.isSubscribed(screenName);
   }
 }
 
@@ -241,7 +287,7 @@ class SubscriptionListScreen extends ConsumerWidget {
                 onPressed: () =>
                     ref.read(subscriptionListProvider.notifier).refresh(),
               ),
-        title: Text(isStandalone ? 'Subscriptions' : 'My Subscriptions'),
+        title: Text(isStandalone ? 'Subscriptions' : 'Subscriptions'),
         actions: [
           if (!isStandalone)
             IconButton(
@@ -308,11 +354,6 @@ class SubscriptionSortSettings extends ConsumerWidget {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          Text(
-            'Sort by: ',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant),
-          ),
           _SortChip(
             label: 'Name',
             isSelected: state.sort == SubscriptionSort.name,
@@ -332,7 +373,7 @@ class SubscriptionSortSettings extends ConsumerWidget {
           ),
           const SizedBox(width: 8),
           _SortChip(
-            label: 'Cache Views',
+            label: 'Views',
             isSelected: state.sort == SubscriptionSort.views,
             onTap: () => notifier.setSort(SubscriptionSort.views),
           ),

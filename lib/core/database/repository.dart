@@ -11,6 +11,7 @@ import '../utils/app_logger.dart';
 const String tableAccounts = 'accounts';
 const String tableSubscriptions = 'subscriptions';
 const String tableCachedMedia = 'cached_media';
+const String tableHashtags = 'hashtags';
 
 class Repository {
   static Database? _database;
@@ -30,13 +31,16 @@ class Repository {
     }
     return await openDatabase(
       path,
-      version: 7,
+      version: 8,
       onCreate: (db, version) async {
         await db.execute(
           'CREATE TABLE $tableAccounts (id TEXT PRIMARY KEY, screen_name TEXT, rest_id TEXT, auth_header TEXT)',
         );
         await db.execute(
           'CREATE TABLE $tableSubscriptions (id TEXT PRIMARY KEY, screen_name TEXT, name TEXT, profile_image_url TEXT, description TEXT, followers_count INTEGER, following_count INTEGER)',
+        );
+        await db.execute(
+          'CREATE TABLE $tableHashtags (tag TEXT PRIMARY KEY, added_at INTEGER)',
         );
         await db.execute('''
           CREATE TABLE $tableCachedMedia (
@@ -107,8 +111,34 @@ class Repository {
           await db.execute(
               'CREATE INDEX IF NOT EXISTS idx_media_key ON $tableCachedMedia (media_key)');
         }
+        if (oldVersion < 8) {
+          await db.execute(
+            'CREATE TABLE IF NOT EXISTS $tableHashtags (tag TEXT PRIMARY KEY, added_at INTEGER)',
+          );
+        }
       },
     );
+  }
+
+  static Future<void> addHashtag(String tag) async {
+    final db = await database;
+    await db.insert(
+      tableHashtags,
+      {'tag': tag, 'added_at': DateTime.now().millisecondsSinceEpoch},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  static Future<List<String>> getHashtags() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps =
+        await db.query(tableHashtags, orderBy: 'added_at DESC');
+    return List.generate(maps.length, (i) => maps[i]['tag'] as String);
+  }
+
+  static Future<void> deleteHashtag(String tag) async {
+    final db = await database;
+    await db.delete(tableHashtags, where: 'tag = ?', whereArgs: [tag]);
   }
 
   static Future<void> insertAccount(Account account) async {

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:media_kit/media_kit.dart';
 import 'features/feed/tiktok_feed_screen.dart';
-import 'features/feed/tweet_detail_screen.dart';
 import 'features/feed/hashtag_feed_screen.dart';
 import 'features/subscriptions/subscription_list_screen.dart';
 import 'features/profile/user_details_screen.dart';
@@ -95,15 +94,13 @@ class MainScaffold extends ConsumerWidget {
       children: const [
         TiktokFeedScreen(),
         SubscriptionListScreen(isStandalone: false),
-        HashtagFeedScreen(hashtag: '#trending', showBackButton: false),
+        HashtagListScreen(),
       ],
     );
 
     Widget? overlayScreen;
-    if (nav.selectedHashtag != null && nav.currentTab != MainTab.trending) {
-      overlayScreen = HashtagFeedScreen(hashtag: nav.selectedHashtag!);
-    } else if (nav.selectedTweet != null) {
-      overlayScreen = TweetDetailScreen(tweet: nav.selectedTweet!);
+    if (nav.selectedHashtag != null) {
+      overlayScreen = HashtagMediaFeedScreen(hashtag: nav.selectedHashtag!);
     } else if (nav.selectedUser != null) {
       if (nav.userMediaInitialIndex != null) {
         overlayScreen = UserMediaFeedScreen(
@@ -132,9 +129,7 @@ class MainScaffold extends ConsumerWidget {
     );
 
     return PopScope(
-      canPop: nav.selectedUser == null &&
-          nav.selectedTweet == null &&
-          nav.selectedHashtag == null,
+      canPop: nav.selectedUser == null && nav.selectedHashtag == null,
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) {
           navNotifier.back();
@@ -164,7 +159,7 @@ class MainScaffold extends ConsumerWidget {
             NavigationDestination(
               icon: Icon(Icons.trending_up_outlined),
               selectedIcon: Icon(Icons.trending_up, color: Colors.blue),
-              label: 'Trending',
+              label: 'Hashtags',
             ),
           ],
         ),

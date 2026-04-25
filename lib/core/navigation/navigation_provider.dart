@@ -8,7 +8,6 @@ class NavigationState {
   final String? selectedUser; // If not null, show UserDetails or UserMediaFeed
   final int? userMediaInitialIndex;
   final String? userMediaInitialTweetId;
-  final Tweet? selectedTweet;
   final String? selectedHashtag;
 
   NavigationState({
@@ -16,7 +15,6 @@ class NavigationState {
     this.selectedUser,
     this.userMediaInitialIndex,
     this.userMediaInitialTweetId,
-    this.selectedTweet,
     this.selectedHashtag,
   });
 
@@ -25,11 +23,9 @@ class NavigationState {
     String? selectedUser,
     int? userMediaInitialIndex,
     String? userMediaInitialTweetId,
-    Tweet? selectedTweet,
     String? selectedHashtag,
     bool clearUser = false,
     bool clearMediaIndex = false,
-    bool clearTweet = false,
     bool clearHashtag = false,
   }) {
     return NavigationState(
@@ -41,9 +37,6 @@ class NavigationState {
       userMediaInitialTweetId: (clearUser || clearMediaIndex)
           ? null
           : (userMediaInitialTweetId ?? this.userMediaInitialTweetId),
-      selectedTweet: (clearTweet || clearUser)
-          ? null
-          : (selectedTweet ?? this.selectedTweet),
       selectedHashtag: (clearHashtag || clearUser)
           ? null
           : (selectedHashtag ?? this.selectedHashtag),
@@ -56,16 +49,13 @@ class NavigationNotifier extends Notifier<NavigationState> {
   NavigationState build() => NavigationState();
 
   void setTab(MainTab tab) {
-    state = state.copyWith(
-        currentTab: tab, clearUser: true, clearTweet: true, clearHashtag: true);
+    state =
+        state.copyWith(currentTab: tab, clearUser: true, clearHashtag: true);
   }
 
   void selectUser(String screenName) {
     state = state.copyWith(
-        selectedUser: screenName,
-        clearMediaIndex: true,
-        clearTweet: true,
-        clearHashtag: true);
+        selectedUser: screenName, clearMediaIndex: true, clearHashtag: true);
   }
 
   void openUserMedia(String screenName, int index, {String? tweetId}) {
@@ -73,12 +63,7 @@ class NavigationNotifier extends Notifier<NavigationState> {
         selectedUser: screenName,
         userMediaInitialIndex: index,
         userMediaInitialTweetId: tweetId,
-        clearTweet: true,
         clearHashtag: true);
-  }
-
-  void selectTweet(Tweet tweet) {
-    state = state.copyWith(selectedTweet: tweet);
   }
 
   void selectHashtag(String hashtag) {
@@ -88,8 +73,6 @@ class NavigationNotifier extends Notifier<NavigationState> {
   void back() {
     if (state.selectedHashtag != null) {
       state = state.copyWith(clearHashtag: true);
-    } else if (state.selectedTweet != null) {
-      state = state.copyWith(clearTweet: true);
     } else if (state.userMediaInitialIndex != null) {
       state = state.copyWith(clearMediaIndex: true);
     } else if (state.selectedUser != null) {

@@ -145,7 +145,6 @@ class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
     final feedAsync = ref.watch(feedNotifierProvider);
     final nav = ref.watch(navigationProvider);
     final isScreenActive = nav.selectedUser == null &&
-        nav.selectedTweet == null &&
         nav.selectedHashtag == null &&
         nav.currentTab == MainTab.media;
 

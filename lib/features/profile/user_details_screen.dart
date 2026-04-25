@@ -4,6 +4,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/navigation/navigation_provider.dart';
 import '../../core/utils/media_cache_manager.dart';
 import '../settings/settings_provider.dart';
+import '../subscriptions/subscription_list_screen.dart';
+import '../../core/database/entities.dart';
 import 'profile_provider.dart';
 
 class UserDetailsScreen extends ConsumerWidget {
@@ -114,6 +116,8 @@ class UserDetailsScreen extends ConsumerWidget {
                               ],
                             ),
                           ),
+                          const SizedBox(width: 8),
+                          _SubscribeButton(profile: profile),
                         ],
                       ),
                       const SizedBox(height: 16),
@@ -407,5 +411,49 @@ class UserDetailsScreen extends ConsumerWidget {
   String _formatDate(DateTime? dt) {
     if (dt == null) return '';
     return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
+  }
+}
+
+class _SubscribeButton extends ConsumerWidget {
+  final Subscription profile;
+  const _SubscribeButton({required this.profile});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final subscriptionState = ref.watch(subscriptionListProvider);
+    final isSubscribed = subscriptionState.isSubscribed(profile.screenName);
+
+    return FilledButton.tonal(
+      style: FilledButton.styleFrom(
+        visualDensity: VisualDensity.compact,
+        backgroundColor: isSubscribed ? Colors.transparent : null,
+        side: isSubscribed
+            ? BorderSide(color: Theme.of(context).colorScheme.outline)
+            : null,
+      ),
+      onPressed: () {
+        ref.read(subscriptionListProvider.notifier).toggleSubscription(
+              Subscription(
+                id: profile.screenName,
+                screenName: profile.screenName,
+                name: profile.name,
+                profileImageUrl: profile.profileImageUrl,
+                description: profile.description,
+                followersCount: profile.followersCount,
+                followingCount: profile.followingCount,
+              ),
+            );
+      },
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (isSubscribed) ...[
+            const Icon(Icons.check, size: 16),
+            const SizedBox(width: 4),
+          ],
+          Text(isSubscribed ? 'Subscribed' : 'Subscribe'),
+        ],
+      ),
+    );
   }
 }

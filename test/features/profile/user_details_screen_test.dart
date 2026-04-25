@@ -9,12 +9,23 @@ import 'package:xflow/features/profile/user_details_screen.dart';
 import 'package:xflow/features/profile/profile_provider.dart';
 import 'package:xflow/features/feed/feed_provider.dart';
 import 'package:xflow/features/settings/settings_provider.dart';
+import 'package:xflow/features/subscriptions/subscription_list_screen.dart';
 import 'package:xflow/core/client/twitter_client.dart';
 import 'package:xflow/core/database/repository.dart';
 import 'package:xflow/core/database/entities.dart';
 import 'package:xflow/core/models/tweet.dart';
 
 import 'profile_provider_test.mocks.dart';
+
+class SubscriptionListNotifierMock extends SubscriptionListNotifier {
+  @override
+  SubscriptionListState build() {
+    return SubscriptionListState(isLoading: false);
+  }
+
+  @override
+  bool isSubscribed(String screenName) => false;
+}
 
 void main() {
   sqfliteFfiInit();
@@ -88,6 +99,8 @@ void main() {
       await tester.pumpWidget(ProviderScope(
         overrides: [
           twitterClientProvider.overrideWithValue(mockClient),
+          subscriptionListProvider
+              .overrideWith(() => SubscriptionListNotifierMock()),
         ],
         child: MaterialApp(
           home: const UserDetailsScreen(screenName: testHandle),
