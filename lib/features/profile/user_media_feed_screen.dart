@@ -206,6 +206,22 @@ class _UserMediaFeedScreenState extends ConsumerState<UserMediaFeedScreen> {
                     key: ValueKey('user_feed_${tweet.id}'),
                     tweet: tweet,
                     isVisible: index == _currentIndex,
+                    onNext: () {
+                      if (_pageController.hasClients) {
+                        _pageController.nextPage(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        );
+                      }
+                    },
+                    onPrevious: () {
+                      if (_pageController.hasClients) {
+                        _pageController.previousPage(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        );
+                      }
+                    },
                     onPlaybackError: () {
                       if (index == _currentIndex && mounted) {
                         Future.delayed(
@@ -257,32 +273,35 @@ class _UserMediaFeedScreenState extends ConsumerState<UserMediaFeedScreen> {
     );
   }
 }
-
 class UserMediaFeedItem extends StatelessWidget {
   final Tweet tweet;
   final bool isVisible;
   final VoidCallback? onPlaybackError;
+  final VoidCallback? onNext;
+  final VoidCallback? onPrevious;
 
   const UserMediaFeedItem({
     super.key,
     required this.tweet,
     required this.isVisible,
     this.onPlaybackError,
+    this.onNext,
+    this.onPrevious,
   });
 
   @override
   Widget build(BuildContext context) {
-    return RepaintBoundary(
-      child: TiktokMediaContainer(
+    return TiktokMediaContainer(
+      tweet: tweet,
+      isVisible: isVisible,
+      overlayBuilder: (context, onFullscreen, isFullscreen) => TweetTextOverlay(
         tweet: tweet,
-        isVisible: isVisible,
-        overlayBuilder: (context, onFullscreen, isFullscreen) =>
-            TweetTextOverlay(
-          tweet: tweet,
-          onFullscreen: onFullscreen,
-          isFullscreen: isFullscreen,
-        ),        onPlaybackError: onPlaybackError,
+        onFullscreen: onFullscreen,
+        isFullscreen: isFullscreen,
       ),
+      onPlaybackError: onPlaybackError,
+      onNext: onNext,
+      onPrevious: onPrevious,
     );
   }
 }

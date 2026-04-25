@@ -179,6 +179,22 @@ class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
                 return TiktokFeedItem(
                   tweet: tweets[index],
                   isVisible: index == _currentIndex && isScreenActive,
+                  onNext: () {
+                    if (_pageController.hasClients) {
+                      _pageController.nextPage(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    }
+                  },
+                  onPrevious: () {
+                    if (_pageController.hasClients) {
+                      _pageController.previousPage(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    }
+                  },
                   onPlaybackError: () {
                     if (index == _currentIndex && mounted) {
                       Future.delayed(
@@ -267,12 +283,16 @@ class TiktokFeedItem extends ConsumerWidget {
   final Tweet tweet;
   final bool isVisible;
   final VoidCallback? onPlaybackError;
+  final VoidCallback? onNext;
+  final VoidCallback? onPrevious;
 
   const TiktokFeedItem({
     super.key,
     required this.tweet,
     required this.isVisible,
     this.onPlaybackError,
+    this.onNext,
+    this.onPrevious,
   });
 
   @override
@@ -292,6 +312,8 @@ class TiktokFeedItem extends ConsumerWidget {
               isFullscreen: isFullscreen,
             ),
             onPlaybackError: onPlaybackError,
+            onNext: onNext,
+            onPrevious: onPrevious,
           ),
           if (settings.showDebugInfo) DiscoveryDebugOverlay(tweet: tweet),
         ],

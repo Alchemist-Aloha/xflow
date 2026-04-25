@@ -20,6 +20,8 @@ class TiktokMediaContainer extends ConsumerStatefulWidget {
           BuildContext context, VoidCallback? onFullscreen, bool isFullscreen)?
       overlayBuilder;
   final VoidCallback? onPlaybackError;
+  final VoidCallback? onNext;
+  final VoidCallback? onPrevious;
 
   const TiktokMediaContainer({
     super.key,
@@ -27,6 +29,8 @@ class TiktokMediaContainer extends ConsumerStatefulWidget {
     required this.isVisible,
     this.overlayBuilder,
     this.onPlaybackError,
+    this.onNext,
+    this.onPrevious,
   });
 
   @override
@@ -185,6 +189,22 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
           }
 
           // Determine orientation based on current player state
+          final handleNext = () async {
+            final state = _videoKey.currentState;
+            if (state != null && state.isFullscreen()) {
+              await state.exitFullscreen();
+            }
+            widget.onNext?.call();
+          };
+
+          final handlePrevious = () async {
+            final state = _videoKey.currentState;
+            if (state != null && state.isFullscreen()) {
+              await state.exitFullscreen();
+            }
+            widget.onPrevious?.call();
+          };
+
           final onFullscreen = () async {
             AppLogger.log('XFLOW: Fullscreen requested for ${widget.tweet.id}');
             final state = _videoKey.currentState;
@@ -196,7 +216,8 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
                   // 1. Get latest dimensions
                   final width = instance.player.state.width;
                   final height = instance.player.state.height;
-                  final isLandscape = (width ?? 0) > (height ?? 0);
+                  final isLandscape =
+                      width != null && height != null && width > height;
 
                   // 2. Start orientation change immediately
                   if (isLandscape) {
@@ -234,56 +255,74 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
                         displaySeekBar: false, // Custom layout below
                         automaticallyImplySkipNextButton: false,
                         automaticallyImplySkipPreviousButton: false,
+                        buttonBarHeight: 100.0,
+                        bottomButtonBarMargin: EdgeInsets.zero,
                         bottomButtonBar: [
                           Expanded(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 8.0),
-                                  child: const MaterialSeekBar(),
-                                ),
-                                Row(
-                                  children: [
-                                    const MaterialPlayOrPauseButton(),
-                                    const MaterialPositionIndicator(),
-                                    const Spacer(),
-                                    // Like Button
-                                    MaterialCustomButton(
-                                      onPressed: () {
-                                        ref
-                                            .read(feedNotifierProvider.notifier)
-                                            .toggleLike(widget.tweet.id);
-                                      },
-                                      icon: Consumer(
-                                        builder: (context, ref, child) {
-                                          final isLiked = ref.watch(
-                                              feedNotifierProvider.select((s) =>
-                                                  s.value?.tweets
-                                                      .firstWhere((t) =>
-                                                          t.id ==
-                                                          widget.tweet.id)
-                                                      .isLiked ??
-                                                  false));
-                                          return Icon(
-                                            isLiked
-                                                ? Icons.favorite
-                                                : Icons.favorite_border,
-                                            color: isLiked
-                                                ? Colors.red
-                                                : Colors.white,
-                                          );
+                            child: Container(
+                              color: Colors.black.withOpacity(0.5),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16.0, vertical: 8.0),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  const MaterialSeekBar(),
+                                  Row(
+                                    children: [
+                                      const MaterialPlayOrPauseButton(),
+                                      const MaterialPositionIndicator(),
+                                      if (widget.onPrevious != null)
+                                        MaterialCustomButton(
+                                          onPressed: handlePrevious,
+                                          icon: const Icon(Icons.arrow_upward,
+                                              color: Colors.white),
+                                        ),
+                                      if (widget.onNext != null)
+                                        MaterialCustomButton(
+                                          onPressed: handleNext,
+                                          icon: const Icon(Icons.arrow_downward,
+                                              color: Colors.white),
+                                        ),
+                                      const Spacer(),
+                                      // Like Button
+                                      MaterialCustomButton(
+                                        onPressed: () {
+                                          ref
+                                              .read(
+                                                  feedNotifierProvider.notifier)
+                                              .toggleLike(widget.tweet.id);
                                         },
+                                        icon: Consumer(
+                                          builder: (context, ref, child) {
+                                            final isLiked = ref.watch(
+                                                feedNotifierProvider.select(
+                                                    (s) => s.value?.tweets
+                                                        .firstWhere((t) =>
+                                                            t.id ==
+                                                            widget.tweet.id)
+                                                        .isLiked ??
+                                                    false));
+                                            return Icon(
+                                              isLiked
+                                                  ? Icons.favorite
+                                                  : Icons.favorite_border,
+                                              color: isLiked
+                                                  ? Colors.red
+                                                  : Colors.white,
+                                            );
+                                          },
+                                        ),
                                       ),
-                                    ),
-                                    // Exit Fullscreen Button
-                                    MaterialCustomButton(
-                                      onPressed: onFullscreen,
-                                      icon: const Icon(Icons.fullscreen_exit),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                                      // Exit Fullscreen Button
+                                      MaterialCustomButton(
+                                        onPressed: onFullscreen,
+                                        icon: const Icon(Icons.fullscreen_exit),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ],
@@ -291,6 +330,7 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
                       child: Video(
                         key: _videoKey,
                         controller: instance.controller,
+                        fit: BoxFit.contain,
                         controls: (state) {
                           if (state.isFullscreen()) {
                             return MaterialVideoControls(state);
