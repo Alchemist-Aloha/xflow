@@ -109,6 +109,7 @@ class MainScaffold extends ConsumerWidget {
         overlayScreen = UserMediaFeedScreen(
           screenName: nav.selectedUser!,
           initialIndex: nav.userMediaInitialIndex!,
+          initialTweetId: nav.userMediaInitialTweetId,
         );
       } else {
         overlayScreen = UserDetailsScreen(screenName: nav.selectedUser!);

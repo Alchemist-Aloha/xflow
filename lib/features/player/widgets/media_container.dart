@@ -203,20 +203,18 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
                   instance.player.play();
                 }
               },
-              child: AbsorbPointer(
-                child: SizedBox.expand(
-                  child: Center(
-                    child: RepaintBoundary(
-                      child: Video(
-                        key: _videoKey,
-                        controller: instance.controller,
-                        controls: MaterialVideoControls,
-                        onExitFullscreen: () async {
-                          await SystemChrome.setPreferredOrientations([
-                            DeviceOrientation.portraitUp,
-                          ]);
-                        },
-                      ),
+              child: SizedBox.expand(
+                child: Center(
+                  child: RepaintBoundary(
+                    child: Video(
+                      key: _videoKey,
+                      controller: instance.controller,
+                      controls: MaterialVideoControls,
+                      onExitFullscreen: () async {
+                        await SystemChrome.setPreferredOrientations([
+                          DeviceOrientation.portraitUp,
+                        ]);
+                      },
                     ),
                   ),
                 ),

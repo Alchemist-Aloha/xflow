@@ -289,7 +289,8 @@ class UserDetailsScreen extends ConsumerWidget {
                                   onTap: () {
                                     ref
                                         .read(navigationProvider.notifier)
-                                        .openUserMedia(screenName, index);
+                                        .openUserMedia(screenName, index,
+                                            tweetId: tweet.id);
                                   },
                                   child: Container(
                                     decoration: BoxDecoration(

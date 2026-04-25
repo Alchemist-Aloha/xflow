@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/navigation/navigation_provider.dart';
@@ -11,11 +12,13 @@ import '../settings/settings_provider.dart';
 class UserMediaFeedScreen extends ConsumerStatefulWidget {
   final String screenName;
   final int initialIndex;
+  final String? initialTweetId;
 
   const UserMediaFeedScreen({
     super.key,
     required this.screenName,
     required this.initialIndex,
+    this.initialTweetId,
   });
 
   @override
@@ -26,6 +29,7 @@ class UserMediaFeedScreen extends ConsumerStatefulWidget {
 class _UserMediaFeedScreenState extends ConsumerState<UserMediaFeedScreen> {
   late PageController _pageController;
   late int _currentIndex;
+  bool _initialized = false;
 
   @override
   void initState() {
@@ -66,34 +70,59 @@ class _UserMediaFeedScreenState extends ConsumerState<UserMediaFeedScreen> {
   }
 
   void _managePool() {
-    final feedAsync = ref.read(userMediaNotifierProvider(widget.screenName));
-    final state = feedAsync.value;
-    if (state == null) return;
-    final tweets = state.tweets;
+    // Use a microtask to avoid building-phase conflicts
+    Future.microtask(() {
+      if (!mounted) return;
+      final feedAsync = ref.read(userMediaNotifierProvider(widget.screenName));
+      final state = feedAsync.value;
+      if (state == null) return;
+      final tweets = state.tweets;
 
-    final pool = ref.read(playerPoolProvider.notifier);
-    final activeIds = <String>{};
+      final pool = ref.read(playerPoolProvider.notifier);
+      final activeIds = <String>{};
 
-    for (int i = _currentIndex - 1; i <= _currentIndex + 3; i++) {
-      if (i >= 0 && i < tweets.length) {
-        final tweet = tweets[i];
-        activeIds.add(tweet.id);
+      for (int i = _currentIndex - 1; i <= _currentIndex + 3; i++) {
+        if (i >= 0 && i < tweets.length) {
+          final tweet = tweets[i];
+          activeIds.add(tweet.id);
 
-        if (tweet.isVideo && tweet.mediaUrls.isNotEmpty) {
-          pool.warmup(tweet.id, tweet.mediaUrls.first);
-        } else if (tweet.mediaUrls.isNotEmpty) {
-          for (final url in tweet.mediaUrls) {
-            precacheImage(NetworkImage(url), context);
+          if (tweet.isVideo && tweet.mediaUrls.isNotEmpty) {
+            pool.warmup(tweet.id, tweet.mediaUrls.first);
+          } else if (tweet.mediaUrls.isNotEmpty) {
+            for (final url in tweet.mediaUrls) {
+              precacheImage(NetworkImage(url), context);
+            }
           }
         }
       }
-    }
-    pool.cleanupExcept(activeIds);
+      pool.cleanupExcept(activeIds);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final feedAsync = ref.watch(userMediaNotifierProvider(widget.screenName));
+
+    // Listen for data arrival to handle initial index adjustment if list shifted
+    ref.listen(userMediaNotifierProvider(widget.screenName), (prev, next) {
+      if (next.hasValue && !_initialized && widget.initialTweetId != null) {
+        final tweets = next.value!.tweets;
+        final actualIndex =
+            tweets.indexWhere((t) => t.id == widget.initialTweetId);
+        if (actualIndex != -1 && actualIndex != _currentIndex) {
+          setState(() {
+            _currentIndex = actualIndex;
+            _pageController.jumpToPage(actualIndex);
+          });
+        }
+        _initialized = true;
+      }
+      
+      // Always manage pool when data changes
+      if (next.hasValue) {
+        _managePool();
+      }
+    });
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -144,6 +173,7 @@ class _UserMediaFeedScreenState extends ConsumerState<UserMediaFeedScreen> {
             );
           }
 
+          // Ensure pool is warmed up for current view
           _managePool();
 
           return Stack(
@@ -154,8 +184,10 @@ class _UserMediaFeedScreenState extends ConsumerState<UserMediaFeedScreen> {
                 itemCount: tweets.length,
                 itemBuilder: (context, index) {
                   final settings = ref.read(settingsProvider);
+                  final tweet = tweets[index];
                   return UserMediaFeedItem(
-                    tweet: tweets[index],
+                    key: ValueKey('user_feed_${tweet.id}'),
+                    tweet: tweet,
                     isVisible: index == _currentIndex,
                     onPlaybackError: () {
                       if (index == _currentIndex && mounted) {

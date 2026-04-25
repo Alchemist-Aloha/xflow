@@ -7,6 +7,7 @@ class NavigationState {
   final MainTab currentTab;
   final String? selectedUser; // If not null, show UserDetails or UserMediaFeed
   final int? userMediaInitialIndex;
+  final String? userMediaInitialTweetId;
   final Tweet? selectedTweet;
   final String? selectedHashtag;
 
@@ -14,6 +15,7 @@ class NavigationState {
     this.currentTab = MainTab.media,
     this.selectedUser,
     this.userMediaInitialIndex,
+    this.userMediaInitialTweetId,
     this.selectedTweet,
     this.selectedHashtag,
   });
@@ -22,6 +24,7 @@ class NavigationState {
     MainTab? currentTab,
     String? selectedUser,
     int? userMediaInitialIndex,
+    String? userMediaInitialTweetId,
     Tweet? selectedTweet,
     String? selectedHashtag,
     bool clearUser = false,
@@ -35,6 +38,9 @@ class NavigationState {
       userMediaInitialIndex: (clearUser || clearMediaIndex)
           ? null
           : (userMediaInitialIndex ?? this.userMediaInitialIndex),
+      userMediaInitialTweetId: (clearUser || clearMediaIndex)
+          ? null
+          : (userMediaInitialTweetId ?? this.userMediaInitialTweetId),
       selectedTweet: (clearTweet || clearUser)
           ? null
           : (selectedTweet ?? this.selectedTweet),
@@ -62,10 +68,11 @@ class NavigationNotifier extends Notifier<NavigationState> {
         clearHashtag: true);
   }
 
-  void openUserMedia(String screenName, int index) {
+  void openUserMedia(String screenName, int index, {String? tweetId}) {
     state = state.copyWith(
         selectedUser: screenName,
         userMediaInitialIndex: index,
+        userMediaInitialTweetId: tweetId,
         clearTweet: true,
         clearHashtag: true);
   }
