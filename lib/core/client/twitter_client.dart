@@ -70,6 +70,18 @@ class TwitterClient {
     }
   }
 
+  static void resetQueue() {
+    AppLogger.log('XFLOW: Resetting request queue');
+    _isRequestInProgress = false;
+    _rateLimitResetTime = null;
+    while (_requestQueue.isNotEmpty) {
+      final next = _requestQueue.removeAt(0);
+      if (!next.isCompleted) {
+        next.completeError(Exception('Queue reset due to app lifecycle change'));
+      }
+    }
+  }
+
   static void _handleRateLimit(int minutes) {
     // minutes comes from settings
     _rateLimitResetTime = DateTime.now().add(Duration(minutes: minutes));

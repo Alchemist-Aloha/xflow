@@ -15,14 +15,15 @@ import '../../settings/settings_provider.dart';
 class TiktokMediaContainer extends ConsumerStatefulWidget {
   final Tweet tweet;
   final bool isVisible;
-  final Widget? overlay;
+  final Widget Function(BuildContext context, VoidCallback? onFullscreen)?
+      overlayBuilder;
   final VoidCallback? onPlaybackError;
 
   const TiktokMediaContainer({
     super.key,
     required this.tweet,
     required this.isVisible,
-    this.overlay,
+    this.overlayBuilder,
     this.onPlaybackError,
   });
 
@@ -92,7 +93,8 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
       return Stack(
         children: [
           TextTweetCard(text: widget.tweet.text),
-          if (widget.overlay != null) widget.overlay!,
+          if (widget.overlayBuilder != null)
+            widget.overlayBuilder!(context, null),
         ],
       );
     }
@@ -123,7 +125,8 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
                 }),
               ),
             ),
-          if (widget.overlay != null) widget.overlay!,
+          if (widget.overlayBuilder != null)
+            widget.overlayBuilder!(context, null),
         ],
       );
     }
@@ -176,6 +179,20 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
         final height = instance.player.state.height;
         final isLandscape = (width ?? 0) > (height ?? 0);
 
+        final onFullscreen = () {
+          _videoKey.currentState?.enterFullscreen();
+          if (isLandscape) {
+            SystemChrome.setPreferredOrientations([
+              DeviceOrientation.landscapeLeft,
+              DeviceOrientation.landscapeRight,
+            ]);
+          } else {
+            SystemChrome.setPreferredOrientations([
+              DeviceOrientation.portraitUp,
+            ]);
+          }
+        };
+
         return Stack(
           children: [
             GestureDetector(
@@ -205,32 +222,8 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
                 ),
               ),
             ),
-            if (widget.overlay != null) widget.overlay!,
-            // Custom Full Screen Button
-            Positioned(
-              right: 16,
-              bottom: 120, // Above the text overlay
-              child: IconButton(
-                icon:
-                    const Icon(Icons.fullscreen, color: Colors.white, size: 36),
-                onPressed: () {
-                  // Manually handle orientation before entering fullscreen if needed,
-                  // but MaterialVideoControls usually handles it if configured via theme.
-                  // For version 1.3.1, we can also use SystemChrome directly in a wrapper if needed.
-                  _videoKey.currentState?.enterFullscreen();
-                  if (isLandscape) {
-                    SystemChrome.setPreferredOrientations([
-                      DeviceOrientation.landscapeLeft,
-                      DeviceOrientation.landscapeRight,
-                    ]);
-                  } else {
-                    SystemChrome.setPreferredOrientations([
-                      DeviceOrientation.portraitUp,
-                    ]);
-                  }
-                },
-              ),
-            ),
+            if (widget.overlayBuilder != null)
+              widget.overlayBuilder!(context, onFullscreen),
             // Progress Bar at the very bottom
             Positioned(
               bottom: 0,

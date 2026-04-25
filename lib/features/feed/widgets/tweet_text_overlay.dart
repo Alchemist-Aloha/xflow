@@ -9,8 +9,9 @@ import '../feed_provider.dart';
 
 class TweetTextOverlay extends ConsumerStatefulWidget {
   final Tweet tweet;
+  final VoidCallback? onFullscreen;
 
-  const TweetTextOverlay({super.key, required this.tweet});
+  const TweetTextOverlay({super.key, required this.tweet, this.onFullscreen});
 
   @override
   ConsumerState<TweetTextOverlay> createState() => _TweetTextOverlayState();
@@ -25,8 +26,8 @@ class _TweetTextOverlayState extends ConsumerState<TweetTextOverlay> {
       children: [
         // Action Buttons (Right Side)
         Positioned(
-          right: 8,
-          bottom: 100,
+          right: 12,
+          bottom: 110,
           child: _buildActionButtons(),
         ),
         // Text Overlay (Bottom)
@@ -41,14 +42,14 @@ class _TweetTextOverlayState extends ConsumerState<TweetTextOverlay> {
                 end: Alignment.bottomCenter,
                 colors: [
                   Colors.transparent,
-                  Colors.black.withValues(alpha: 0.3),
-                  Colors.black.withValues(alpha: 0.7),
-                  Colors.black.withValues(alpha: 0.9),
+                  Colors.black.withValues(alpha: 0.2),
+                  Colors.black.withValues(alpha: 0.5),
+                  Colors.black.withValues(alpha: 0.8),
                 ],
-                stops: const [0.0, 0.4, 0.7, 1.0],
+                stops: const [0.0, 0.3, 0.6, 1.0],
               ),
             ),
-            padding: const EdgeInsets.fromLTRB(16, 80, 80, 20),
+            padding: const EdgeInsets.fromLTRB(16, 100, 80, 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -66,6 +67,7 @@ class _TweetTextOverlayState extends ConsumerState<TweetTextOverlay> {
 
   Widget _buildActionButtons() {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         _ActionButton(
           icon: widget.tweet.isLiked ? Icons.favorite : Icons.favorite_border,
@@ -75,24 +77,30 @@ class _TweetTextOverlayState extends ConsumerState<TweetTextOverlay> {
             ref.read(feedNotifierProvider.notifier).toggleLike(widget.tweet.id);
           },
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
         _ActionButton(
           icon: Icons.chat_bubble_outline,
-          color: Colors.white,
           label: _formatCount(widget.tweet.replyCount),
           onTap: () {
             ref.read(navigationProvider.notifier).selectTweet(widget.tweet);
           },
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
         _ActionButton(
           icon: Icons.share_outlined,
-          color: Colors.white,
           label: "Share",
           onTap: () {
             // TODO: Implement share
           },
         ),
+        if (widget.onFullscreen != null && widget.tweet.isVideo) ...[
+          const SizedBox(height: 16),
+          _ActionButton(
+            icon: Icons.fullscreen,
+            label: "Full",
+            onTap: widget.onFullscreen!,
+          ),
+        ],
       ],
     );
   }
@@ -278,7 +286,7 @@ class _ActionButton extends StatelessWidget {
 
   const _ActionButton({
     required this.icon,
-    required this.color,
+    this.color = Colors.white,
     required this.label,
     required this.onTap,
   });
@@ -287,25 +295,45 @@ class _ActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 35, shadows: const [
-            Shadow(offset: Offset(0, 1), blurRadius: 4, color: Colors.black54),
-          ]),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              shadows: [
-                Shadow(
-                    offset: Offset(0, 1), blurRadius: 2, color: Colors.black54),
-              ],
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        width: 60,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.black.withValues(alpha: 0.1),
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: 32,
+                shadows: const [
+                  Shadow(
+                      offset: Offset(0, 1), blurRadius: 4, color: Colors.black),
+                ],
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                shadows: [
+                  Shadow(
+                      offset: Offset(0, 1),
+                      blurRadius: 2,
+                      color: Colors.black54),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

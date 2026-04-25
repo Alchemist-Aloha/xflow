@@ -34,6 +34,15 @@ class UserMediaNotifier extends FamilyAsyncNotifier<FeedState, String> {
     );
   }
 
+  Future<void> refresh() async {
+    final screenName = arg.startsWith('@') ? arg.substring(1) : arg;
+    final currentState = state.value;
+    if (currentState != null) {
+      state = AsyncData(currentState.copyWith(isRefreshing: true));
+    }
+    await _fetchFreshData(screenName);
+  }
+
   Future<void> _fetchFreshData(String screenName) async {
     final client = ref.read(twitterClientProvider);
     final settings = ref.read(settingsProvider);
@@ -49,15 +58,26 @@ class UserMediaNotifier extends FamilyAsyncNotifier<FeedState, String> {
         
         final freshTweets = response.tweets.map((t) => t.copyWith(source: 'API')).toList();
         
-        // Update state with fresh data
+        // Update state by MERGING to avoid jumps
         final currentState = state.value;
         if (currentState != null) {
-          // Merge or replace? For profile, we usually want fresh first
-          state = AsyncData(FeedState(
-            tweets: freshTweets,
-            cursorBottom: response.cursorBottom,
-            isRefreshing: false,
-          ));
+          // Identify which items from the fresh fetch are NOT already in our current list
+          final existingIds = currentState.tweets.map((t) => t.id).toSet();
+          final uniqueFresh = freshTweets.where((t) => !existingIds.contains(t.id)).toList();
+          
+          if (uniqueFresh.isNotEmpty) {
+            // Sort merged list by date to keep it chronological
+            final merged = [...currentState.tweets, ...uniqueFresh];
+            merged.sort((a, b) => (b.createdAt ?? DateTime(0)).compareTo(a.createdAt ?? DateTime(0)));
+
+            state = AsyncData(FeedState(
+              tweets: merged,
+              cursorBottom: response.cursorBottom ?? currentState.cursorBottom,
+              isRefreshing: false,
+            ));
+          } else {
+            state = AsyncData(currentState.copyWith(isRefreshing: false));
+          }
         }
       } else {
         // No new tweets, just clear refreshing flag

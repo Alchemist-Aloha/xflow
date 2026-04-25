@@ -37,6 +37,12 @@ class UserDetailsScreen extends ConsumerWidget {
                         fontSize: 18, fontWeight: FontWeight.bold)),
                 actions: [
                   IconButton(
+                    icon: const Icon(Icons.refresh),
+                    onPressed: () => ref
+                        .read(userMediaNotifierProvider(screenName).notifier)
+                        .refresh(),
+                  ),
+                  IconButton(
                     icon: Icon(settings.isListView
                         ? Icons.grid_view
                         : Icons.view_list),

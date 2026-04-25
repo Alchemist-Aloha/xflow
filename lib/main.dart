@@ -36,6 +36,7 @@ class XFlowApp extends ConsumerWidget {
     ref.listen(lifecycleProvider, (previous, next) {
       if (next == AppLifecycle.resumed) {
         debugPrint('XFLOW: App resumed. Ensuring BackgroundSync is active.');
+        TwitterClient.resetQueue();
         BackgroundSync.restart(TwitterClient(), ref.read(settingsProvider));
       }
     });

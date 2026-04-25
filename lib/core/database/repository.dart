@@ -213,7 +213,7 @@ class Repository {
       tableCachedMedia,
       where: whereClause,
       whereArgs: whereArgs,
-      orderBy: 'RANDOM()',
+      orderBy: 'created_at DESC',
       limit: limit,
     );
 
@@ -278,7 +278,7 @@ class Repository {
       tableCachedMedia,
       where: whereClause,
       whereArgs: whereArgs,
-      orderBy: 'RANDOM()',
+      orderBy: 'created_at DESC',
       limit: limit,
     );
 
@@ -353,7 +353,7 @@ class Repository {
       tableCachedMedia,
       where: whereClause,
       whereArgs: whereArgs,
-      orderBy: 'RANDOM()',
+      orderBy: 'created_at DESC',
       limit: limit,
     );
 
