@@ -248,7 +248,21 @@ class _TweetTextOverlayState extends ConsumerState<TweetTextOverlay> {
     final List<InlineSpan> spans = [];
 
     // Simple hashtag and mention parsing
-    final words = text.split(RegExp(r'(\s+)'));
+    // We need to preserve whitespace, but Dart's split() with RegExp doesn't keep groups.
+    final List<String> words = [];
+    final matches = RegExp(r'(\s+)').allMatches(text);
+    int lastEnd = 0;
+    for (final match in matches) {
+      if (match.start > lastEnd) {
+        words.add(text.substring(lastEnd, match.start));
+      }
+      words.add(text.substring(match.start, match.end));
+      lastEnd = match.end;
+    }
+    if (lastEnd < text.length) {
+      words.add(text.substring(lastEnd));
+    }
+
     for (final word in words) {
       if (word.startsWith('#') && word.length > 1) {
         spans.add(
