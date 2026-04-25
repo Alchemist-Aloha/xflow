@@ -8,6 +8,7 @@ import 'dart:async' as _i3;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:xflow/core/client/twitter_client.dart' as _i2;
 import 'package:xflow/core/database/entities.dart' as _i4;
+import 'package:xflow/core/database/media_repository.dart' as _i7;
 import 'package:xflow/core/models/tweet.dart' as _i6;
 import 'package:xflow/features/settings/settings_provider.dart' as _i5;
 
@@ -275,6 +276,45 @@ class MockTwitterClient extends _i1.Mock implements _i2.TwitterClient {
       ) as _i3.Future<_i2.TweetResponse>);
 
   @override
+  _i3.Future<bool> favoriteTweet(String? tweetId) => (super.noSuchMethod(
+        Invocation.method(
+          #favoriteTweet,
+          [tweetId],
+        ),
+        returnValue: _i3.Future<bool>.value(false),
+      ) as _i3.Future<bool>);
+
+  @override
+  _i3.Future<bool> unfavoriteTweet(String? tweetId) => (super.noSuchMethod(
+        Invocation.method(
+          #unfavoriteTweet,
+          [tweetId],
+        ),
+        returnValue: _i3.Future<bool>.value(false),
+      ) as _i3.Future<bool>);
+
+  @override
+  _i3.Future<_i2.TweetResponse> fetchTweetDetail(
+    String? focalTweetId, {
+    String? cursor,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #fetchTweetDetail,
+          [focalTweetId],
+          {#cursor: cursor},
+        ),
+        returnValue: _i3.Future<_i2.TweetResponse>.value(_FakeTweetResponse_0(
+          this,
+          Invocation.method(
+            #fetchTweetDetail,
+            [focalTweetId],
+            {#cursor: cursor},
+          ),
+        )),
+      ) as _i3.Future<_i2.TweetResponse>);
+
+  @override
   _i3.Future<_i2.TweetResponse> fetchVideoMixer({
     String? cursor,
     int? count = 20,
@@ -381,4 +421,40 @@ class MockTwitterClient extends _i1.Mock implements _i2.TwitterClient {
         ),
         returnValueForMissingStub: null,
       );
+}
+
+/// A class which mocks [MediaRepository].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockMediaRepository extends _i1.Mock implements _i7.MediaRepository {
+  MockMediaRepository() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i3.Future<List<_i6.Tweet>> getUserCachedMedia(
+    String? userHandle,
+    int? limit,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getUserCachedMedia,
+          [
+            userHandle,
+            limit,
+          ],
+        ),
+        returnValue: _i3.Future<List<_i6.Tweet>>.value(<_i6.Tweet>[]),
+      ) as _i3.Future<List<_i6.Tweet>>);
+
+  @override
+  _i3.Future<void> insertCachedMedia(List<_i6.Tweet>? tweets) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #insertCachedMedia,
+          [tweets],
+        ),
+        returnValue: _i3.Future<void>.value(),
+        returnValueForMissingStub: _i3.Future<void>.value(),
+      ) as _i3.Future<void>);
 }

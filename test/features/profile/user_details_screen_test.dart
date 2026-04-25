@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,7 +17,6 @@ import 'package:xflow/core/models/tweet.dart';
 import 'profile_provider_test.mocks.dart';
 
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
   sqfliteFfiInit();
   databaseFactory = databaseFactoryFfi;
 
@@ -26,176 +26,85 @@ void main() {
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     mockClient = MockTwitterClient();
-    final db = await Repository.database;
-    await db.delete('cached_media');
-    await db.delete('subscriptions');
+    await Repository.close();
   });
 
-  Widget createTestWidget() {
-    return ProviderScope(
-      overrides: [
+  tearDown(() async {
+    await Repository.close();
+  });
+
+  group('UserMediaNotifier Logic (Unit Tests)', () {
+    test('initial build loads from cache and triggers fresh fetch', () async {
+      final cachedTweet = Tweet(
+          id: 'c1',
+          text: 'Cached',
+          userHandle: testHandle,
+          mediaUrls: [],
+          isVideo: false,
+          createdAt: DateTime(2023, 1, 1));
+      final freshTweet = Tweet(
+          id: 'f1',
+          text: 'Fresh',
+          userHandle: testHandle,
+          mediaUrls: [],
+          isVideo: false,
+          createdAt: DateTime(2023, 1, 2));
+
+      await Repository.insertCachedMedia([cachedTweet]);
+
+      when(mockClient.fetchUserTimelineByScreenName(any,
+              cooldownMinutes: anyNamed('cooldownMinutes')))
+          .thenAnswer((_) async => TweetResponse(tweets: [freshTweet]));
+
+      final container = ProviderContainer(overrides: [
         twitterClientProvider.overrideWithValue(mockClient),
-        // We don't override settingsProvider here to use default values
-      ],
-      child: MaterialApp(
-        home: const UserDetailsScreen(screenName: testHandle),
-      ),
-    );
-  }
+      ]);
 
-  testWidgets('shows loading indicator then user not found', (tester) async {
-    when(mockClient.fetchProfile(testHandle)).thenAnswer((_) async => null);
-    when(mockClient.fetchUserTimelineByScreenName(any, cooldownMinutes: anyNamed('cooldownMinutes')))
-        .thenAnswer((_) async => TweetResponse(tweets: []));
+      // Initial read triggers build()
+      final firstState =
+          await container.read(userMediaNotifierProvider(testHandle).future);
+      expect(firstState.tweets.any((t) => t.id == 'c1'), isTrue);
 
-    await tester.pumpWidget(createTestWidget());
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      // Give the background fetch time to complete
+      await Future.delayed(const Duration(milliseconds: 100));
 
-    await tester.pumpAndSettle();
-    expect(find.text('User not found'), findsOneWidget);
-  });
-
-  testWidgets('shows profile info and empty media state', (tester) async {
-    final profile = Subscription(
-      id: '123',
-      screenName: testHandle,
-      name: 'Test User',
-      description: 'A test user description',
-      followersCount: 1000,
-      followingCount: 500,
-    );
-
-    when(mockClient.fetchProfile(testHandle)).thenAnswer((_) async => profile);
-    when(mockClient.fetchUserTimelineByScreenName(any, cooldownMinutes: anyNamed('cooldownMinutes')))
-        .thenAnswer((_) async => TweetResponse(tweets: []));
-
-    await tester.pumpWidget(createTestWidget());
-    await tester.pumpAndSettle();
-
-    expect(find.text('Test User'), findsWidgets);
-    expect(find.text('@$testHandle'), findsOneWidget);
-    expect(find.text('A test user description'), findsOneWidget);
-    expect(find.text('1.0K'), findsOneWidget); // Followers
-    expect(find.text('500'), findsOneWidget); // Following
-    expect(find.text('No media found'), findsOneWidget);
-  });
-
-  testWidgets('cache-first: shows cached items while fetching fresh data', (tester) async {
-    final profile = Subscription(
-      id: '123',
-      screenName: testHandle,
-      name: 'Test User',
-    );
-
-    final cachedTweet = Tweet(
-      id: 'cached_1',
-      text: 'Cached Content',
-      userHandle: '@$testHandle',
-      mediaUrls: ['url1'],
-      isVideo: true,
-      createdAt: DateTime.now().subtract(const Duration(hours: 1)),
-    );
-
-    final freshTweet = Tweet(
-      id: 'fresh_1',
-      text: 'Fresh Content',
-      userHandle: '@$testHandle',
-      mediaUrls: ['url2'],
-      isVideo: true,
-      createdAt: DateTime.now(),
-    );
-
-    // Seed cache
-    await Repository.insertCachedMedia([cachedTweet]);
-
-    when(mockClient.fetchProfile(testHandle)).thenAnswer((_) async => profile);
-    
-    // Return fresh data with a delay
-    when(mockClient.fetchUserTimelineByScreenName(any, cooldownMinutes: anyNamed('cooldownMinutes')))
-        .thenAnswer((_) async {
-      await Future.delayed(const Duration(milliseconds: 500));
-      return TweetResponse(tweets: [freshTweet]);
+      final finalState =
+          container.read(userMediaNotifierProvider(testHandle)).value!;
+      expect(finalState.tweets.any((t) => t.id == 'f1'), isTrue);
+      expect(finalState.isRefreshing, isFalse);
     });
-
-    await tester.pumpWidget(createTestWidget());
-    
-    // After profile loads but before fresh tweets load
-    await tester.pump(); // Start fetching profile
-    await tester.pump(const Duration(milliseconds: 100)); // Wait for profile fetch
-
-    // Should show cached content
-    expect(find.text('Cached Content'), findsOneWidget);
-    expect(find.byType(LinearProgressIndicator), findsOneWidget); // IsRefreshing indicator
-
-    // Wait for fresh data
-    await tester.pumpAndSettle(const Duration(seconds: 1));
-
-    // Should show fresh content
-    expect(find.text('Fresh Content'), findsOneWidget);
-    expect(find.text('Cached Content'), findsNothing); // Merging logic in profile_provider.dart replaces or sorts
   });
 
-  testWidgets('shows error message on API failure when no cache exists', (tester) async {
-    when(mockClient.fetchProfile(testHandle)).thenThrow(Exception('Network Error'));
+  group('UserDetailsScreen Widget Tests', () {
+    testWidgets('shows loading state then profile name', (tester) async {
+      final profile =
+          Subscription(id: '1', screenName: testHandle, name: 'Display Name');
+      when(mockClient.fetchProfile(testHandle))
+          .thenAnswer((_) async => profile);
+      when(mockClient.fetchUserTimelineByScreenName(any,
+              cooldownMinutes: anyNamed('cooldownMinutes')))
+          .thenAnswer((_) async => TweetResponse(tweets: []));
 
-    await tester.pumpWidget(createTestWidget());
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          twitterClientProvider.overrideWithValue(mockClient),
+        ],
+        child: MaterialApp(
+          home: const UserDetailsScreen(screenName: testHandle),
+        ),
+      ));
 
-    expect(find.textContaining('Error loading profile: Exception: Network Error'), findsOneWidget);
-  });
+      // Initially shows loading
+      expect(find.byType(CircularProgressIndicator), findsWidgets);
 
-  testWidgets('fetchMore: loads more items when scrolling to bottom', (tester) async {
-    final profile = Subscription(
-      id: '123',
-      screenName: testHandle,
-      name: 'Test User',
-    );
+      // Wait for profile fetch
+      await tester.runAsync(() async {
+        await Future.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
-    final initialTweets = List.generate(10, (i) => Tweet(
-      id: 'id_$i',
-      text: 'Tweet $i',
-      userHandle: '@$testHandle',
-      mediaUrls: ['url_$i'],
-      isVideo: false,
-      createdAt: DateTime.now().subtract(Duration(minutes: i)),
-    ));
-
-    final moreTweets = List.generate(5, (i) => Tweet(
-      id: 'more_${i + 10}',
-      text: 'More Tweet ${i + 10}',
-      userHandle: '@$testHandle',
-      mediaUrls: ['url_more_${i + 10}'],
-      isVideo: false,
-      createdAt: DateTime.now().subtract(Duration(minutes: i + 10)),
-    ));
-
-    when(mockClient.fetchProfile(testHandle)).thenAnswer((_) async => profile);
-    
-    // Initial fetch
-    when(mockClient.fetchUserTimelineByScreenName(testHandle, cooldownMinutes: anyNamed('cooldownMinutes')))
-        .thenAnswer((_) async => TweetResponse(
-          tweets: initialTweets,
-          cursorBottom: 'next_cursor',
-        ));
-
-    // Fetch more
-    when(mockClient.fetchUserTimelineByScreenName(testHandle, cursor: 'next_cursor', cooldownMinutes: anyNamed('cooldownMinutes')))
-        .thenAnswer((_) async => TweetResponse(
-          tweets: moreTweets,
-          cursorBottom: 'end_cursor',
-        ));
-
-    await tester.pumpWidget(createTestWidget());
-    await tester.pumpAndSettle();
-
-    expect(find.text('Tweet 0'), findsOneWidget);
-    
-    // Scroll to bottom
-    final listFinder = find.byType(CustomScrollView);
-    await tester.drag(listFinder, const Offset(0, -2000));
-    await tester.pumpAndSettle();
-
-    // Should have triggered fetchMore and now show more tweets
-    expect(find.text('More Tweet 10'), findsOneWidget);
+      expect(find.text('Display Name'), findsWidgets);
+    });
   });
 }

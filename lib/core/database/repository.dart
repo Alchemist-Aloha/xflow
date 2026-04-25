@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'entities.dart';
@@ -21,7 +22,12 @@ class Repository {
   }
 
   static Future<Database> _initDatabase() async {
-    String path = join(await getDatabasesPath(), 'xflow.db');
+    String path;
+    if (Platform.environment.containsKey('FLUTTER_TEST')) {
+      path = inMemoryDatabasePath;
+    } else {
+      path = join(await getDatabasesPath(), 'xflow.db');
+    }
     return await openDatabase(
       path,
       version: 7,
@@ -509,5 +515,12 @@ class Repository {
       tableCachedMedia,
       where: 'played_count > 0',
     );
+  }
+
+  static Future<void> close() async {
+    if (_database != null) {
+      await _database!.close();
+      _database = null;
+    }
   }
 }

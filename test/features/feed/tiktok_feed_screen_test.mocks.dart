@@ -275,6 +275,45 @@ class MockTwitterClient extends _i1.Mock implements _i2.TwitterClient {
       ) as _i3.Future<_i2.TweetResponse>);
 
   @override
+  _i3.Future<bool> favoriteTweet(String? tweetId) => (super.noSuchMethod(
+        Invocation.method(
+          #favoriteTweet,
+          [tweetId],
+        ),
+        returnValue: _i3.Future<bool>.value(false),
+      ) as _i3.Future<bool>);
+
+  @override
+  _i3.Future<bool> unfavoriteTweet(String? tweetId) => (super.noSuchMethod(
+        Invocation.method(
+          #unfavoriteTweet,
+          [tweetId],
+        ),
+        returnValue: _i3.Future<bool>.value(false),
+      ) as _i3.Future<bool>);
+
+  @override
+  _i3.Future<_i2.TweetResponse> fetchTweetDetail(
+    String? focalTweetId, {
+    String? cursor,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #fetchTweetDetail,
+          [focalTweetId],
+          {#cursor: cursor},
+        ),
+        returnValue: _i3.Future<_i2.TweetResponse>.value(_FakeTweetResponse_0(
+          this,
+          Invocation.method(
+            #fetchTweetDetail,
+            [focalTweetId],
+            {#cursor: cursor},
+          ),
+        )),
+      ) as _i3.Future<_i2.TweetResponse>);
+
+  @override
   _i3.Future<_i2.TweetResponse> fetchVideoMixer({
     String? cursor,
     int? count = 20,

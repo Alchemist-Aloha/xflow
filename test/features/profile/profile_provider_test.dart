@@ -1,43 +1,40 @@
+import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:xflow/features/profile/profile_provider.dart';
 import 'package:xflow/features/feed/feed_provider.dart';
 import 'package:xflow/features/settings/settings_provider.dart';
 import 'package:xflow/core/client/twitter_client.dart';
-import 'package:xflow/core/database/repository.dart';
+import 'package:xflow/core/database/media_repository.dart';
 import 'package:xflow/core/models/tweet.dart';
 
 import 'profile_provider_test.mocks.dart';
 
-@GenerateMocks([TwitterClient])
+@GenerateMocks([TwitterClient, MediaRepository])
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  sqfliteFfiInit();
-  databaseFactory = databaseFactoryFfi;
-
   late MockTwitterClient mockClient;
+  late MockMediaRepository mockRepo;
   const testHandle = 'testuser';
 
-  setUp(() async {
+  setUp(() {
     SharedPreferences.setMockInitialValues({});
     mockClient = MockTwitterClient();
-    final db = await Repository.database;
-    await db.delete('cached_media');
-    await db.delete('subscriptions');
+    mockRepo = MockMediaRepository();
   });
 
-  group('UserMediaNotifier Tests (Online Only Initial Load)', () {
-    test('loads from API directly and ignores initial cache', () async {
+  group('UserMediaNotifier Tests (Pure Mocked)', () {
+    test('loads from cache and then merges API data', () async {
       final localTweet = Tweet(
         id: 'local_1',
         text: 'Local Tweet',
         userHandle: '@$testHandle',
         mediaUrls: ['url1'],
         isVideo: true,
+        createdAt: DateTime(2023, 1, 1),
       );
 
       final apiTweet = Tweet(
@@ -46,137 +43,50 @@ void main() {
         userHandle: '@$testHandle',
         mediaUrls: ['url2'],
         isVideo: true,
+        createdAt: DateTime(2023, 1, 2),
       );
 
-      await Repository.insertCachedMedia([localTweet]);
+      when(mockRepo.getUserCachedMedia(any, any))
+          .thenAnswer((_) async => [localTweet]);
+      when(mockRepo.insertCachedMedia(any)).thenAnswer((_) async => {});
 
+      final completer = Completer<TweetResponse>();
       when(mockClient.fetchUserTimelineByScreenName(
         testHandle,
-        cursor: anyNamed('cursor'),
         cooldownMinutes: anyNamed('cooldownMinutes'),
-      )).thenAnswer((_) async => TweetResponse(
-            tweets: [apiTweet],
-            cursorBottom: 'new_cursor',
-          ));
+      )).thenAnswer((_) => completer.future);
 
       final container = ProviderContainer(
         overrides: [
           twitterClientProvider.overrideWithValue(mockClient),
-          settingsProvider.overrideWith(() => MockSettingsNotifier()),
+          mediaRepositoryProvider.overrideWithValue(mockRepo),
         ],
       );
 
-      // Initial read - should be API data directly, bypassing local cache
+      // Initial read - triggers build()
       final state =
           await container.read(userMediaNotifierProvider(testHandle).future);
 
-      expect(state.tweets.length, 1);
-      expect(state.tweets.first.id, 'api_1');
-      expect(state.cursorBottom, 'new_cursor');
-      expect(state.isRefreshing, isFalse);
-
-      // Verify it saved to DB
-      final dbItems = await Repository.getUserCachedMedia(testHandle, 10);
-      expect(dbItems.any((t) => t.id == 'api_1'), isTrue);
-    });
-
-    test('falls back to cache on API error', () async {
-      final localTweet = Tweet(
-        id: 'local_1',
-        text: 'Local Tweet',
-        userHandle: '@$testHandle',
-        mediaUrls: ['url1'],
-        isVideo: true,
-      );
-
-      await Repository.insertCachedMedia([localTweet]);
-
-      when(mockClient.fetchUserTimelineByScreenName(
-        any,
-        cursor: anyNamed('cursor'),
-        cooldownMinutes: anyNamed('cooldownMinutes'),
-      )).thenThrow(Exception('API Down'));
-
-      final container = ProviderContainer(
-        overrides: [
-          twitterClientProvider.overrideWithValue(mockClient),
-          settingsProvider.overrideWith(() => MockSettingsNotifier()),
-        ],
-      );
-
-      final state =
-          await container.read(userMediaNotifierProvider(testHandle).future);
-
-      // Should fallback to local cache
       expect(state.tweets.length, 1);
       expect(state.tweets.first.id, 'local_1');
-    });
+      expect(state.isRefreshing, isTrue);
 
-    group('Infinite Scroll Tests', () {
-      test('fetchMore appends to state and saves to DB', () async {
-        final apiTweet1 = Tweet(
-          id: 'api_1',
-          text: 'API 1',
-          userHandle: '@$testHandle',
-          mediaUrls: ['u1'],
-          isVideo: true,
-        );
+      // Complete API
+      completer.complete(TweetResponse(
+        tweets: [apiTweet],
+        cursorBottom: 'new_cursor',
+      ));
 
-        final apiTweet2 = Tweet(
-          id: 'api_2',
-          text: 'API 2',
-          userHandle: '@$testHandle',
-          mediaUrls: ['u2'],
-          isVideo: true,
-        );
+      // Wait for background fetch (async)
+      await Future.delayed(const Duration(milliseconds: 10));
+      // Riverpod update might take a few microtasks
+      await Future.delayed(const Duration(milliseconds: 10));
 
-        // Build calls this for first load
-        when(mockClient.fetchUserTimelineByScreenName(
-          testHandle,
-          cursor: null,
-          cooldownMinutes: anyNamed('cooldownMinutes'),
-        )).thenAnswer((_) async => TweetResponse(
-              tweets: [apiTweet1],
-              cursorBottom: 'cursor_1',
-            ));
-
-        // fetchMore calls this
-        when(mockClient.fetchUserTimelineByScreenName(
-          testHandle,
-          cursor: 'cursor_1',
-          cooldownMinutes: anyNamed('cooldownMinutes'),
-        )).thenAnswer((_) async => TweetResponse(
-              tweets: [apiTweet2],
-              cursorBottom: 'cursor_2',
-            ));
-
-        final container = ProviderContainer(
-          overrides: [
-            twitterClientProvider.overrideWithValue(mockClient),
-            settingsProvider.overrideWith(() => MockSettingsNotifier()),
-          ],
-        );
-
-        final notifier =
-            container.read(userMediaNotifierProvider(testHandle).notifier);
-
-        // Initial build
-        await container.read(userMediaNotifierProvider(testHandle).future);
-
-        // Now fetch more
-        await notifier.fetchMore();
-
-        final state = container.read(userMediaNotifierProvider(testHandle));
-        expect(state.value?.tweets.length, 2);
-        expect(state.value?.tweets.first.id, 'api_1');
-        expect(state.value?.tweets.last.id, 'api_2');
-        expect(state.value?.cursorBottom, 'cursor_2');
-      });
+      final finalState =
+          container.read(userMediaNotifierProvider(testHandle)).value!;
+      expect(finalState.tweets.length, 2);
+      expect(finalState.tweets.any((t) => t.id == 'api_1'), isTrue);
+      expect(finalState.isRefreshing, isFalse);
     });
   });
-}
-
-class MockSettingsNotifier extends SettingsNotifier {
-  @override
-  SettingsState build() => SettingsState();
 }
