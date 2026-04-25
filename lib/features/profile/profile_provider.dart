@@ -19,16 +19,24 @@ class UserMediaNotifier extends FamilyAsyncNotifier<FeedState, String> {
   FutureOr<FeedState> build(String arg) async {
     final client = ref.watch(twitterClientProvider);
     final settings = ref.watch(settingsProvider);
-
-    // Normalize handle: API and lookup prefer raw handle
     final screenName = arg.startsWith('@') ? arg.substring(1) : arg;
 
-    debugPrint(
-        'XFLOW: Building UserMediaNotifier for $screenName (Online Only)');
+    // 1. Try to load from cache immediately to show SOMETHING
+    final cached = await Repository.getUserCachedMedia(
+        screenName, settings.loadBatchSize);
+    
+    // Trigger async fetch in the background
+    _fetchFreshData(screenName);
 
-    // We start with an empty state and mark it as refreshing immediately
-    // In build(), returning a Future will make the UI show the loading state.
-    // However, the user wants it to actually FETCH now.
+    return FeedState(
+      tweets: cached.map((t) => t.copyWith(source: 'Cache')).toList(),
+      isRefreshing: true, // Mark as refreshing while we fetch
+    );
+  }
+
+  Future<void> _fetchFreshData(String screenName) async {
+    final client = ref.read(twitterClientProvider);
+    final settings = ref.read(settingsProvider);
 
     try {
       final response = await client.fetchUserTimelineByScreenName(
@@ -36,28 +44,34 @@ class UserMediaNotifier extends FamilyAsyncNotifier<FeedState, String> {
         cooldownMinutes: settings.cooldownDuration,
       );
 
-      debugPrint(
-          'XFLOW: Initial online fetch for $screenName returned ${response.tweets.length} tweets');
-
       if (response.tweets.isNotEmpty) {
-        // Save to cache for other screens, but we return the fresh results directly
         await Repository.insertCachedMedia(response.tweets);
+        
+        final freshTweets = response.tweets.map((t) => t.copyWith(source: 'API')).toList();
+        
+        // Update state with fresh data
+        final currentState = state.value;
+        if (currentState != null) {
+          // Merge or replace? For profile, we usually want fresh first
+          state = AsyncData(FeedState(
+            tweets: freshTweets,
+            cursorBottom: response.cursorBottom,
+            isRefreshing: false,
+          ));
+        }
+      } else {
+        // No new tweets, just clear refreshing flag
+        final currentState = state.value;
+        if (currentState != null) {
+          state = AsyncData(currentState.copyWith(isRefreshing: false));
+        }
       }
-
-      return FeedState(
-        tweets: response.tweets,
-        cursorBottom: response.cursorBottom,
-        isRefreshing: false,
-      );
-    } catch (e, st) {
-      debugPrint('XFLOW: User media fetch error for $screenName: $e\n$st');
-      // Fallback to cache ONLY on error if available, or empty
-      final cached = await Repository.getUserCachedMedia(
-          screenName, settings.loadBatchSize);
-      return FeedState(
-        tweets: cached,
-        isRefreshing: false,
-      );
+    } catch (e) {
+      debugPrint('XFLOW: Background user media fetch error: $e');
+      final currentState = state.value;
+      if (currentState != null) {
+        state = AsyncData(currentState.copyWith(isRefreshing: false));
+      }
     }
   }
 

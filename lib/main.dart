@@ -13,6 +13,7 @@ import 'core/client/twitter_client.dart';
 import 'features/settings/settings_provider.dart';
 import 'core/client/twitter_account.dart';
 import 'core/database/repository.dart';
+import 'core/utils/lifecycle_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,6 +32,14 @@ class XFlowApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Listen to lifecycle changes
+    ref.listen(lifecycleProvider, (previous, next) {
+      if (next == AppLifecycle.resumed) {
+        debugPrint('XFLOW: App resumed. Ensuring BackgroundSync is active.');
+        BackgroundSync.restart(TwitterClient(), ref.read(settingsProvider));
+      }
+    });
+
     ref.listen(settingsProvider, (prev, next) {
       if (prev?.syncInterval != next.syncInterval ||
           prev?.syncBatchSize != next.syncBatchSize ||
@@ -85,11 +94,12 @@ class MainScaffold extends ConsumerWidget {
       children: const [
         TiktokFeedScreen(),
         SubscriptionListScreen(isStandalone: false),
+        HashtagFeedScreen(hashtag: '#trending', showBackButton: false),
       ],
     );
 
     Widget? overlayScreen;
-    if (nav.selectedHashtag != null) {
+    if (nav.selectedHashtag != null && nav.currentTab != MainTab.trending) {
       overlayScreen = HashtagFeedScreen(hashtag: nav.selectedHashtag!);
     } else if (nav.selectedTweet != null) {
       overlayScreen = TweetDetailScreen(tweet: nav.selectedTweet!);
@@ -106,11 +116,16 @@ class MainScaffold extends ConsumerWidget {
 
     final body = Stack(
       children: [
-        Offstage(
-          offstage: overlayScreen != null,
+        Visibility(
+          visible: overlayScreen == null,
+          maintainState: true,
           child: mainScreens,
         ),
-        if (overlayScreen != null) overlayScreen,
+        if (overlayScreen != null)
+          Container(
+            color: Colors.black,
+            child: overlayScreen,
+          ),
       ],
     );
 
@@ -143,6 +158,11 @@ class MainScaffold extends ConsumerWidget {
               icon: Icon(Icons.people_outline),
               selectedIcon: Icon(Icons.people, color: Colors.blue),
               label: 'Subscriptions',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.trending_up_outlined),
+              selectedIcon: Icon(Icons.trending_up, color: Colors.blue),
+              label: 'Trending',
             ),
           ],
         ),

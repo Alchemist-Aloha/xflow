@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/tweet.dart';
 
-enum MainTab { media, subscriptions }
+enum MainTab { media, subscriptions, trending }
 
 class NavigationState {
   final MainTab currentTab;

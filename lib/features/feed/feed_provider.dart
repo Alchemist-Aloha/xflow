@@ -304,9 +304,10 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
       final seenCursors = <String>{};
       int apiRetries = 0;
       int chunkRotations = 0;
+      final maxRetries = settings.apiRetryLimit * 2; // Increase limit for robustness
 
       while (allNewTweets.length < settings.minNewTweetsThreshold &&
-          apiRetries < settings.apiRetryLimit &&
+          apiRetries < maxRetries &&
           chunkRotations < settings.chunkRotationLimit) {
         // 1. Try to fetch from DB first (refresh pool)
         final dbCandidates = await Repository.getCachedMediaCandidates(
@@ -329,66 +330,72 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
         final client = ref.read(twitterClientProvider);
         if (currentCursor != null) seenCursors.add(currentCursor);
 
-        final TweetResponse response;
-        if (settings.fetchStrategy == FeedSort.videomixer) {
-          response = await client.fetchVideoMixer(
-            cursor: currentCursor,
-            count: settings.timelineBatchSize,
-            filters: settings.filters,
-          );
-        } else if (settings.fetchStrategy == FeedSort.algorithmic) {
-          response = await client.fetchAlgorithmicTimeline(
-            cursor: currentCursor,
-            count: settings.timelineBatchSize,
-            filters: settings.filters,
-          );
-        } else if (settings.fetchStrategy == FeedSort.chronological) {
-          response = await client.fetchChronologicalTimeline(
-            cursor: currentCursor,
-            count: settings.timelineBatchSize,
-            filters: settings.filters,
-          );
-        } else {
-          response = await client.fetchSubscribedMedia(
-            cursor: currentCursor,
-            sort: settings.fetchStrategy,
-            filters: settings.filters,
-            subBatchSize: syncBatchSize,
-            loadBatchSize: settings.loadBatchSize,
-            cooldownMinutes: settings.cooldownDuration,
-            strictSubscriptionsOnly: settings.strictSubscriptionsOnly,
-            includeNativeRetweets: settings.includeNativeRetweets,
-            useChunkedSubscriptions: settings.useChunkedSubscriptions,
-            minFaves: settings.minFavesFilter,
-            maxQueryLength: settings.maxQueryLength,
-            timeoutSeconds: settings.apiTimeoutSeconds,
-          );
-        }
+        try {
+          final TweetResponse response;
+          if (settings.fetchStrategy == FeedSort.videomixer) {
+            response = await client.fetchVideoMixer(
+              cursor: currentCursor,
+              count: settings.timelineBatchSize,
+              filters: settings.filters,
+            );
+          } else if (settings.fetchStrategy == FeedSort.algorithmic) {
+            response = await client.fetchAlgorithmicTimeline(
+              cursor: currentCursor,
+              count: settings.timelineBatchSize,
+              filters: settings.filters,
+            );
+          } else if (settings.fetchStrategy == FeedSort.chronological) {
+            response = await client.fetchChronologicalTimeline(
+              cursor: currentCursor,
+              count: settings.timelineBatchSize,
+              filters: settings.filters,
+            );
+          } else {
+            response = await client.fetchSubscribedMedia(
+              cursor: currentCursor,
+              sort: settings.fetchStrategy,
+              filters: settings.filters,
+              subBatchSize: syncBatchSize,
+              loadBatchSize: settings.loadBatchSize,
+              cooldownMinutes: settings.cooldownDuration,
+              strictSubscriptionsOnly: settings.strictSubscriptionsOnly,
+              includeNativeRetweets: settings.includeNativeRetweets,
+              useChunkedSubscriptions: settings.useChunkedSubscriptions,
+              minFaves: settings.minFavesFilter,
+              maxQueryLength: settings.maxQueryLength,
+              timeoutSeconds: settings.apiTimeoutSeconds,
+            );
+          }
 
-        final freshUnique = response.tweets.where((t) {
-          return !seenIds.contains(t.id) &&
-              (t.mediaUrls.isEmpty || !seenMedia.contains(t.mediaUrls.first));
-        }).toList();
+          final freshUnique = response.tweets.where((t) {
+            return !seenIds.contains(t.id) &&
+                (t.mediaUrls.isEmpty || !seenMedia.contains(t.mediaUrls.first));
+          }).toList();
 
-        if (response.tweets.isNotEmpty) {
-          await Repository.insertCachedMedia(response.tweets);
-        }
+          if (response.tweets.isNotEmpty) {
+            await Repository.insertCachedMedia(response.tweets);
+          }
 
-        allNewTweets.addAll(freshUnique);
-        apiRetries++;
+          allNewTweets.addAll(freshUnique);
+          apiRetries++;
 
-        // Handle Pagination vs Rotation
-        if (response.cursorBottom != null &&
-            response.cursorBottom != currentCursor &&
-            !seenCursors.contains(response.cursorBottom!)) {
-          currentCursor = response.cursorBottom;
-        } else {
-          // Chunk exhausted or stuck cursor
-          AppLogger.log(
-              'XFLOW: Chunk exhausted or stuck cursor. Rotating to next subscription chunk.');
-          currentCursor = null;
-          chunkRotations++;
-          await Future.delayed(const Duration(milliseconds: 300));
+          // Handle Pagination vs Rotation
+          if (response.cursorBottom != null &&
+              response.cursorBottom != currentCursor &&
+              !seenCursors.contains(response.cursorBottom!)) {
+            currentCursor = response.cursorBottom;
+          } else {
+            // Chunk exhausted or stuck cursor
+            AppLogger.log(
+                'XFLOW: Chunk exhausted or stuck cursor. Rotating to next subscription chunk.');
+            currentCursor = null;
+            chunkRotations++;
+            await Future.delayed(const Duration(milliseconds: 300));
+          }
+        } catch (e) {
+          AppLogger.log('XFLOW: fetchMore API error: $e');
+          apiRetries++;
+          await Future.delayed(const Duration(seconds: 1));
         }
 
         if (allNewTweets.length < settings.minNewTweetsThreshold) {

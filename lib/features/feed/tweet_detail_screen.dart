@@ -23,12 +23,14 @@ class TweetDetailScreen extends ConsumerWidget {
     final repliesAsync = ref.watch(tweetDetailProvider(tweet.id));
 
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(
+        backgroundColor: Colors.black,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => ref.read(navigationProvider.notifier).back(),
         ),
-        title: const Text('Tweet'),
+        title: const Text('Tweet', style: TextStyle(color: Colors.white)),
       ),
       body: CustomScrollView(
         slivers: [

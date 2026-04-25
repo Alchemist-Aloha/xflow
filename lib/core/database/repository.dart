@@ -375,6 +375,59 @@ class Repository {
     });
   }
 
+  static Future<List<Tweet>> getHashtagCachedMedia(String hashtag, int limit,
+      {Set<MediaFilter>? filters}) async {
+    final db = await database;
+
+    String whereClause = 'text LIKE ?';
+    List<dynamic> whereArgs = ['%$hashtag%'];
+
+    if (filters != null && filters.isNotEmpty) {
+      final conditions = <String>[];
+      for (final filter in filters) {
+        switch (filter) {
+          case MediaFilter.video:
+            conditions.add('is_video = 1');
+            break;
+          case MediaFilter.image:
+            conditions.add('(media_urls != "[]" AND is_video = 0)');
+            break;
+          case MediaFilter.text:
+            conditions.add('media_urls = "[]"');
+            break;
+        }
+      }
+      if (conditions.isNotEmpty) {
+        whereClause += ' AND (${conditions.join(' OR ')})';
+      }
+    }
+
+    final List<Map<String, dynamic>> maps = await db.query(
+      tableCachedMedia,
+      where: whereClause,
+      whereArgs: whereArgs,
+      orderBy: 'created_at DESC',
+      limit: limit,
+    );
+
+    return List.generate(maps.length, (i) {
+      return Tweet(
+        id: maps[i]['id'] as String,
+        text: maps[i]['text'] as String,
+        userHandle: maps[i]['user_handle'] as String,
+        userAvatarUrl: maps[i]['user_avatar_url'] as String?,
+        mediaKey: maps[i]['media_key'] as String?,
+        mediaUrls:
+            List<String>.from(jsonDecode(maps[i]['media_urls'] as String)),
+        thumbnailUrl: maps[i]['thumbnail_url'] as String?,
+        isVideo: (maps[i]['is_video'] as int) == 1,
+        createdAt: maps[i]['created_at'] != null
+            ? DateTime.fromMillisecondsSinceEpoch(maps[i]['created_at'] as int)
+            : null,
+      );
+    });
+  }
+
   static Future<void> markMediaAsPlayed(String id) async {
     final db = await database;
     await db.rawUpdate('''
