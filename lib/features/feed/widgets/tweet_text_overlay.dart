@@ -220,7 +220,7 @@ class _TweetTextOverlayState extends ConsumerState<TweetTextOverlay> {
           ),
         ),
         if (!isSubscribed)
-          TextButton(
+          IconButton(
             onPressed: () {
               ref.read(subscriptionListProvider.notifier).toggleSubscription(
                     Subscription(
@@ -231,14 +231,13 @@ class _TweetTextOverlayState extends ConsumerState<TweetTextOverlay> {
                     ),
                   );
             },
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.white,
+            icon: const Icon(Icons.add, color: Colors.white, size: 20),
+            style: IconButton.styleFrom(
               backgroundColor: Colors.blueAccent.withValues(alpha: 0.6),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-              minimumSize: const Size(0, 30),
               visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
             ),
-            child: const Text('Subscribe', style: TextStyle(fontSize: 12)),
+            tooltip: 'Subscribe',
           ),
       ],
     );

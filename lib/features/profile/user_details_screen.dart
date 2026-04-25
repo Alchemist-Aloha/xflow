@@ -423,8 +423,8 @@ class _SubscribeButton extends ConsumerWidget {
     final subscriptionState = ref.watch(subscriptionListProvider);
     final isSubscribed = subscriptionState.isSubscribed(profile.screenName);
 
-    return FilledButton.tonal(
-      style: FilledButton.styleFrom(
+    return IconButton.filledTonal(
+      style: IconButton.styleFrom(
         visualDensity: VisualDensity.compact,
         backgroundColor: isSubscribed ? Colors.transparent : null,
         side: isSubscribed
@@ -444,16 +444,8 @@ class _SubscribeButton extends ConsumerWidget {
               ),
             );
       },
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (isSubscribed) ...[
-            const Icon(Icons.check, size: 16),
-            const SizedBox(width: 4),
-          ],
-          Text(isSubscribed ? 'Subscribed' : 'Subscribe'),
-        ],
-      ),
+      icon: Icon(isSubscribed ? Icons.check : Icons.add, size: 20),
+      tooltip: isSubscribed ? 'Subscribed' : 'Subscribe',
     );
   }
 }
