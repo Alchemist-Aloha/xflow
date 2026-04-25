@@ -54,7 +54,9 @@ class _UserMediaFeedScreenState extends ConsumerState<UserMediaFeedScreen> {
       final feedAsync = ref.read(userMediaNotifierProvider(widget.screenName));
       if (feedAsync.hasValue) {
         final tweets = feedAsync.value!.tweets;
-        if (page >= tweets.length - 5) {
+        final settings = ref.read(settingsProvider);
+        if (page >= tweets.length - settings.lazyLoadThreshold &&
+            !feedAsync.value!.isLoadingMore) {
           ref
               .read(userMediaNotifierProvider(widget.screenName).notifier)
               .fetchMore();
@@ -77,7 +79,7 @@ class _UserMediaFeedScreenState extends ConsumerState<UserMediaFeedScreen> {
         final tweet = tweets[i];
         activeIds.add(tweet.id);
 
-        if (tweet.isVideo) {
+        if (tweet.isVideo && tweet.mediaUrls.isNotEmpty) {
           pool.warmup(tweet.id, tweet.mediaUrls.first);
         } else if (tweet.mediaUrls.isNotEmpty) {
           for (final url in tweet.mediaUrls) {
@@ -94,56 +96,114 @@ class _UserMediaFeedScreenState extends ConsumerState<UserMediaFeedScreen> {
     final feedAsync = ref.watch(userMediaNotifierProvider(widget.screenName));
 
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(
+        backgroundColor: Colors.black,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => ref.read(navigationProvider.notifier).back(),
         ),
         title: Text('@${widget.screenName}',
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.white)),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: () => ref
+                .read(userMediaNotifierProvider(widget.screenName).notifier)
+                .refresh(),
+          ),
+        ],
       ),
       body: feedAsync.when(
         data: (state) {
           final tweets = state.tweets;
           if (tweets.isEmpty) {
-            return const Center(
-                child: Text('No media found.',
-                    style: TextStyle(color: Colors.white70)));
+            if (state.isRefreshing) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('No media found.',
+                      style: TextStyle(color: Colors.white70)),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => ref
+                        .read(userMediaNotifierProvider(widget.screenName)
+                            .notifier)
+                        .refresh(),
+                    child: const Text('Refresh'),
+                  ),
+                ],
+              ),
+            );
           }
 
           _managePool();
 
-          return PageView.builder(
-            controller: _pageController,
-            scrollDirection: Axis.vertical,
-            itemCount: tweets.length,
-            itemBuilder: (context, index) {
-              final settings = ref.read(settingsProvider);
-              return UserMediaFeedItem(
-                tweet: tweets[index],
-                isVisible: index == _currentIndex,
-                onPlaybackError: () {
-                  if (index == _currentIndex && mounted) {
-                    Future.delayed(
-                        Duration(seconds: settings.autoSkipDelaySeconds), () {
-                      if (mounted && _currentIndex == index) {
-                        _pageController.nextPage(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                        );
+          return Stack(
+            children: [
+              PageView.builder(
+                controller: _pageController,
+                scrollDirection: Axis.vertical,
+                itemCount: tweets.length,
+                itemBuilder: (context, index) {
+                  final settings = ref.read(settingsProvider);
+                  return UserMediaFeedItem(
+                    tweet: tweets[index],
+                    isVisible: index == _currentIndex,
+                    onPlaybackError: () {
+                      if (index == _currentIndex && mounted) {
+                        Future.delayed(
+                            Duration(seconds: settings.autoSkipDelaySeconds),
+                            () {
+                          if (mounted && _currentIndex == index) {
+                            _pageController.nextPage(
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                            );
+                          }
+                        });
                       }
-                    });
-                  }
+                    },
+                  );
                 },
-              );
-            },
+              ),
+              if (state.isRefreshing)
+                const Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: LinearProgressIndicator(
+                    minHeight: 2,
+                    backgroundColor: Colors.transparent,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                  ),
+                ),
+            ],
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, st) => Center(
-            child: Text('Error: $e',
-                style: const TextStyle(color: Colors.white70))),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Error: $e', style: const TextStyle(color: Colors.white70)),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => ref
+                    .read(userMediaNotifierProvider(widget.screenName).notifier)
+                    .refresh(),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -167,7 +227,10 @@ class UserMediaFeedItem extends StatelessWidget {
       child: TiktokMediaContainer(
         tweet: tweet,
         isVisible: isVisible,
-        overlay: TweetTextOverlay(tweet: tweet),
+        overlayBuilder: (context, onFullscreen) => TweetTextOverlay(
+          tweet: tweet,
+          onFullscreen: onFullscreen,
+        ),
         onPlaybackError: onPlaybackError,
       ),
     );
