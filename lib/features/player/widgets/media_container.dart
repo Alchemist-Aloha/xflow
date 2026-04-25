@@ -154,160 +154,168 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
     }
 
     final settings = ref.watch(settingsProvider);
-    return StreamBuilder(
-      stream: instance.player.stream.error,
-      builder: (context, snapshot) {
-        if (snapshot.hasData && _retryCount >= settings.playbackRetryLimit) {
-          return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.error_outline,
-                    color: Colors.white70, size: 48),
-                const SizedBox(height: 16),
-                const Text('Playback failed. Moving to next...',
-                    style: TextStyle(color: Colors.white70)),
-                const SizedBox(height: 8),
-                Text('Error: ${snapshot.data}',
-                    style:
-                        const TextStyle(color: Colors.white38, fontSize: 12)),
-              ],
-            ),
-          );
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result) async {
+        final state = _videoKey.currentState;
+        if (state != null && state.isFullscreen()) {
+          await state.exitFullscreen();
         }
-
-        // Determine orientation based on current player state
-        final width = instance.player.state.width;
-        final height = instance.player.state.height;
-        final isLandscape = (width ?? 0) > (height ?? 0);
-
-        final onFullscreen = () async {
-          AppLogger.log('XFLOW: Fullscreen requested for ${widget.tweet.id}');
-          final state = _videoKey.currentState;
-          if (state != null) {
-            try {
-              if (state.isFullscreen()) {
-                await state.exitFullscreen();
-              } else {
-                // 1. Start orientation change immediately
-                if (isLandscape) {
-                  await SystemChrome.setPreferredOrientations([
-                    DeviceOrientation.landscapeLeft,
-                    DeviceOrientation.landscapeRight,
-                  ]);
-                } else {
-                  await SystemChrome.setPreferredOrientations([
-                    DeviceOrientation.portraitUp,
-                  ]);
-                }
-
-                // 2. Enter fullscreen
-                await state.enterFullscreen();
-              }
-            } catch (e) {
-              AppLogger.log('XFLOW: Error toggling fullscreen: $e');
-            }
+      },
+      child: StreamBuilder(
+        stream: instance.player.stream.error,
+        builder: (context, snapshot) {
+          if (snapshot.hasData && _retryCount >= settings.playbackRetryLimit) {
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.error_outline,
+                      color: Colors.white70, size: 48),
+                  const SizedBox(height: 16),
+                  const Text('Playback failed. Moving to next...',
+                      style: TextStyle(color: Colors.white70)),
+                  const SizedBox(height: 8),
+                  Text('Error: ${snapshot.data}',
+                      style:
+                          const TextStyle(color: Colors.white38, fontSize: 12)),
+                ],
+              ),
+            );
           }
-        };
 
-        return Stack(
-          children: [
-            Positioned.fill(
-              child: GestureDetector(
-                onTap: () {
-                  if (instance.player.state.playing) {
-                    instance.player.pause();
+          // Determine orientation based on current player state
+          final width = instance.player.state.width;
+          final height = instance.player.state.height;
+          final isLandscape = (width ?? 0) > (height ?? 0);
+
+          final onFullscreen = () async {
+            AppLogger.log('XFLOW: Fullscreen requested for ${widget.tweet.id}');
+            final state = _videoKey.currentState;
+            if (state != null) {
+              try {
+                if (state.isFullscreen()) {
+                  await state.exitFullscreen();
+                } else {
+                  // 1. Start orientation change immediately
+                  if (isLandscape) {
+                    await SystemChrome.setPreferredOrientations([
+                      DeviceOrientation.landscapeLeft,
+                      DeviceOrientation.landscapeRight,
+                    ]);
                   } else {
-                    instance.player.play();
+                    await SystemChrome.setPreferredOrientations([
+                      DeviceOrientation.portraitUp,
+                    ]);
                   }
-                },
-                behavior: HitTestBehavior.opaque,
-                child: Center(
-                  child: RepaintBoundary(
-                    child: MaterialVideoControlsTheme(
-                      normal: const MaterialVideoControlsThemeData(
-                        displaySeekBar: false,
-                        automaticallyImplySkipNextButton: false,
-                        automaticallyImplySkipPreviousButton: false,
-                      ),
-                      fullscreen: MaterialVideoControlsThemeData(
-                        displaySeekBar: false,
-                        automaticallyImplySkipNextButton: false,
-                        automaticallyImplySkipPreviousButton: false,
-                        bottomButtonBar: [
-                          const MaterialPlayOrPauseButton(),
-                          const MaterialPositionIndicator(),
-                          const MaterialSeekBar(),
-                          const MaterialDesktopVolumeButton(),
-                          // Like Button
-                          MaterialCustomButton(
-                            onPressed: () {
-                              ref
-                                  .read(feedNotifierProvider.notifier)
-                                  .toggleLike(widget.tweet.id);
-                            },
-                            icon: Consumer(
-                              builder: (context, ref, child) {
-                                final isLiked = ref.watch(feedNotifierProvider
-                                    .select((s) => s.value?.tweets
-                                        .firstWhere(
-                                            (t) => t.id == widget.tweet.id)
-                                        .isLiked ?? false));
-                                return Icon(
-                                  isLiked
-                                      ? Icons.favorite
-                                      : Icons.favorite_border,
-                                  color: isLiked ? Colors.red : Colors.white,
-                                );
+
+                  // 2. Enter fullscreen
+                  await state.enterFullscreen();
+                }
+              } catch (e) {
+                AppLogger.log('XFLOW: Error toggling fullscreen: $e');
+              }
+            }
+          };
+
+          return Stack(
+            children: [
+              Positioned.fill(
+                child: GestureDetector(
+                  onTap: () {
+                    if (instance.player.state.playing) {
+                      instance.player.pause();
+                    } else {
+                      instance.player.play();
+                    }
+                  },
+                  behavior: HitTestBehavior.opaque,
+                  child: Center(
+                    child: RepaintBoundary(
+                      child: MaterialVideoControlsTheme(
+                        normal: const MaterialVideoControlsThemeData(
+                          displaySeekBar: false,
+                          automaticallyImplySkipNextButton: false,
+                          automaticallyImplySkipPreviousButton: false,
+                        ),
+                        fullscreen: MaterialVideoControlsThemeData(
+                          displaySeekBar: true,
+                          automaticallyImplySkipNextButton: false,
+                          automaticallyImplySkipPreviousButton: false,
+                          bottomButtonBar: [
+                            const MaterialPlayOrPauseButton(),
+                            const MaterialPositionIndicator(),
+                            const MaterialSeekBar(),
+                            // Like Button
+                            MaterialCustomButton(
+                              onPressed: () {
+                                ref
+                                    .read(feedNotifierProvider.notifier)
+                                    .toggleLike(widget.tweet.id);
                               },
+                              icon: Consumer(
+                                builder: (context, ref, child) {
+                                  final isLiked = ref.watch(feedNotifierProvider
+                                      .select((s) => s.value?.tweets
+                                          .firstWhere(
+                                              (t) => t.id == widget.tweet.id)
+                                          .isLiked ?? false));
+                                  return Icon(
+                                    isLiked
+                                        ? Icons.favorite
+                                        : Icons.favorite_border,
+                                    color: isLiked ? Colors.red : Colors.white,
+                                  );
+                                },
+                              ),
                             ),
-                          ),
-                          const MaterialFullscreenButton(),
-                        ],
-                      ),
-                      child: Video(
-                        key: _videoKey,
-                        controller: instance.controller,
-                        controls: (state) {
-                          return Stack(
-                            children: [
-                              if (state.isFullscreen())
-                                MaterialVideoControls(state),
-                              if (widget.overlayBuilder != null &&
-                                  !state.isFullscreen())
-                                Positioned.fill(
-                                  child: widget.overlayBuilder!(
-                                    context,
-                                    onFullscreen,
-                                    state.isFullscreen(),
+                            const MaterialFullscreenButton(),
+                          ],
+                        ),
+                        child: Video(
+                          key: _videoKey,
+                          controller: instance.controller,
+                          controls: (state) {
+                            if (state.isFullscreen()) {
+                              return MaterialVideoControls(state);
+                            }
+                            return Stack(
+                              children: [
+                                if (widget.overlayBuilder != null)
+                                  Positioned.fill(
+                                    child: widget.overlayBuilder!(
+                                      context,
+                                      onFullscreen,
+                                      false,
+                                    ),
                                   ),
-                                ),
-                            ],
-                          );
-                        },
-                        onExitFullscreen: () async {
-                          await SystemChrome.setPreferredOrientations([
-                            DeviceOrientation.portraitUp,
-                          ]);
-                        },
+                              ],
+                            );
+                          },
+                          onExitFullscreen: () async {
+                            await SystemChrome.setPreferredOrientations([
+                              DeviceOrientation.portraitUp,
+                            ]);
+                          },
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-            // Progress Bar at the very bottom
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: IgnorePointer(
-                child: _buildProgressBar(instance),
+              // Progress Bar at the very bottom
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: IgnorePointer(
+                  child: _buildProgressBar(instance),
+                ),
               ),
-            ),
-          ],
-        );
-      },
+            ],
+          );
+        },
+      ),
     );
   }
 
