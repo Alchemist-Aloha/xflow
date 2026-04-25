@@ -185,10 +185,6 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
           }
 
           // Determine orientation based on current player state
-          final width = instance.player.state.width;
-          final height = instance.player.state.height;
-          final isLandscape = (width ?? 0) > (height ?? 0);
-
           final onFullscreen = () async {
             AppLogger.log('XFLOW: Fullscreen requested for ${widget.tweet.id}');
             final state = _videoKey.currentState;
@@ -197,7 +193,12 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
                 if (state.isFullscreen()) {
                   await state.exitFullscreen();
                 } else {
-                  // 1. Start orientation change immediately
+                  // 1. Get latest dimensions
+                  final width = instance.player.state.width;
+                  final height = instance.player.state.height;
+                  final isLandscape = (width ?? 0) > (height ?? 0);
+
+                  // 2. Start orientation change immediately
                   if (isLandscape) {
                     await SystemChrome.setPreferredOrientations([
                       DeviceOrientation.landscapeLeft,
@@ -209,7 +210,7 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
                     ]);
                   }
 
-                  // 2. Enter fullscreen
+                  // 3. Enter fullscreen
                   await state.enterFullscreen();
                 }
               } catch (e) {
@@ -221,83 +222,107 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
           return Stack(
             children: [
               Positioned.fill(
-                child: GestureDetector(
-                  onTap: () {
-                    if (instance.player.state.playing) {
-                      instance.player.pause();
-                    } else {
-                      instance.player.play();
-                    }
-                  },
-                  behavior: HitTestBehavior.opaque,
-                  child: Center(
-                    child: RepaintBoundary(
-                      child: MaterialVideoControlsTheme(
-                        normal: const MaterialVideoControlsThemeData(
-                          displaySeekBar: false,
-                          automaticallyImplySkipNextButton: false,
-                          automaticallyImplySkipPreviousButton: false,
-                        ),
-                        fullscreen: MaterialVideoControlsThemeData(
-                          displaySeekBar: true,
-                          automaticallyImplySkipNextButton: false,
-                          automaticallyImplySkipPreviousButton: false,
-                          bottomButtonBar: [
-                            const MaterialPlayOrPauseButton(),
-                            const MaterialPositionIndicator(),
-                            const MaterialSeekBar(),
-                            // Like Button
-                            MaterialCustomButton(
-                              onPressed: () {
-                                ref
-                                    .read(feedNotifierProvider.notifier)
-                                    .toggleLike(widget.tweet.id);
-                              },
-                              icon: Consumer(
-                                builder: (context, ref, child) {
-                                  final isLiked = ref.watch(feedNotifierProvider
-                                      .select((s) => s.value?.tweets
-                                          .firstWhere(
-                                              (t) => t.id == widget.tweet.id)
-                                          .isLiked ?? false));
-                                  return Icon(
-                                    isLiked
-                                        ? Icons.favorite
-                                        : Icons.favorite_border,
-                                    color: isLiked ? Colors.red : Colors.white,
-                                  );
-                                },
-                              ),
-                            ),
-                            const MaterialFullscreenButton(),
-                          ],
-                        ),
-                        child: Video(
-                          key: _videoKey,
-                          controller: instance.controller,
-                          controls: (state) {
-                            if (state.isFullscreen()) {
-                              return MaterialVideoControls(state);
-                            }
-                            return Stack(
+                child: Center(
+                  child: RepaintBoundary(
+                    child: MaterialVideoControlsTheme(
+                      normal: const MaterialVideoControlsThemeData(
+                        displaySeekBar: false,
+                        automaticallyImplySkipNextButton: false,
+                        automaticallyImplySkipPreviousButton: false,
+                      ),
+                      fullscreen: MaterialVideoControlsThemeData(
+                        displaySeekBar: false, // Custom layout below
+                        automaticallyImplySkipNextButton: false,
+                        automaticallyImplySkipPreviousButton: false,
+                        bottomButtonBar: [
+                          Expanded(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                if (widget.overlayBuilder != null)
-                                  Positioned.fill(
-                                    child: widget.overlayBuilder!(
-                                      context,
-                                      onFullscreen,
-                                      false,
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 8.0),
+                                  child: const MaterialSeekBar(),
+                                ),
+                                Row(
+                                  children: [
+                                    const MaterialPlayOrPauseButton(),
+                                    const MaterialPositionIndicator(),
+                                    const Spacer(),
+                                    // Like Button
+                                    MaterialCustomButton(
+                                      onPressed: () {
+                                        ref
+                                            .read(feedNotifierProvider.notifier)
+                                            .toggleLike(widget.tweet.id);
+                                      },
+                                      icon: Consumer(
+                                        builder: (context, ref, child) {
+                                          final isLiked = ref.watch(
+                                              feedNotifierProvider.select((s) =>
+                                                  s.value?.tweets
+                                                      .firstWhere((t) =>
+                                                          t.id ==
+                                                          widget.tweet.id)
+                                                      .isLiked ??
+                                                  false));
+                                          return Icon(
+                                            isLiked
+                                                ? Icons.favorite
+                                                : Icons.favorite_border,
+                                            color: isLiked
+                                                ? Colors.red
+                                                : Colors.white,
+                                          );
+                                        },
+                                      ),
                                     ),
-                                  ),
+                                    // Exit Fullscreen Button
+                                    MaterialCustomButton(
+                                      onPressed: onFullscreen,
+                                      icon: const Icon(Icons.fullscreen_exit),
+                                    ),
+                                  ],
+                                ),
                               ],
-                            );
-                          },
-                          onExitFullscreen: () async {
-                            await SystemChrome.setPreferredOrientations([
-                              DeviceOrientation.portraitUp,
-                            ]);
-                          },
-                        ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      child: Video(
+                        key: _videoKey,
+                        controller: instance.controller,
+                        controls: (state) {
+                          if (state.isFullscreen()) {
+                            return MaterialVideoControls(state);
+                          }
+                          return Stack(
+                            children: [
+                              GestureDetector(
+                                onTap: () {
+                                  if (instance.player.state.playing) {
+                                    instance.player.pause();
+                                  } else {
+                                    instance.player.play();
+                                  }
+                                },
+                                behavior: HitTestBehavior.opaque,
+                              ),
+                              if (widget.overlayBuilder != null)
+                                Positioned.fill(
+                                  child: widget.overlayBuilder!(
+                                    context,
+                                    onFullscreen,
+                                    false,
+                                  ),
+                                ),
+                            ],
+                          );
+                        },
+                        onExitFullscreen: () async {
+                          await SystemChrome.setPreferredOrientations([
+                            DeviceOrientation.portraitUp,
+                          ]);
+                        },
                       ),
                     ),
                   ),
