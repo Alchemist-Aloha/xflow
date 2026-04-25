@@ -147,7 +147,6 @@ class _HashtagMediaFeedScreenState
     extends ConsumerState<HashtagMediaFeedScreen> {
   final PageController _pageController = PageController();
   int _currentIndex = 0;
-  bool _pendingAutoFullscreen = false;
 
   @override
   void initState() {
@@ -168,7 +167,6 @@ class _HashtagMediaFeedScreenState
     if (page != _currentIndex) {
       setState(() {
         _currentIndex = page;
-        _pendingAutoFullscreen = false;
       });
       _managePool();
 
@@ -266,29 +264,6 @@ class _HashtagMediaFeedScreenState
                     key: ValueKey('hash_feed_${tweets[index].id}'),
                     tweet: tweets[index],
                     isVisible: index == _currentIndex,
-                    autoFullscreen: index == _currentIndex && _pendingAutoFullscreen,
-                    onNext: ({bool fromFullscreen = false}) {
-                      if (fromFullscreen) {
-                        setState(() => _pendingAutoFullscreen = true);
-                      }
-                      if (_pageController.hasClients) {
-                        _pageController.nextPage(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                        );
-                      }
-                    },
-                    onPrevious: ({bool fromFullscreen = false}) {
-                      if (fromFullscreen) {
-                        setState(() => _pendingAutoFullscreen = true);
-                      }
-                      if (_pageController.hasClients) {
-                        _pageController.previousPage(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                        );
-                      }
-                    },
                     onPlaybackError: () {
                       if (index == _currentIndex && mounted) {
                         Future.delayed(
@@ -345,8 +320,6 @@ class HashtagFeedItem extends StatelessWidget {
   final bool isVisible;
   final bool autoFullscreen;
   final VoidCallback? onPlaybackError;
-  final void Function({bool fromFullscreen})? onNext;
-  final void Function({bool fromFullscreen})? onPrevious;
 
   const HashtagFeedItem({
     super.key,
@@ -354,8 +327,6 @@ class HashtagFeedItem extends StatelessWidget {
     required this.isVisible,
     this.autoFullscreen = false,
     this.onPlaybackError,
-    this.onNext,
-    this.onPrevious,
   });
 
   @override
@@ -370,8 +341,6 @@ class HashtagFeedItem extends StatelessWidget {
         isFullscreen: isFullscreen,
       ),
       onPlaybackError: onPlaybackError,
-      onNext: onNext,
-      onPrevious: onPrevious,
     );
   }
 }

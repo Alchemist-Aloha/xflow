@@ -21,8 +21,6 @@ class TiktokMediaContainer extends ConsumerStatefulWidget {
           BuildContext context, VoidCallback? onFullscreen, bool isFullscreen)?
       overlayBuilder;
   final VoidCallback? onPlaybackError;
-  final void Function({bool fromFullscreen})? onNext;
-  final void Function({bool fromFullscreen})? onPrevious;
 
   const TiktokMediaContainer({
     super.key,
@@ -31,8 +29,6 @@ class TiktokMediaContainer extends ConsumerStatefulWidget {
     this.autoFullscreen = false,
     this.overlayBuilder,
     this.onPlaybackError,
-    this.onNext,
-    this.onPrevious,
   });
 
   @override
@@ -63,8 +59,14 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
     super.dispose();
   }
 
-  void _handleCompleted() {
+  void _handleCompleted() async {
     if (!mounted || !widget.isVisible) return;
+
+    // Exit fullscreen if active when video completes
+    final state = _videoKey.currentState;
+    if (state != null && state.isFullscreen()) {
+      await state.exitFullscreen();
+    }
 
     final settings = ref.read(settingsProvider);
     switch (settings.videoEndAction) {
@@ -84,8 +86,15 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
     }
   }
 
-  void _handleError(dynamic error) {
+  void _handleError(dynamic error) async {
     final settings = ref.read(settingsProvider);
+
+    // Exit fullscreen on error
+    final state = _videoKey.currentState;
+    if (state != null && state.isFullscreen()) {
+      await state.exitFullscreen();
+    }
+
     if (_retryCount < settings.playbackRetryLimit) {
       _retryCount++;
       AppLogger.log(
@@ -200,24 +209,7 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
           }
 
           // Determine orientation based on current player state
-          final handleNext = () async {
-            final state = _videoKey.currentState;
-            if (state != null && state.isFullscreen()) {
-              await state.exitFullscreen();
-            }
-            widget.onNext?.call(fromFullscreen: true);
-          };
-
-          final handlePrevious = () async {
-            final state = _videoKey.currentState;
-            if (state != null && state.isFullscreen()) {
-              await state.exitFullscreen();
-            }
-            widget.onPrevious?.call(fromFullscreen: true);
-          };
-
           final onFullscreen = () async {
-            AppLogger.log('XFLOW: Fullscreen requested for ${widget.tweet.id}');
             final state = _videoKey.currentState;
             if (state != null) {
               try {
@@ -228,11 +220,14 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
                   final width = instance.player.state.width;
                   final height = instance.player.state.height;
                   
-                  // Use aspect ratio for better detection. User says aspect ratio = 1 should be portrait.
+                  // Use aspect ratio for better detection. 
+                  // Default to portrait (isLandscape = false) if dimensions are missing or invalid.
                   final double aspectRatio = (width != null && height != null && height != 0) 
                       ? width / height 
-                      : 1.0;
+                      : 0.0;
                   final isLandscape = aspectRatio > 1.0;
+
+                  AppLogger.log('XFLOW: Fullscreen toggle. ID: ${widget.tweet.id} W: $width H: $height AR: $aspectRatio Landscape: $isLandscape');
 
                   // 2. Start orientation change immediately
                   if (isLandscape) {
@@ -287,19 +282,7 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
                         bottomButtonBarMargin: EdgeInsets.zero,
                         primaryButtonBar: [
                           const Spacer(),
-                          if (widget.onPrevious != null)
-                            MaterialCustomButton(
-                              onPressed: handlePrevious,
-                              icon: const Icon(Icons.skip_previous,
-                                  color: Colors.white, size: 48),
-                            ),
                           const MaterialPlayOrPauseButton(iconSize: 64),
-                          if (widget.onNext != null)
-                            MaterialCustomButton(
-                              onPressed: handleNext,
-                              icon: const Icon(Icons.skip_next,
-                                  color: Colors.white, size: 48),
-                            ),
                           const Spacer(),
                         ],
                         bottomButtonBar: [

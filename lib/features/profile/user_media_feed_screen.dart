@@ -31,7 +31,6 @@ class _UserMediaFeedScreenState extends ConsumerState<UserMediaFeedScreen> {
   late PageController _pageController;
   late int _currentIndex;
   bool _initialized = false;
-  bool _pendingAutoFullscreen = false;
 
   @override
   void initState() {
@@ -54,7 +53,6 @@ class _UserMediaFeedScreenState extends ConsumerState<UserMediaFeedScreen> {
     if (page != _currentIndex) {
       setState(() {
         _currentIndex = page;
-        _pendingAutoFullscreen = false;
       });
       _managePool();
 
@@ -208,29 +206,6 @@ class _UserMediaFeedScreenState extends ConsumerState<UserMediaFeedScreen> {
                     key: ValueKey('user_feed_${tweet.id}'),
                     tweet: tweet,
                     isVisible: index == _currentIndex,
-                    autoFullscreen: index == _currentIndex && _pendingAutoFullscreen,
-                    onNext: ({bool fromFullscreen = false}) {
-                      if (fromFullscreen) {
-                        setState(() => _pendingAutoFullscreen = true);
-                      }
-                      if (_pageController.hasClients) {
-                        _pageController.nextPage(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                        );
-                      }
-                    },
-                    onPrevious: ({bool fromFullscreen = false}) {
-                      if (fromFullscreen) {
-                        setState(() => _pendingAutoFullscreen = true);
-                      }
-                      if (_pageController.hasClients) {
-                        _pageController.previousPage(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                        );
-                      }
-                    },
                     onPlaybackError: () {
                       if (index == _currentIndex && mounted) {
                         Future.delayed(
@@ -287,8 +262,6 @@ class UserMediaFeedItem extends StatelessWidget {
   final bool isVisible;
   final bool autoFullscreen;
   final VoidCallback? onPlaybackError;
-  final void Function({bool fromFullscreen})? onNext;
-  final void Function({bool fromFullscreen})? onPrevious;
 
   const UserMediaFeedItem({
     super.key,
@@ -296,8 +269,6 @@ class UserMediaFeedItem extends StatelessWidget {
     required this.isVisible,
     this.autoFullscreen = false,
     this.onPlaybackError,
-    this.onNext,
-    this.onPrevious,
   });
 
   @override
@@ -312,8 +283,6 @@ class UserMediaFeedItem extends StatelessWidget {
         isFullscreen: isFullscreen,
       ),
       onPlaybackError: onPlaybackError,
-      onNext: onNext,
-      onPrevious: onPrevious,
     );
   }
 }
