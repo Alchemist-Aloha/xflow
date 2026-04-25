@@ -27,7 +27,8 @@ class TiktokMediaContainer extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<TiktokMediaContainer> createState() => _TiktokMediaContainerState();
+  ConsumerState<TiktokMediaContainer> createState() =>
+      _TiktokMediaContainerState();
 }
 
 class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
@@ -46,7 +47,7 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
 
   void _handleCompleted() {
     if (!mounted || !widget.isVisible) return;
-    
+
     final settings = ref.read(settingsProvider);
     switch (settings.videoEndAction) {
       case VideoEndAction.pause:
@@ -59,7 +60,8 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
         instance?.player.play();
         break;
       case VideoEndAction.playNext:
-        widget.onPlaybackError?.call(); // Re-use the same callback for auto-advance
+        widget.onPlaybackError
+            ?.call(); // Re-use the same callback for auto-advance
         break;
     }
   }
@@ -68,13 +70,15 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
     final settings = ref.read(settingsProvider);
     if (_retryCount < settings.playbackRetryLimit) {
       _retryCount++;
-      AppLogger.log('XFLOW: Video playback error. Retrying ($_retryCount/${settings.playbackRetryLimit})... Error: $error');
-      
+      AppLogger.log(
+          'XFLOW: Video playback error. Retrying ($_retryCount/${settings.playbackRetryLimit})... Error: $error');
+
       final pool = ref.read(playerPoolProvider);
       final instance = pool[widget.tweet.id];
       if (instance != null) {
         // Re-open media to retry
-        instance.player.open(Media(widget.tweet.mediaUrls.first), play: widget.isVisible);
+        instance.player
+            .open(Media(widget.tweet.mediaUrls.first), play: widget.isVisible);
       }
     } else {
       AppLogger.log('XFLOW: Video playback failed after retry. Skipping item.');
@@ -111,9 +115,9 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
                     margin: const EdgeInsets.symmetric(horizontal: 3),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: _imageIndex == index 
-                        ? Colors.white 
-                        : Colors.white.withValues(alpha: 0.4),
+                      color: _imageIndex == index
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: 0.4),
                     ),
                   );
                 }),
@@ -133,7 +137,8 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
 
     // Subscribe to events if not already doing so
     _errorSubscription ??= instance.player.stream.error.listen(_handleError);
-    _completedSubscription ??= instance.player.stream.completed.listen((completed) {
+    _completedSubscription ??=
+        instance.player.stream.completed.listen((completed) {
       if (completed) _handleCompleted();
     });
 
@@ -152,11 +157,15 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.error_outline, color: Colors.white70, size: 48),
+                const Icon(Icons.error_outline,
+                    color: Colors.white70, size: 48),
                 const SizedBox(height: 16),
-                const Text('Playback failed. Moving to next...', style: TextStyle(color: Colors.white70)),
+                const Text('Playback failed. Moving to next...',
+                    style: TextStyle(color: Colors.white70)),
                 const SizedBox(height: 8),
-                Text('Error: ${snapshot.data}', style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                Text('Error: ${snapshot.data}',
+                    style:
+                        const TextStyle(color: Colors.white38, fontSize: 12)),
               ],
             ),
           );
@@ -202,7 +211,8 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
               right: 16,
               bottom: 120, // Above the text overlay
               child: IconButton(
-                icon: const Icon(Icons.fullscreen, color: Colors.white, size: 36),
+                icon:
+                    const Icon(Icons.fullscreen, color: Colors.white, size: 36),
                 onPressed: () {
                   // Manually handle orientation before entering fullscreen if needed,
                   // but MaterialVideoControls usually handles it if configured via theme.
@@ -240,11 +250,11 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
       builder: (context, snapshot) {
         final position = snapshot.data ?? Duration.zero;
         final duration = instance.player.state.duration;
-        
+
         if (duration == Duration.zero) return const SizedBox.shrink();
-        
+
         final progress = position.inMilliseconds / duration.inMilliseconds;
-        
+
         return Container(
           height: 2,
           width: double.infinity,
@@ -267,7 +277,8 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
             cacheManager: CustomMediaCacheManager.getInstance(),
             imageUrl: widget.tweet.mediaUrls.first,
             fit: BoxFit.contain,
-            placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
+            placeholder: (context, url) =>
+                const Center(child: CircularProgressIndicator()),
             errorWidget: (context, url, error) => const Icon(Icons.error),
           ),
         ),
@@ -289,7 +300,8 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
               cacheManager: CustomMediaCacheManager.getInstance(),
               imageUrl: widget.tweet.mediaUrls[index],
               fit: BoxFit.contain,
-              placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
+              placeholder: (context, url) =>
+                  const Center(child: CircularProgressIndicator()),
               errorWidget: (context, url, error) => const Icon(Icons.error),
             ),
           ),

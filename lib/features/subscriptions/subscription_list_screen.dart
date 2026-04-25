@@ -40,7 +40,7 @@ class SubscriptionListState {
       final query = searchQuery.toLowerCase();
       filtered = filtered.where((sub) {
         return sub.name.toLowerCase().contains(query) ||
-               sub.screenName.toLowerCase().contains(query);
+            sub.screenName.toLowerCase().contains(query);
       }).toList();
     }
 
@@ -48,13 +48,18 @@ class SubscriptionListState {
 
     switch (sort) {
       case SubscriptionSort.name:
-        filtered.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()) * multiplier);
+        filtered.sort((a, b) =>
+            a.name.toLowerCase().compareTo(b.name.toLowerCase()) * multiplier);
         break;
       case SubscriptionSort.handle:
-        filtered.sort((a, b) => a.screenName.toLowerCase().compareTo(b.screenName.toLowerCase()) * multiplier);
+        filtered.sort((a, b) =>
+            a.screenName.toLowerCase().compareTo(b.screenName.toLowerCase()) *
+            multiplier);
         break;
       case SubscriptionSort.followers:
-        filtered.sort((a, b) => (a.followersCount ?? 0).compareTo(b.followersCount ?? 0) * multiplier);
+        filtered.sort((a, b) =>
+            (a.followersCount ?? 0).compareTo(b.followersCount ?? 0) *
+            multiplier);
         break;
       case SubscriptionSort.views:
         filtered.sort((a, b) {
@@ -98,7 +103,7 @@ class SubscriptionListNotifier extends Notifier<SubscriptionListState> {
       Repository.getSubscriptions(),
       Repository.getPlayedCountsByUser(),
     ]);
-    
+
     state = state.copyWith(
       allSubscriptions: results[0] as List<Subscription>,
       userViews: results[1] as Map<String, int>,
@@ -124,7 +129,8 @@ class SubscriptionListNotifier extends Notifier<SubscriptionListState> {
   }
 }
 
-final subscriptionListProvider = NotifierProvider<SubscriptionListNotifier, SubscriptionListState>(
+final subscriptionListProvider =
+    NotifierProvider<SubscriptionListNotifier, SubscriptionListState>(
   SubscriptionListNotifier.new,
 );
 
@@ -150,13 +156,19 @@ class SubscriptionListScreen extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  state.searchQuery.isEmpty ? 'No subscriptions found.' : 'No results matching "${state.searchQuery}"',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                  state.searchQuery.isEmpty
+                      ? 'No subscriptions found.'
+                      : 'No results matching "${state.searchQuery}"',
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(color: Colors.white70),
                 ),
                 if (account == null) ...[
                   const SizedBox(height: 16),
                   FilledButton.tonal(
-                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (c) => const LoginScreen())),
+                    onPressed: () => Navigator.push(context,
+                        MaterialPageRoute(builder: (c) => const LoginScreen())),
                     child: const Text('Login to X'),
                   ),
                 ],
@@ -169,14 +181,16 @@ class SubscriptionListScreen extends ConsumerWidget {
             itemBuilder: (context, index) {
               final sub = subs[index];
               final views = state.userViews[sub.screenName.toLowerCase()] ?? 0;
-              
+
               return Card(
                 elevation: 0,
                 color: Theme.of(context).colorScheme.surfaceContainerLow,
                 margin: const EdgeInsets.symmetric(vertical: 4),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
                 child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   leading: CircleAvatar(
                     radius: 24,
                     backgroundImage: sub.profileImageUrl != null
@@ -185,7 +199,9 @@ class SubscriptionListScreen extends ConsumerWidget {
                             cacheManager: CustomMediaCacheManager.getInstance(),
                           )
                         : null,
-                    child: sub.profileImageUrl == null ? const Icon(Icons.person, size: 24) : null,
+                    child: sub.profileImageUrl == null
+                        ? const Icon(Icons.person, size: 24)
+                        : null,
                   ),
                   title: Text(
                     sub.name,
@@ -193,18 +209,22 @@ class SubscriptionListScreen extends ConsumerWidget {
                   ),
                   subtitle: Text(
                     '@${sub.screenName}${sub.followersCount != null ? " • ${_formatCount(sub.followersCount!)} followers" : ""}${views > 0 ? " • $views views" : ""}',
-                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
                   ),
                   onTap: () {
                     if (isStandalone) {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => UserDetailsScreen(screenName: sub.screenName),
+                          builder: (context) =>
+                              UserDetailsScreen(screenName: sub.screenName),
                         ),
                       );
                     } else {
-                      ref.read(navigationProvider.notifier).selectUser(sub.screenName);
+                      ref
+                          .read(navigationProvider.notifier)
+                          .selectUser(sub.screenName);
                     }
                   },
                 ),
@@ -214,10 +234,13 @@ class SubscriptionListScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        leading: isStandalone ? null : IconButton(
-          icon: const Icon(Icons.refresh),
-          onPressed: () => ref.read(subscriptionListProvider.notifier).refresh(),
-        ),
+        leading: isStandalone
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: () =>
+                    ref.read(subscriptionListProvider.notifier).refresh(),
+              ),
         title: Text(isStandalone ? 'Subscriptions' : 'My Subscriptions'),
         actions: [
           if (!isStandalone)
@@ -260,8 +283,10 @@ class SubscriptionListScreen extends ConsumerWidget {
             onChanged: notifier.setSearchQuery,
             leading: const Icon(Icons.search),
             elevation: WidgetStateProperty.all(0),
-            backgroundColor: WidgetStateProperty.all(Theme.of(context).colorScheme.surfaceContainerHigh),
-            padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 16)),
+            backgroundColor: WidgetStateProperty.all(
+                Theme.of(context).colorScheme.surfaceContainerHigh),
+            padding: WidgetStateProperty.all(
+                const EdgeInsets.symmetric(horizontal: 16)),
           ),
           const SizedBox(height: 8),
           const SubscriptionSortSettings(),
@@ -285,7 +310,8 @@ class SubscriptionSortSettings extends ConsumerWidget {
         children: [
           Text(
             'Sort by: ',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
           _SortChip(
             label: 'Name',
@@ -347,7 +373,9 @@ class _SortChip extends StatelessWidget {
       onSelected: (_) => onTap(),
       labelStyle: TextStyle(
         fontSize: 12,
-        color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface,
+        color: isSelected
+            ? Theme.of(context).colorScheme.onPrimary
+            : Theme.of(context).colorScheme.onSurface,
       ),
       padding: EdgeInsets.zero,
       visualDensity: VisualDensity.compact,

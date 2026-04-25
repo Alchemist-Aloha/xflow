@@ -32,11 +32,16 @@ class UserDetailsScreen extends ConsumerWidget {
                   icon: const Icon(Icons.arrow_back),
                   onPressed: () => ref.read(navigationProvider.notifier).back(),
                 ),
-                title: Text(profile.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                title: Text(profile.name,
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold)),
                 actions: [
                   IconButton(
-                    icon: Icon(settings.isListView ? Icons.grid_view : Icons.view_list),
-                    onPressed: () => settingsNotifier.toggleListView(!settings.isListView),
+                    icon: Icon(settings.isListView
+                        ? Icons.grid_view
+                        : Icons.view_list),
+                    onPressed: () =>
+                        settingsNotifier.toggleListView(!settings.isListView),
                   ),
                 ],
                 floating: true,
@@ -56,14 +61,18 @@ class UserDetailsScreen extends ConsumerWidget {
                             padding: const EdgeInsets.all(3),
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              border: Border.all(color: Theme.of(context).colorScheme.primary, width: 2),
+                              border: Border.all(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  width: 2),
                             ),
                             child: CircleAvatar(
                               radius: 40,
-                              backgroundImage: profile.profileImageUrlHighRes != null
+                              backgroundImage: profile.profileImageUrlHighRes !=
+                                      null
                                   ? CachedNetworkImageProvider(
                                       profile.profileImageUrlHighRes!,
-                                      cacheManager: CustomMediaCacheManager.getInstance(),
+                                      cacheManager:
+                                          CustomMediaCacheManager.getInstance(),
                                     )
                                   : null,
                               child: profile.profileImageUrlHighRes == null
@@ -78,15 +87,23 @@ class UserDetailsScreen extends ConsumerWidget {
                               children: [
                                 Text(
                                   profile.name,
-                                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .headlineSmall
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                 ),
                                 Text(
                                   '@${profile.screenName}',
-                                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                  ),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyLarge
+                                      ?.copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurfaceVariant,
+                                      ),
                                 ),
                               ],
                             ),
@@ -94,7 +111,8 @@ class UserDetailsScreen extends ConsumerWidget {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      if (profile.description != null && profile.description!.isNotEmpty)
+                      if (profile.description != null &&
+                          profile.description!.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 16.0),
                           child: Text(
@@ -104,9 +122,15 @@ class UserDetailsScreen extends ConsumerWidget {
                         ),
                       Row(
                         children: [
-                          _buildStat(context, '${_formatCount(profile.followingCount ?? 0)}', 'Following'),
+                          _buildStat(
+                              context,
+                              '${_formatCount(profile.followingCount ?? 0)}',
+                              'Following'),
                           const SizedBox(width: 24),
-                          _buildStat(context, '${_formatCount(profile.followersCount ?? 0)}', 'Followers'),
+                          _buildStat(
+                              context,
+                              '${_formatCount(profile.followersCount ?? 0)}',
+                              'Followers'),
                         ],
                       ),
                       const Divider(height: 32),
@@ -152,7 +176,8 @@ class UserDetailsScreen extends ConsumerWidget {
                                 children: [
                                   CircularProgressIndicator(),
                                   SizedBox(height: 16),
-                                  Text('Fetching latest items...', style: TextStyle(color: Colors.white70)),
+                                  Text('Fetching latest items...',
+                                      style: TextStyle(color: Colors.white70)),
                                 ],
                               ),
                             ),
@@ -165,40 +190,62 @@ class UserDetailsScreen extends ConsumerWidget {
                             delegate: SliverChildBuilderDelegate(
                               (context, index) {
                                 if (index == tweets.length - 1) {
-                                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                                    ref.read(userMediaNotifierProvider(screenName).notifier).fetchMore();
+                                  WidgetsBinding.instance
+                                      .addPostFrameCallback((_) {
+                                    ref
+                                        .read(userMediaNotifierProvider(
+                                                screenName)
+                                            .notifier)
+                                        .fetchMore();
                                   });
                                 }
                                 final tweet = tweets[index];
                                 return Card(
                                   elevation: 0,
-                                  color: Theme.of(context).colorScheme.surfaceContainerLow,
-                                  margin: const EdgeInsets.symmetric(vertical: 4),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .surfaceContainerLow,
+                                  margin:
+                                      const EdgeInsets.symmetric(vertical: 4),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12)),
                                   child: ListTile(
                                     key: ValueKey(tweet.id),
                                     leading: ClipRRect(
                                       borderRadius: BorderRadius.circular(8),
-                                      child: tweet.mediaUrls.isNotEmpty 
-                                        ? SizedBox(
-                                            width: 50,
-                                            height: 50,
-                                            child: CachedNetworkImage(
-                                              cacheManager: CustomMediaCacheManager.getInstance(),
-                                              imageUrl: tweet.thumbnailUrl ?? tweet.mediaUrls.first,
-                                              fit: BoxFit.cover,
-                                              memCacheWidth: 150,
-                                              memCacheHeight: 150,
-                                            ),
-                                          )
-                                        : const Icon(Icons.text_fields),
+                                      child: tweet.mediaUrls.isNotEmpty
+                                          ? SizedBox(
+                                              width: 50,
+                                              height: 50,
+                                              child: CachedNetworkImage(
+                                                cacheManager:
+                                                    CustomMediaCacheManager
+                                                        .getInstance(),
+                                                imageUrl: tweet.thumbnailUrl ??
+                                                    tweet.mediaUrls.first,
+                                                fit: BoxFit.cover,
+                                                memCacheWidth: 150,
+                                                memCacheHeight: 150,
+                                              ),
+                                            )
+                                          : const Icon(Icons.text_fields),
                                     ),
-                                    title: Text(tweet.text, maxLines: 2, overflow: TextOverflow.ellipsis),
+                                    title: Text(tweet.text,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis),
                                     subtitle: Text(
                                       _formatDate(tweet.createdAt),
-                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurfaceVariant),
                                     ),
-                                    onTap: () => ref.read(navigationProvider.notifier).openUserMedia(screenName, index),
+                                    onTap: () => ref
+                                        .read(navigationProvider.notifier)
+                                        .openUserMedia(screenName, index),
                                   ),
                                 );
                               },
@@ -210,7 +257,8 @@ class UserDetailsScreen extends ConsumerWidget {
                         SliverPadding(
                           padding: const EdgeInsets.symmetric(horizontal: 4),
                           sliver: SliverGrid(
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: 3,
                               crossAxisSpacing: 4,
                               mainAxisSpacing: 4,
@@ -219,8 +267,13 @@ class UserDetailsScreen extends ConsumerWidget {
                             delegate: SliverChildBuilderDelegate(
                               (context, index) {
                                 if (index == tweets.length - 1) {
-                                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                                    ref.read(userMediaNotifierProvider(screenName).notifier).fetchMore();
+                                  WidgetsBinding.instance
+                                      .addPostFrameCallback((_) {
+                                    ref
+                                        .read(userMediaNotifierProvider(
+                                                screenName)
+                                            .notifier)
+                                        .fetchMore();
                                   });
                                 }
 
@@ -228,11 +281,15 @@ class UserDetailsScreen extends ConsumerWidget {
                                 return GestureDetector(
                                   key: ValueKey(tweet.id),
                                   onTap: () {
-                                    ref.read(navigationProvider.notifier).openUserMedia(screenName, index);
+                                    ref
+                                        .read(navigationProvider.notifier)
+                                        .openUserMedia(screenName, index);
                                   },
                                   child: Container(
                                     decoration: BoxDecoration(
-                                      color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .surfaceContainerHigh,
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     clipBehavior: Clip.antiAlias,
@@ -241,13 +298,20 @@ class UserDetailsScreen extends ConsumerWidget {
                                       children: [
                                         if (tweet.mediaUrls.isNotEmpty)
                                           CachedNetworkImage(
-                                            cacheManager: CustomMediaCacheManager.getInstance(),
-                                            imageUrl: tweet.thumbnailUrl ?? tweet.mediaUrls.first,
+                                            cacheManager:
+                                                CustomMediaCacheManager
+                                                    .getInstance(),
+                                            imageUrl: tweet.thumbnailUrl ??
+                                                tweet.mediaUrls.first,
                                             fit: BoxFit.cover,
                                             memCacheWidth: 300,
                                             memCacheHeight: 300,
-                                            placeholder: (context, url) => Container(color: Colors.black12),
-                                            errorWidget: (context, url, error) => const Icon(Icons.error),
+                                            placeholder: (context, url) =>
+                                                Container(
+                                                    color: Colors.black12),
+                                            errorWidget:
+                                                (context, url, error) =>
+                                                    const Icon(Icons.error),
                                           )
                                         else
                                           Container(
@@ -258,14 +322,20 @@ class UserDetailsScreen extends ConsumerWidget {
                                               maxLines: 4,
                                               overflow: TextOverflow.ellipsis,
                                               textAlign: TextAlign.center,
-                                              style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 10),
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall
+                                                  ?.copyWith(fontSize: 10),
                                             ),
                                           ),
                                         if (tweet.isVideo)
                                           const Positioned(
                                             top: 4,
                                             right: 4,
-                                            child: Icon(Icons.play_circle_outline, color: Colors.white70, size: 20),
+                                            child: Icon(
+                                                Icons.play_circle_outline,
+                                                color: Colors.white70,
+                                                size: 20),
                                           ),
                                       ],
                                     ),
@@ -308,14 +378,14 @@ class UserDetailsScreen extends ConsumerWidget {
         Text(
           value,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+                fontWeight: FontWeight.bold,
+              ),
         ),
         Text(
           label,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
         ),
       ],
     );

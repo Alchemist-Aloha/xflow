@@ -54,13 +54,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 icon: Icons.play_circle_outline,
                 title: 'Playback & Feed',
                 subtitle: 'Sorting, autoplay, and delivery mix',
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => const PlaybackSettingsPage())),
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (c) => const PlaybackSettingsPage())),
               ),
               _SettingsTile(
                 icon: Icons.auto_awesome_outlined,
                 title: 'Discovery & Diversity',
                 subtitle: 'Algorithm tuning and content variety',
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => const DiscoverySettingsPage())),
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (c) => const DiscoverySettingsPage())),
               ),
             ],
           ),
@@ -71,17 +77,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 icon: Icons.sync_outlined,
                 title: 'Background Fetch',
                 subtitle: 'Sync intervals and background crawling',
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => const SyncSettingsPage())),
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (c) => const SyncSettingsPage())),
               ),
               _SettingsTile(
                 icon: Icons.storage_outlined,
                 title: 'Storage & Cache',
-                subtitle: '${_cacheSizeMB.toStringAsFixed(1)} MB used • $_metadataCount items',
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => StorageSettingsPage(
-                  metadataCount: _metadataCount,
-                  cacheSizeMB: _cacheSizeMB,
-                  onRefresh: _loadStats,
-                ))),
+                subtitle:
+                    '${_cacheSizeMB.toStringAsFixed(1)} MB used • $_metadataCount items',
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (c) => StorageSettingsPage(
+                              metadataCount: _metadataCount,
+                              cacheSizeMB: _cacheSizeMB,
+                              onRefresh: _loadStats,
+                            ))),
               ),
             ],
           ),
@@ -92,13 +105,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 icon: Icons.people_outline,
                 title: 'Subscriptions',
                 subtitle: 'Import, export, or clear follow list',
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => const SubscriptionSettingsPage())),
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (c) => const SubscriptionSettingsPage())),
               ),
               _SettingsTile(
                 icon: Icons.search_outlined,
                 title: 'Legacy Fetch',
                 subtitle: 'Advanced subscription crawling parameters',
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => const SearchSettingsPage())),
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (c) => const SearchSettingsPage())),
               ),
             ],
           ),
@@ -109,13 +128,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 icon: Icons.network_check_outlined,
                 title: 'Network & Performance',
                 subtitle: 'Timeouts, retries, and loading thresholds',
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => const NetworkSettingsPage())),
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (c) => const NetworkSettingsPage())),
               ),
               _SettingsTile(
                 icon: Icons.bug_report_outlined,
                 title: 'Diagnostics & Logs',
                 subtitle: 'Debug tools and algorithm safety caps',
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => const DiagnosticSettingsPage())),
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (c) => const DiagnosticSettingsPage())),
               ),
               _SettingsTile(
                 icon: Icons.logout,
@@ -151,16 +176,17 @@ class _SettingsGroup extends StatelessWidget {
           child: Text(
             title,
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.bold,
-            ),
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
           ),
         ),
         Card(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           elevation: 0,
           color: Theme.of(context).colorScheme.surfaceContainerLow,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           child: Column(children: children),
         ),
         const SizedBox(height: 8),
@@ -188,7 +214,8 @@ class _SettingsTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-      leading: Icon(icon, color: titleColor ?? Theme.of(context).colorScheme.onSurfaceVariant),
+      leading: Icon(icon,
+          color: titleColor ?? Theme.of(context).colorScheme.onSurfaceVariant),
       title: Text(
         title,
         style: TextStyle(
@@ -210,12 +237,18 @@ class PlaybackSettingsPage extends ConsumerWidget {
 
   String _getFeedSortLabel(FeedSort sort) {
     switch (sort) {
-      case FeedSort.latest: return 'Subs: Latest';
-      case FeedSort.popular: return 'Subs: Popular';
-      case FeedSort.trending: return 'Subs: Trending';
-      case FeedSort.algorithmic: return 'For You (X)';
-      case FeedSort.chronological: return 'Following (X)';
-      case FeedSort.videomixer: return 'Video Mixer (X)';
+      case FeedSort.latest:
+        return 'Subs: Latest';
+      case FeedSort.popular:
+        return 'Subs: Popular';
+      case FeedSort.trending:
+        return 'Subs: Trending';
+      case FeedSort.algorithmic:
+        return 'For You (X)';
+      case FeedSort.chronological:
+        return 'Following (X)';
+      case FeedSort.videomixer:
+        return 'Video Mixer (X)';
     }
   }
 
@@ -230,14 +263,19 @@ class PlaybackSettingsPage extends ConsumerWidget {
         children: [
           ListTile(
             title: const Text('Content Strategy'),
-            subtitle: Text('Current: ${_getFeedSortLabel(settings.fetchStrategy)}'),
+            subtitle:
+                Text('Current: ${_getFeedSortLabel(settings.fetchStrategy)}'),
             trailing: DropdownButton<FeedSort>(
               value: settings.fetchStrategy,
-              items: FeedSort.values.map((sort) => DropdownMenuItem(
-                value: sort,
-                child: Text(_getFeedSortLabel(sort)),
-              )).toList(),
-              onChanged: (val) => val != null ? notifier.updateDiscoveryParam(fetchStrategy: val) : null,
+              items: FeedSort.values
+                  .map((sort) => DropdownMenuItem(
+                        value: sort,
+                        child: Text(_getFeedSortLabel(sort)),
+                      ))
+                  .toList(),
+              onChanged: (val) => val != null
+                  ? notifier.updateDiscoveryParam(fetchStrategy: val)
+                  : null,
             ),
           ),
           SwitchListTile(
@@ -248,37 +286,47 @@ class PlaybackSettingsPage extends ConsumerWidget {
           ),
           ListTile(
             title: const Text('After Video Ends'),
-            subtitle: Text('Action: ${settings.videoEndAction.name.toUpperCase()}'),
+            subtitle:
+                Text('Action: ${settings.videoEndAction.name.toUpperCase()}'),
             trailing: DropdownButton<VideoEndAction>(
               value: settings.videoEndAction,
-              items: VideoEndAction.values.map((action) => DropdownMenuItem(
-                value: action,
-                child: Text(action.name.toUpperCase()),
-              )).toList(),
-              onChanged: (val) => val != null ? notifier.updateDiscoveryParam(videoEndAction: val) : null,
+              items: VideoEndAction.values
+                  .map((action) => DropdownMenuItem(
+                        value: action,
+                        child: Text(action.name.toUpperCase()),
+                      ))
+                  .toList(),
+              onChanged: (val) => val != null
+                  ? notifier.updateDiscoveryParam(videoEndAction: val)
+                  : null,
             ),
           ),
           _SliderSetting(
             title: 'Video Load Retries',
             subtitle: 'Attempts to play a video if it fails to load',
             value: settings.playbackRetryLimit.toDouble(),
-            min: 0, max: 5,
-            onChanged: (v) => notifier.updateDiscoveryParam(playbackRetryLimit: v.toInt()),
+            min: 0,
+            max: 5,
+            onChanged: (v) =>
+                notifier.updateDiscoveryParam(playbackRetryLimit: v.toInt()),
           ),
           const Divider(),
           const Padding(
             padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Text('Content Filters', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: Text('Content Filters',
+                style: TextStyle(fontWeight: FontWeight.bold)),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Wrap(
               spacing: 8.0,
-              children: MediaFilter.values.map((f) => FilterChip(
-                label: Text(f.name.toUpperCase()),
-                selected: settings.filters.contains(f),
-                onSelected: (_) => notifier.toggleFilter(f),
-              )).toList(),
+              children: MediaFilter.values
+                  .map((f) => FilterChip(
+                        label: Text(f.name.toUpperCase()),
+                        selected: settings.filters.contains(f),
+                        onSelected: (_) => notifier.toggleFilter(f),
+                      ))
+                  .toList(),
             ),
           ),
           const Divider(),
@@ -286,24 +334,31 @@ class PlaybackSettingsPage extends ConsumerWidget {
             title: 'Initial Feed Size',
             subtitle: 'Videos to load immediately when the app starts',
             value: settings.initialSyncCount.toDouble(),
-            min: 1, max: 100,
-            onChanged: (v) => notifier.updateDiscoveryParam(initialSyncCount: v.toInt()),
+            min: 1,
+            max: 100,
+            onChanged: (v) =>
+                notifier.updateDiscoveryParam(initialSyncCount: v.toInt()),
           ),
           _SliderSetting(
             title: 'Scroll Batch Size',
             subtitle: 'New videos to load when reaching the end',
             value: settings.loadBatchSize.toDouble(),
-            min: 5, max: 100,
+            min: 5,
+            max: 100,
             onChanged: (v) => notifier.updateLoadBatchSize(v.toInt()),
           ),
           ListTile(
             title: const Text('New vs. Cached Mix'),
-            subtitle: Text('${(settings.freshMixRatio * 100).toInt()}% Fresh / ${(100 - settings.freshMixRatio * 100).toInt()}% Saved'),
+            subtitle: Text(
+                '${(settings.freshMixRatio * 100).toInt()}% Fresh / ${(100 - settings.freshMixRatio * 100).toInt()}% Saved'),
           ),
           Slider(
             value: settings.freshMixRatio,
-            min: 0.0, max: 1.0, divisions: 10,
-            onChanged: (val) => notifier.updateDiscoveryParam(freshMixRatio: val),
+            min: 0.0,
+            max: 1.0,
+            divisions: 10,
+            onChanged: (val) =>
+                notifier.updateDiscoveryParam(freshMixRatio: val),
           ),
         ],
       ),
@@ -327,56 +382,71 @@ class DiscoverySettingsPage extends ConsumerWidget {
             title: const Text('Avoid Seen Content'),
             subtitle: const Text('Hide videos you have already watched'),
             value: settings.avoidWatchedContent,
-            onChanged: (val) => notifier.updateDiscoveryParam(avoidWatchedContent: val),
+            onChanged: (val) =>
+                notifier.updateDiscoveryParam(avoidWatchedContent: val),
           ),
           SwitchListTile(
             title: const Text('Unseen Creator Boost'),
-            subtitle: const Text('Show more content from creators you rarely see'),
+            subtitle:
+                const Text('Show more content from creators you rarely see'),
             value: settings.unseenSubscriptionBoost,
-            onChanged: (val) => notifier.updateDiscoveryParam(unseenSubscriptionBoost: val),
+            onChanged: (val) =>
+                notifier.updateDiscoveryParam(unseenSubscriptionBoost: val),
           ),
           const Divider(),
           _SliderSetting(
             title: 'Creator Diversity',
             subtitle: 'Max videos from same creator in a row',
             value: settings.saturationThreshold.toDouble(),
-            min: 1, max: 10,
-            onChanged: (v) => notifier.updateDiscoveryParam(saturationThreshold: v.toInt()),
+            min: 1,
+            max: 10,
+            onChanged: (v) =>
+                notifier.updateDiscoveryParam(saturationThreshold: v.toInt()),
           ),
           _SliderSetting(
             title: 'Video Diversity',
             subtitle: 'Max copies of same video in window',
             value: settings.mediaSaturationThreshold.toDouble(),
-            min: 1, max: 5,
-            onChanged: (v) => notifier.updateDiscoveryParam(mediaSaturationThreshold: v.toInt()),
+            min: 1,
+            max: 5,
+            onChanged: (v) => notifier.updateDiscoveryParam(
+                mediaSaturationThreshold: v.toInt()),
           ),
           _SliderSetting(
             title: 'Diversity Window',
             subtitle: 'How far back the algorithm looks to ensure variety',
             value: settings.saturationWindow.toDouble(),
-            min: 5, max: 100,
-            onChanged: (v) => notifier.updateDiscoveryParam(saturationWindow: v.toInt()),
+            min: 5,
+            max: 100,
+            onChanged: (v) =>
+                notifier.updateDiscoveryParam(saturationWindow: v.toInt()),
           ),
           _SliderSetting(
             title: 'Strict Deduplication',
             subtitle: 'Lookback for exact media-key matches',
             value: settings.mediaDeduplicationWindow.toDouble(),
-            min: 10, max: 200,
-            onChanged: (v) => notifier.updateDiscoveryParam(mediaDeduplicationWindow: v.toInt()),
+            min: 10,
+            max: 200,
+            onChanged: (v) => notifier.updateDiscoveryParam(
+                mediaDeduplicationWindow: v.toInt()),
           ),
           _SliderSetting(
             title: 'Discovery Range',
             subtitle: 'Search depth for finding creators to boost',
             value: settings.unseenBoostLookahead.toDouble(),
-            min: 2, max: 50,
-            onChanged: (v) => notifier.updateDiscoveryParam(unseenBoostLookahead: v.toInt()),
+            min: 2,
+            max: 50,
+            onChanged: (v) =>
+                notifier.updateDiscoveryParam(unseenBoostLookahead: v.toInt()),
           ),
           _SliderSetting(
             title: 'Candidate Pool Size',
             subtitle: 'Local search space for building a diverse feed',
             value: settings.dbCandidateMultiplier.toDouble(),
-            min: 1, max: 20,
-            onChanged: (v) => notifier.updateDiscoveryParam(dbCandidateMultiplier: v.toInt()),
+            min: 1,
+            max: 20,
+            onChanged: (v) =>
+                notifier.updateDiscoveryParam(dbCandidateMultiplier: v.toInt()),
           ),
         ],
       ),
@@ -400,21 +470,24 @@ class SyncSettingsPage extends ConsumerWidget {
             title: 'Refresh Frequency (Mins)',
             subtitle: 'How often the app checks for new videos',
             value: settings.syncInterval.toDouble(),
-            min: 1, max: 120,
+            min: 1,
+            max: 120,
             onChanged: (v) => notifier.updateSyncInterval(v.toInt()),
           ),
           _SliderSetting(
             title: 'Refresh Intensity',
             subtitle: 'Accounts to check per refresh session',
             value: settings.syncBatchSize.toDouble(),
-            min: 1, max: 50,
+            min: 1,
+            max: 50,
             onChanged: (v) => notifier.updateSyncBatchSize(v.toInt()),
           ),
           _SliderSetting(
             title: 'Account Cool-off',
             subtitle: 'Wait time before checking the same account again',
             value: settings.cooldownDuration.toDouble(),
-            min: 0, max: 240,
+            min: 0,
+            max: 240,
             onChanged: (v) => notifier.updateCooldownDuration(v.toInt()),
           ),
         ],
@@ -446,17 +519,21 @@ class StorageSettingsPage extends ConsumerWidget {
         children: [
           ListTile(
             title: const Text('Local Media Cache'),
-            subtitle: Text('${cacheSizeMB.toStringAsFixed(1)} MB used / ${settings.mediaCacheSizeMB} MB limit'),
+            subtitle: Text(
+                '${cacheSizeMB.toStringAsFixed(1)} MB used / ${settings.mediaCacheSizeMB} MB limit'),
           ),
           Slider(
             value: settings.mediaCacheSizeMB.toDouble(),
-            min: 100, max: 2000, divisions: 19,
+            min: 100,
+            max: 2000,
+            divisions: 19,
             label: '${settings.mediaCacheSizeMB} MB',
             onChanged: (v) => notifier.updateMediaCacheSize(v.round()),
           ),
           ListTile(
             leading: const Icon(Icons.cleaning_services, color: Colors.orange),
-            title: const Text('Clear Media Cache', style: TextStyle(color: Colors.orange)),
+            title: const Text('Clear Media Cache',
+                style: TextStyle(color: Colors.orange)),
             onTap: () async {
               await CustomMediaCacheManager.clearCache();
               onRefresh();
@@ -467,12 +544,15 @@ class StorageSettingsPage extends ConsumerWidget {
             title: 'Database Record Limit',
             subtitle: 'Max video metadata entries to keep in storage',
             value: settings.pruneThreshold.toDouble(),
-            min: 1000, max: 100000, divisions: 99,
+            min: 1000,
+            max: 100000,
+            divisions: 99,
             onChanged: (v) => notifier.updatePruneThreshold(v.toInt()),
           ),
           ListTile(
             leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
-            title: const Text('Purge Seen Metadata', style: TextStyle(color: Colors.redAccent)),
+            title: const Text('Purge Seen Metadata',
+                style: TextStyle(color: Colors.redAccent)),
             subtitle: const Text('Delete database records for watched videos'),
             onTap: () async {
               await Repository.purgeSeenMetadata();
@@ -498,15 +578,21 @@ class SubscriptionSettingsPage extends ConsumerWidget {
             leading: const Icon(Icons.import_export),
             title: const Text('Import Subscriptions'),
             subtitle: const Text('Sync follows from an existing X account'),
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => const SubscriptionImportScreen())),
+            onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (c) => const SubscriptionImportScreen())),
           ),
           ListTile(
             leading: const Icon(Icons.delete_sweep, color: Colors.orange),
-            title: const Text('Clear All Subscriptions', style: TextStyle(color: Colors.orange)),
+            title: const Text('Clear All Subscriptions',
+                style: TextStyle(color: Colors.orange)),
             onTap: () async {
               await Repository.clearSubscriptions();
               ref.invalidate(feedNotifierProvider);
-              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cleared')));
+              if (context.mounted)
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(const SnackBar(content: Text('Cleared')));
             },
           ),
         ],
@@ -530,36 +616,45 @@ class NetworkSettingsPage extends ConsumerWidget {
           _SliderSetting(
             title: 'Network Timeout (Secs)',
             value: settings.apiTimeoutSeconds.toDouble(),
-            min: 5, max: 60,
-            onChanged: (v) => notifier.updateDiscoveryParam(apiTimeoutSeconds: v.toInt()),
+            min: 5,
+            max: 60,
+            onChanged: (v) =>
+                notifier.updateDiscoveryParam(apiTimeoutSeconds: v.toInt()),
           ),
           _SliderSetting(
             title: 'API Request Size',
             subtitle: 'Target items to request from X per call',
             value: settings.timelineBatchSize.toDouble(),
-            min: 5, max: 200,
+            min: 5,
+            max: 200,
             onChanged: (v) => notifier.updateTimelineBatchSize(v.toInt()),
           ),
           _SliderSetting(
             title: 'Network Retry Limit',
             subtitle: 'Attempts per page if a request fails',
             value: settings.apiRetryLimit.toDouble(),
-            min: 1, max: 10,
-            onChanged: (v) => notifier.updateDiscoveryParam(apiRetryLimit: v.toInt()),
+            min: 1,
+            max: 10,
+            onChanged: (v) =>
+                notifier.updateDiscoveryParam(apiRetryLimit: v.toInt()),
           ),
           _SliderSetting(
             title: 'Pre-load Threshold',
             subtitle: 'Fetch next batch when this many remain in feed',
             value: settings.lazyLoadThreshold.toDouble(),
-            min: 1, max: 50,
-            onChanged: (v) => notifier.updateDiscoveryParam(lazyLoadThreshold: v.toInt()),
+            min: 1,
+            max: 50,
+            onChanged: (v) =>
+                notifier.updateDiscoveryParam(lazyLoadThreshold: v.toInt()),
           ),
           _SliderSetting(
             title: 'Failure Skip Delay',
             subtitle: 'Seconds to wait before skipping broken media',
             value: settings.autoSkipDelaySeconds.toDouble(),
-            min: 1, max: 10,
-            onChanged: (v) => notifier.updateDiscoveryParam(autoSkipDelaySeconds: v.toInt()),
+            min: 1,
+            max: 10,
+            onChanged: (v) =>
+                notifier.updateDiscoveryParam(autoSkipDelaySeconds: v.toInt()),
           ),
         ],
       ),
@@ -583,51 +678,66 @@ class SearchSettingsPage extends ConsumerWidget {
             title: const Text('Strict Subscriptions'),
             subtitle: const Text('Disable trending fallback for empty queries'),
             value: settings.strictSubscriptionsOnly,
-            onChanged: (val) => notifier.updateDiscoveryParam(strictSubscriptionsOnly: val),
+            onChanged: (val) =>
+                notifier.updateDiscoveryParam(strictSubscriptionsOnly: val),
           ),
           SwitchListTile(
             title: const Text('Include Retweets'),
             value: settings.includeNativeRetweets,
-            onChanged: (val) => notifier.updateDiscoveryParam(includeNativeRetweets: val),
+            onChanged: (val) =>
+                notifier.updateDiscoveryParam(includeNativeRetweets: val),
           ),
           SwitchListTile(
             title: const Text('Chunked Crawling'),
             subtitle: const Text('Iterate through follow list in blocks'),
             value: settings.useChunkedSubscriptions,
-            onChanged: (val) => notifier.updateDiscoveryParam(useChunkedSubscriptions: val),
+            onChanged: (val) =>
+                notifier.updateDiscoveryParam(useChunkedSubscriptions: val),
           ),
           _SliderSetting(
             title: 'Chunk Size',
             subtitle: 'Accounts to query per search block',
             value: settings.searchBatchSize.toDouble(),
-            min: 1, max: 50,
-            onChanged: (v) => notifier.updateDiscoveryParam(searchBatchSize: v.toInt()),
+            min: 1,
+            max: 50,
+            onChanged: (v) =>
+                notifier.updateDiscoveryParam(searchBatchSize: v.toInt()),
           ),
           _SliderSetting(
             title: 'Minimum Favorites Filter',
             value: settings.minFavesFilter.toDouble(),
-            min: 0, max: 1000, divisions: 20,
-            onChanged: (v) => notifier.updateDiscoveryParam(minFavesFilter: v.toInt()),
+            min: 0,
+            max: 1000,
+            divisions: 20,
+            onChanged: (v) =>
+                notifier.updateDiscoveryParam(minFavesFilter: v.toInt()),
           ),
           _SliderSetting(
             title: 'Max Search Query Length',
             value: settings.maxQueryLength.toDouble(),
-            min: 100, max: 1000, divisions: 18,
-            onChanged: (v) => notifier.updateDiscoveryParam(maxQueryLength: v.toInt()),
+            min: 100,
+            max: 1000,
+            divisions: 18,
+            onChanged: (v) =>
+                notifier.updateDiscoveryParam(maxQueryLength: v.toInt()),
           ),
           _SliderSetting(
             title: 'Rotation Cycle',
             subtitle: 'Blocks to skip before repeating creators',
             value: settings.chunkRotationLimit.toDouble(),
-            min: 1, max: 10,
-            onChanged: (v) => notifier.updateDiscoveryParam(chunkRotationLimit: v.toInt()),
+            min: 1,
+            max: 10,
+            onChanged: (v) =>
+                notifier.updateDiscoveryParam(chunkRotationLimit: v.toInt()),
           ),
           _SliderSetting(
             title: 'Minimum Yield',
             subtitle: 'New items required before finishing loop',
             value: settings.minNewTweetsThreshold.toDouble(),
-            min: 1, max: 20,
-            onChanged: (v) => notifier.updateDiscoveryParam(minNewTweetsThreshold: v.toInt()),
+            min: 1,
+            max: 20,
+            onChanged: (v) =>
+                notifier.updateDiscoveryParam(minNewTweetsThreshold: v.toInt()),
           ),
         ],
       ),
@@ -657,19 +767,24 @@ class DiagnosticSettingsPage extends ConsumerWidget {
             title: 'Algorithm Safety Cap',
             subtitle: 'Max calculations for diversity logic',
             value: settings.maxSaturationSwaps.toDouble(),
-            min: 100, max: 5000, divisions: 49,
-            onChanged: (v) => notifier.updateDiscoveryParam(maxSaturationSwaps: v.toInt()),
+            min: 100,
+            max: 5000,
+            divisions: 49,
+            onChanged: (v) =>
+                notifier.updateDiscoveryParam(maxSaturationSwaps: v.toInt()),
           ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.terminal),
             title: const Text('View App Logs'),
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => const LogViewerScreen())),
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (c) => const LogViewerScreen())),
           ),
           ListTile(
             leading: const Icon(Icons.history),
             title: const Text('Debug Timeline'),
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => const DebugTimelineScreen())),
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (c) => const DebugTimelineScreen())),
           ),
         ],
       ),

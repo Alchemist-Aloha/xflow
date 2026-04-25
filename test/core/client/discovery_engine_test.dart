@@ -144,13 +144,15 @@ void main() {
     test('applySaturation does not swap items before startIndex', () {
       final tweets = [
         Tweet(id: '1', userHandle: '@A', text: '', mediaUrls: []),
-        Tweet(id: '2', userHandle: '@A', text: '', mediaUrls: []), // Consecutive!
+        Tweet(
+            id: '2', userHandle: '@A', text: '', mediaUrls: []), // Consecutive!
         Tweet(id: '3', userHandle: '@B', text: '', mediaUrls: []),
       ];
 
       // Normally index 1 would be swapped. If we protect index 1, it stays.
-      final result = DiscoveryEngine.applySaturation(tweets, threshold: 1, startIndex: 2);
-      
+      final result =
+          DiscoveryEngine.applySaturation(tweets, threshold: 1, startIndex: 2);
+
       expect(result[0].userHandle, '@A');
       expect(result[1].userHandle, '@A');
       expect(result[2].userHandle, '@B');

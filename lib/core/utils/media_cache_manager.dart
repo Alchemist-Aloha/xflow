@@ -24,7 +24,7 @@ class CustomMediaCacheManager {
   static Future<int> getCacheSize() async {
     try {
       final tempDir = await getTemporaryDirectory();
-      
+
       // flutter_cache_manager typically stores files in a directory named after the key.
       // On some platforms/versions, it might be inside 'libCachedImageData' or 'flutter_cache_manager'.
       final possiblePaths = {
@@ -39,7 +39,8 @@ class CustomMediaCacheManager {
       for (final path in possiblePaths) {
         final dir = Directory(path);
         if (await dir.exists()) {
-          await for (var entity in dir.list(recursive: true, followLinks: false)) {
+          await for (var entity
+              in dir.list(recursive: true, followLinks: false)) {
             if (entity is File && !processedFiles.contains(entity.path)) {
               totalSize += await entity.length();
               processedFiles.add(entity.path);
@@ -69,7 +70,7 @@ class CustomMediaCacheManager {
           await dir.delete(recursive: true);
         }
       }
-      
+
       // Also empty the manager instance
       await getInstance().emptyCache();
     } catch (e) {
@@ -77,4 +78,3 @@ class CustomMediaCacheManager {
     }
   }
 }
-

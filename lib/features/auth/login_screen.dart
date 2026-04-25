@@ -9,7 +9,8 @@ import '../../core/database/entities.dart';
 import '../../core/database/repository.dart';
 import '../../core/client/twitter_client.dart';
 
-const String bearerToken = "Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA";
+const String bearerToken =
+    "Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA";
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -28,37 +29,42 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.initState();
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setUserAgent('Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Mobile Safari/537.3')
+      ..setUserAgent(
+          'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Mobile Safari/537.3')
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageFinished: (url) async {
             if (url == "https://x.com/home") {
               if (_userFound) return;
-              
+
               String screenName = (await _controller.runJavaScriptReturningResult(
-                "document.documentElement.outerHTML.match(/\"screen_name\":\"([^\"]+)\"/)?.[1] ?? '';"
-              )).toString();
-              
+                      "document.documentElement.outerHTML.match(/\"screen_name\":\"([^\"]+)\"/)?.[1] ?? '';"))
+                  .toString();
+
               if (screenName == '' || screenName == 'null') {
-                 return;
+                return;
               }
               screenName = screenName.replaceAll('"', '');
               _userFound = true;
 
-              final cookies = await _cookieManager.getCookies("https://x.com/home");
-              final ct0Cookie = cookies.firstWhere((c) => c.name == 'ct0', orElse: () => throw Exception('ct0 not found'));
-              
+              final cookies =
+                  await _cookieManager.getCookies("https://x.com/home");
+              final ct0Cookie = cookies.firstWhere((c) => c.name == 'ct0',
+                  orElse: () => throw Exception('ct0 not found'));
+
               final authHeader = {
                 "Cookie": cookies
-                  .where((c) => ['guest_id', 'gt', 'att', 'auth_token', 'ct0'].contains(c.name))
-                  .map((c) => '${c.name}=${c.value}')
-                  .join(";"),
+                    .where((c) => ['guest_id', 'gt', 'att', 'auth_token', 'ct0']
+                        .contains(c.name))
+                    .map((c) => '${c.name}=${c.value}')
+                    .join(";"),
                 "authorization": bearerToken,
                 "x-csrf-token": ct0Cookie.value,
               };
 
               // Fetch rest_id using screenName
-              final profileUri = Uri.https('x.com', '/i/api/graphql/oUZZZ8Oddwxs8Cd3iW3UEA/UserByScreenName', {
+              final profileUri = Uri.https('x.com',
+                  '/i/api/graphql/oUZZZ8Oddwxs8Cd3iW3UEA/UserByScreenName', {
                 'variables': jsonEncode({
                   'screen_name': screenName,
                   'withHighlightedLabel': true,
@@ -70,7 +76,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
               final profileRes = await http.get(profileUri, headers: {
                 ...authHeader,
-                'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Mobile Safari/537.3',
+                'User-Agent':
+                    'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Mobile Safari/537.3',
                 'Content-Type': 'application/json',
               });
 

@@ -37,10 +37,11 @@ void main() {
       ];
 
       await Repository.insertCachedMedia(tweets);
-      
+
       // We check directly in DB because getUnplayedCachedMedia uses RANDOM()
       final db = await Repository.database;
-      final results = await db.query(tableCachedMedia, where: "id LIKE 'repo_test_%'");
+      final results =
+          await db.query(tableCachedMedia, where: "id LIKE 'repo_test_%'");
 
       expect(results.length, 2);
       expect(results.any((r) => r['id'] == 'repo_test_1'), true);
@@ -60,20 +61,22 @@ void main() {
       await Repository.markMediaAsPlayed('play_test_unique');
 
       final db = await Repository.database;
-      final result = await db.query(tableCachedMedia, where: 'id = ?', whereArgs: ['play_test_unique']);
+      final result = await db.query(tableCachedMedia,
+          where: 'id = ?', whereArgs: ['play_test_unique']);
       expect(result.first['played_count'], 1);
       expect(result.first['last_played_at'], isNotNull);
     });
 
-    test('pruneCachedMedia removes oldest WATCHED items when limit exceeded', () async {
+    test('pruneCachedMedia removes oldest WATCHED items when limit exceeded',
+        () async {
       final db = await Repository.database;
       await db.delete(tableCachedMedia);
-      
+
       for (int i = 1; i <= 5; i++) {
         await db.insert(tableCachedMedia, {
           'id': 'prune_test_$i',
           'played_count': 1,
-          'last_played_at': i * 1000, 
+          'last_played_at': i * 1000,
           'text': 'Watched $i',
           'media_urls': '[]',
         });
@@ -81,7 +84,8 @@ void main() {
 
       await Repository.pruneCachedMedia(threshold: 3);
 
-      final remaining = await db.query(tableCachedMedia, where: "id LIKE 'prune_test_%'");
+      final remaining =
+          await db.query(tableCachedMedia, where: "id LIKE 'prune_test_%'");
       expect(remaining.length, 3);
       final remainingIds = remaining.map((row) => row['id']).toList();
       expect(remainingIds.contains('prune_test_1'), false);

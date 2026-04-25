@@ -67,8 +67,10 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
         .toSet();
 
     // Initialize seen sets using a sliding window of already visible tweets
-    final dedupeWindow = currentTweets.length > settings.mediaDeduplicationWindow
-        ? currentTweets.sublist(currentTweets.length - settings.mediaDeduplicationWindow)
+    final dedupeWindow = currentTweets.length >
+            settings.mediaDeduplicationWindow
+        ? currentTweets
+            .sublist(currentTweets.length - settings.mediaDeduplicationWindow)
         : currentTweets;
 
     final seenIds = {...headIds, ...dedupeWindow.map((t) => t.id)};
@@ -284,12 +286,14 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
 
     try {
       final seenIds = state.value!.tweets.map((t) => t.id).toSet();
-      
+
       // Use dynamic deduplication window from settings
-      final dedupeWindow = state.value!.tweets.length > settings.mediaDeduplicationWindow
-          ? state.value!.tweets.sublist(state.value!.tweets.length - settings.mediaDeduplicationWindow)
+      final dedupeWindow = state.value!.tweets.length >
+              settings.mediaDeduplicationWindow
+          ? state.value!.tweets.sublist(
+              state.value!.tweets.length - settings.mediaDeduplicationWindow)
           : state.value!.tweets;
-          
+
       final seenMedia = dedupeWindow
           .where((t) => t.mediaUrls.isNotEmpty)
           .map((t) => t.mediaUrls.first)
@@ -301,7 +305,9 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
       int apiRetries = 0;
       int chunkRotations = 0;
 
-      while (allNewTweets.length < settings.minNewTweetsThreshold && apiRetries < settings.apiRetryLimit && chunkRotations < settings.chunkRotationLimit) {
+      while (allNewTweets.length < settings.minNewTweetsThreshold &&
+          apiRetries < settings.apiRetryLimit &&
+          chunkRotations < settings.chunkRotationLimit) {
         // 1. Try to fetch from DB first (refresh pool)
         final dbCandidates = await Repository.getCachedMediaCandidates(
           settings.loadBatchSize * settings.dbCandidateMultiplier,
@@ -310,8 +316,8 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
         );
 
         var localNew = dbCandidates.where((t) {
-          return !seenIds.contains(t.id) && 
-                 (t.mediaUrls.isEmpty || !seenMedia.contains(t.mediaUrls.first));
+          return !seenIds.contains(t.id) &&
+              (t.mediaUrls.isEmpty || !seenMedia.contains(t.mediaUrls.first));
         }).toList();
 
         if (localNew.isNotEmpty) {
@@ -360,8 +366,8 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
         }
 
         final freshUnique = response.tweets.where((t) {
-          return !seenIds.contains(t.id) && 
-                 (t.mediaUrls.isEmpty || !seenMedia.contains(t.mediaUrls.first));
+          return !seenIds.contains(t.id) &&
+              (t.mediaUrls.isEmpty || !seenMedia.contains(t.mediaUrls.first));
         }).toList();
 
         if (response.tweets.isNotEmpty) {
@@ -372,13 +378,14 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
         apiRetries++;
 
         // Handle Pagination vs Rotation
-        if (response.cursorBottom != null && 
-            response.cursorBottom != currentCursor && 
+        if (response.cursorBottom != null &&
+            response.cursorBottom != currentCursor &&
             !seenCursors.contains(response.cursorBottom!)) {
           currentCursor = response.cursorBottom;
         } else {
           // Chunk exhausted or stuck cursor
-          AppLogger.log('XFLOW: Chunk exhausted or stuck cursor. Rotating to next subscription chunk.');
+          AppLogger.log(
+              'XFLOW: Chunk exhausted or stuck cursor. Rotating to next subscription chunk.');
           currentCursor = null;
           chunkRotations++;
           await Future.delayed(const Duration(milliseconds: 300));
@@ -420,10 +427,57 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
         cursorBottom: currentCursor,
         isLoadingMore: false,
       ));
-      debugPrint('XFLOW: fetchMore complete. Added ${finalNewTweets.length} tweets. Total: ${combined.length}');
+      debugPrint(
+          'XFLOW: fetchMore complete. Added ${finalNewTweets.length} tweets. Total: ${combined.length}');
     } catch (e, st) {
       debugPrint('Error fetching more: $e\n$st');
       state = AsyncData(state.value!.copyWith(isLoadingMore: false));
+    }
+  }
+
+  Future<void> toggleLike(String tweetId) async {
+    final currentState = state.value;
+    if (currentState == null) return;
+
+    final tweetIndex = currentState.tweets.indexWhere((t) => t.id == tweetId);
+    if (tweetIndex == -1) return;
+
+    final tweet = currentState.tweets[tweetIndex];
+    final newIsLiked = !tweet.isLiked;
+    final newFavoriteCount = tweet.favoriteCount + (newIsLiked ? 1 : -1);
+
+    // Optimistic UI Update
+    final updatedTweet = tweet.copyWith(
+      isLiked: newIsLiked,
+      favoriteCount: newFavoriteCount >= 0 ? newFavoriteCount : 0,
+    );
+
+    final updatedTweets = List<Tweet>.from(currentState.tweets);
+    updatedTweets[tweetIndex] = updatedTweet;
+    state = AsyncData(currentState.copyWith(tweets: updatedTweets));
+
+    // API Call
+    final client = ref.read(twitterClientProvider);
+    final success = newIsLiked
+        ? await client.favoriteTweet(tweetId)
+        : await client.unfavoriteTweet(tweetId);
+
+    if (!success) {
+      // Revert on failure
+      final currentAsync = ref.read(feedNotifierProvider);
+      if (currentAsync.hasValue) {
+        final latestState = currentAsync.value!;
+        final idx = latestState.tweets.indexWhere((t) => t.id == tweetId);
+        if (idx != -1) {
+          final revertedTweets = List<Tweet>.from(latestState.tweets);
+          revertedTweets[idx] = tweet; // original tweet
+          state = AsyncData(latestState.copyWith(tweets: revertedTweets));
+        }
+      }
+      AppLogger.log('XFLOW: Failed to toggle like for $tweetId, reverted.');
+    } else {
+      AppLogger.log(
+          'XFLOW: Successfully toggled like for $tweetId to $newIsLiked');
     }
   }
 }

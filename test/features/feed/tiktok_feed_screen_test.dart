@@ -18,7 +18,8 @@ void main() {
   databaseFactory = databaseFactoryFfi;
 
   group('TiktokFeedScreen Widget Tests', () {
-    testWidgets('renders feed items from mock provider', (WidgetTester tester) async {
+    testWidgets('renders feed items from mock provider',
+        (WidgetTester tester) async {
       final mockTweets = [
         Tweet(
           id: '1',
@@ -34,7 +35,8 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            feedNotifierProvider.overrideWith(() => MockFeedNotifier(mockState)),
+            feedNotifierProvider
+                .overrideWith(() => MockFeedNotifier(mockState)),
             playerPoolProvider.overrideWith(() => MockPlayerPool()),
           ],
           child: const MaterialApp(

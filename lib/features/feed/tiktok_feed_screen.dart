@@ -49,13 +49,14 @@ class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
       final feedAsync = ref.read(feedNotifierProvider);
       if (feedAsync.hasValue) {
         final tweets = feedAsync.value!.tweets;
-        
+
         if (page < tweets.length) {
           Repository.markMediaAsPlayed(tweets[page].id);
         }
 
         final settings = ref.read(settingsProvider);
-        if (page >= tweets.length - settings.lazyLoadThreshold && !feedAsync.value!.isRefreshing) {
+        if (page >= tweets.length - settings.lazyLoadThreshold &&
+            !feedAsync.value!.isRefreshing) {
           ref.read(feedNotifierProvider.notifier).fetchMore();
         }
       }
@@ -76,7 +77,7 @@ class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
         if (i >= 0 && i < tweets.length) {
           final tweet = tweets[i];
           activeIds.add(tweet.id);
-          
+
           if (tweet.isVideo && tweet.mediaUrls.isNotEmpty) {
             pool.warmup(tweet.id, tweet.mediaUrls.first);
           } else if (tweet.mediaUrls.isNotEmpty) {
@@ -143,7 +144,8 @@ class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
   Widget _buildMediaFeed() {
     final feedAsync = ref.watch(feedNotifierProvider);
     final nav = ref.watch(navigationProvider);
-    final isScreenActive = nav.selectedUser == null && nav.currentTab == MainTab.media;
+    final isScreenActive =
+        nav.selectedUser == null && nav.currentTab == MainTab.media;
 
     return feedAsync.when(
       data: (state) {
@@ -156,7 +158,8 @@ class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
                 children: [
                   CircularProgressIndicator(),
                   SizedBox(height: 16),
-                  Text('Fetching latest media...', style: TextStyle(color: Colors.white70)),
+                  Text('Fetching latest media...',
+                      style: TextStyle(color: Colors.white70)),
                 ],
               ),
             );
@@ -177,7 +180,8 @@ class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
                   isVisible: index == _currentIndex && isScreenActive,
                   onPlaybackError: () {
                     if (index == _currentIndex && mounted) {
-                      Future.delayed(Duration(seconds: settings.autoSkipDelaySeconds), () {
+                      Future.delayed(
+                          Duration(seconds: settings.autoSkipDelaySeconds), () {
                         if (mounted && _currentIndex == index) {
                           _pageController.nextPage(
                             duration: const Duration(milliseconds: 300),
@@ -213,7 +217,8 @@ class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('No media found.', style: TextStyle(color: Colors.white70)),
+          const Text('No media found.',
+              style: TextStyle(color: Colors.white70)),
           const SizedBox(height: 16),
           FilledButton.tonal(
             onPressed: () => _goToLogin(),
@@ -229,7 +234,9 @@ class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('Error: $e', style: const TextStyle(color: Colors.white70), textAlign: TextAlign.center),
+          Text('Error: $e',
+              style: const TextStyle(color: Colors.white70),
+              textAlign: TextAlign.center),
           const SizedBox(height: 16),
           FilledButton.tonal(
             onPressed: () => _goToLogin(),
@@ -280,8 +287,7 @@ class TiktokFeedItem extends ConsumerWidget {
             overlay: TweetTextOverlay(tweet: tweet),
             onPlaybackError: onPlaybackError,
           ),
-          if (settings.showDebugInfo)
-            DiscoveryDebugOverlay(tweet: tweet),
+          if (settings.showDebugInfo) DiscoveryDebugOverlay(tweet: tweet),
         ],
       ),
     );
@@ -322,7 +328,15 @@ class DiscoveryDebugOverlay extends StatelessWidget {
                   _debugLine('SEEN', '${stats.$1} times'),
                   _debugLine('ACCT_SEEN', '${stats.$2} times'),
                   if (tweet.createdAt != null)
-                    _debugLine('TS', tweet.createdAt!.toLocal().toString().split(' ').last.split('.').first),
+                    _debugLine(
+                        'TS',
+                        tweet.createdAt!
+                            .toLocal()
+                            .toString()
+                            .split(' ')
+                            .last
+                            .split('.')
+                            .first),
                 ],
               ),
             ),

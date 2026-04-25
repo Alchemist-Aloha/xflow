@@ -8,7 +8,8 @@ class SubscriptionImportScreen extends StatefulWidget {
   const SubscriptionImportScreen({super.key});
 
   @override
-  State<SubscriptionImportScreen> createState() => _SubscriptionImportScreenState();
+  State<SubscriptionImportScreen> createState() =>
+      _SubscriptionImportScreenState();
 }
 
 class _SubscriptionImportScreenState extends State<SubscriptionImportScreen> {
@@ -32,7 +33,7 @@ class _SubscriptionImportScreenState extends State<SubscriptionImportScreen> {
     try {
       _streamController?.add(0);
       final client = TwitterClient();
-      
+
       final user = await client.fetchProfile(_fromScreenName!);
       if (user == null) {
         throw Exception('User not found');
@@ -45,7 +46,7 @@ class _SubscriptionImportScreenState extends State<SubscriptionImportScreen> {
       } else {
         _streamController?.add(0);
       }
-      
+
       _streamController?.close();
     } catch (e, stackTrace) {
       debugPrint('Import error: $e\n$stackTrace');
@@ -81,23 +82,29 @@ class _SubscriptionImportScreenState extends State<SubscriptionImportScreen> {
               Card(
                 elevation: 0,
                 color: Theme.of(context).colorScheme.surfaceContainerLow,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24)),
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
                   child: Column(
                     children: [
-                      const Icon(Icons.import_export, size: 48, color: Colors.blue),
+                      const Icon(Icons.import_export,
+                          size: 48, color: Colors.blue),
                       const SizedBox(height: 16),
                       Text(
                         'Enter a username to sync their following list into your XFlow subscriptions.',
                         textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant),
                       ),
                       const SizedBox(height: 24),
                       TextFormField(
                         decoration: InputDecoration(
                           filled: true,
-                          fillColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+                          fillColor: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHigh,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
                             borderSide: BorderSide.none,
@@ -107,7 +114,10 @@ class _SubscriptionImportScreenState extends State<SubscriptionImportScreen> {
                           labelText: 'Username',
                         ),
                         maxLength: 15,
-                        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^[a-zA-Z0-9_]+'))],
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(
+                              RegExp(r'^[a-zA-Z0-9_]+'))
+                        ],
                         onChanged: (value) {
                           setState(() {
                             _fromScreenName = value;
@@ -119,13 +129,19 @@ class _SubscriptionImportScreenState extends State<SubscriptionImportScreen> {
                         width: double.infinity,
                         child: FilledButton.icon(
                           onPressed: _isImporting ? null : _importSubscriptions,
-                          icon: _isImporting 
-                            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                            : const Icon(Icons.cloud_download),
-                          label: Text(_isImporting ? 'Importing...' : 'Start Import'),
+                          icon: _isImporting
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: Colors.white))
+                              : const Icon(Icons.cloud_download),
+                          label: Text(
+                              _isImporting ? 'Importing...' : 'Start Import'),
                           style: FilledButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16)),
                           ),
                         ),
                       ),
@@ -203,11 +219,17 @@ class _StatusCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (isSpinning)
-              const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+              const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2))
             else
               Icon(icon, color: color, size: 24),
             const SizedBox(width: 16),
-            Flexible(child: Text(message, style: TextStyle(color: color, fontWeight: FontWeight.w500))),
+            Flexible(
+                child: Text(message,
+                    style:
+                        TextStyle(color: color, fontWeight: FontWeight.w500))),
           ],
         ),
       ),

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/models/tweet.dart';
 import '../../../core/navigation/navigation_provider.dart';
 import '../../../core/utils/app_logger.dart';
+import '../feed_provider.dart';
 
 class TweetTextOverlay extends ConsumerStatefulWidget {
   final Tweet tweet;
@@ -20,36 +21,89 @@ class _TweetTextOverlayState extends ConsumerState<TweetTextOverlay> {
 
   @override
   Widget build(BuildContext context) {
-    return Positioned(
-      bottom: 0,
-      left: 0,
-      right: 0,
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.transparent,
-              Colors.black.withValues(alpha: 0.3),
-              Colors.black.withValues(alpha: 0.7),
-              Colors.black.withValues(alpha: 0.9),
-            ],
-            stops: const [0.0, 0.4, 0.7, 1.0],
+    return Stack(
+      children: [
+        // Action Buttons (Right Side)
+        Positioned(
+          right: 8,
+          bottom: 100,
+          child: _buildActionButtons(),
+        ),
+        // Text Overlay (Bottom)
+        Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.transparent,
+                  Colors.black.withValues(alpha: 0.3),
+                  Colors.black.withValues(alpha: 0.7),
+                  Colors.black.withValues(alpha: 0.9),
+                ],
+                stops: const [0.0, 0.4, 0.7, 1.0],
+              ),
+            ),
+            padding: const EdgeInsets.fromLTRB(16, 80, 80, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildUserHeader(context),
+                const SizedBox(height: 12),
+                _buildTweetText(),
+              ],
+            ),
           ),
         ),
-        padding: const EdgeInsets.fromLTRB(16, 80, 16, 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildUserHeader(context),
-            const SizedBox(height: 12),
-            _buildTweetText(),
-          ],
-        ),
-      ),
+      ],
     );
+  }
+
+  Widget _buildActionButtons() {
+    return Column(
+      children: [
+        _ActionButton(
+          icon: widget.tweet.isLiked ? Icons.favorite : Icons.favorite_border,
+          color: widget.tweet.isLiked ? Colors.red : Colors.white,
+          label: _formatCount(widget.tweet.favoriteCount),
+          onTap: () {
+            ref.read(feedNotifierProvider.notifier).toggleLike(widget.tweet.id);
+          },
+        ),
+        const SizedBox(height: 20),
+        _ActionButton(
+          icon: Icons.chat_bubble_outline,
+          color: Colors.white,
+          label: _formatCount(widget.tweet.replyCount),
+          onTap: () {
+            ref.read(navigationProvider.notifier).selectTweet(widget.tweet);
+          },
+        ),
+        const SizedBox(height: 20),
+        _ActionButton(
+          icon: Icons.share_outlined,
+          color: Colors.white,
+          label: "Share",
+          onTap: () {
+            // TODO: Implement share
+          },
+        ),
+      ],
+    );
+  }
+
+  String _formatCount(int count) {
+    if (count >= 1000000) {
+      return '${(count / 1000000).toStringAsFixed(1)}M';
+    } else if (count >= 1000) {
+      return '${(count / 1000).toStringAsFixed(1)}K';
+    }
+    return count.toString();
   }
 
   Widget _buildUserHeader(BuildContext context) {
@@ -62,8 +116,6 @@ class _TweetTextOverlayState extends ConsumerState<TweetTextOverlay> {
         AppLogger.log('XFLOW: Error formatting date: $e');
         dateStr = " • ERR";
       }
-    } else {
-      AppLogger.log('XFLOW: createdAt is NULL for tweet ${widget.tweet.id}');
     }
 
     return GestureDetector(
@@ -95,7 +147,10 @@ class _TweetTextOverlayState extends ConsumerState<TweetTextOverlay> {
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                     shadows: [
-                      Shadow(offset: Offset(0, 1), blurRadius: 2, color: Colors.black54),
+                      Shadow(
+                          offset: Offset(0, 1),
+                          blurRadius: 2,
+                          color: Colors.black54),
                     ],
                   ),
                   overflow: TextOverflow.ellipsis,
@@ -107,7 +162,10 @@ class _TweetTextOverlayState extends ConsumerState<TweetTextOverlay> {
                       color: Colors.white70,
                       fontSize: 12,
                       shadows: [
-                        Shadow(offset: Offset(0, 1), blurRadius: 2, color: Colors.black54),
+                        Shadow(
+                            offset: Offset(0, 1),
+                            blurRadius: 2,
+                            color: Colors.black54),
                       ],
                     ),
                   ),
@@ -120,6 +178,54 @@ class _TweetTextOverlayState extends ConsumerState<TweetTextOverlay> {
   }
 
   Widget _buildTweetText() {
+    final text = widget.tweet.text;
+    final List<InlineSpan> spans = [];
+
+    // Simple hashtag and mention parsing
+    final words = text.split(RegExp(r'(\s+)'));
+    for (final word in words) {
+      if (word.startsWith('#') && word.length > 1) {
+        spans.add(
+          WidgetSpan(
+            child: GestureDetector(
+              onTap: () {
+                ref.read(navigationProvider.notifier).selectHashtag(word);
+              },
+              child: Text(
+                word,
+                style: const TextStyle(
+                  color: Colors.lightBlueAccent,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
+              ),
+            ),
+          ),
+        );
+      } else if (word.startsWith('@') && word.length > 1) {
+        spans.add(
+          WidgetSpan(
+            child: GestureDetector(
+              onTap: () {
+                final handle = word.replaceFirst('@', '');
+                ref.read(navigationProvider.notifier).selectUser(handle);
+              },
+              child: Text(
+                word,
+                style: const TextStyle(
+                  color: Colors.lightBlueAccent,
+                  fontWeight: FontWeight.w500,
+                  fontSize: 15,
+                ),
+              ),
+            ),
+          ),
+        );
+      } else {
+        spans.add(TextSpan(text: word));
+      }
+    }
+
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -129,18 +235,22 @@ class _TweetTextOverlayState extends ConsumerState<TweetTextOverlay> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            widget.tweet.text,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 15,
-              height: 1.4,
-              shadows: [
-                Shadow(offset: Offset(0, 1), blurRadius: 2, color: Colors.black),
-              ],
+          RichText(
+            text: TextSpan(
+              children: spans,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                height: 1.4,
+                shadows: [
+                  Shadow(
+                      offset: Offset(0, 1), blurRadius: 2, color: Colors.black),
+                ],
+              ),
             ),
             maxLines: _isExpanded ? null : 3,
-            overflow: _isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+            overflow:
+                _isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
           ),
           if (!_isExpanded && widget.tweet.text.length > 100)
             const Padding(
@@ -154,6 +264,47 @@ class _TweetTextOverlayState extends ConsumerState<TweetTextOverlay> {
                 ),
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String label;
+  final VoidCallback onTap;
+
+  const _ActionButton({
+    required this.icon,
+    required this.color,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 35, shadows: const [
+            Shadow(offset: Offset(0, 1), blurRadius: 4, color: Colors.black54),
+          ]),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              shadows: [
+                Shadow(
+                    offset: Offset(0, 1), blurRadius: 2, color: Colors.black54),
+              ],
+            ),
+          ),
         ],
       ),
     );

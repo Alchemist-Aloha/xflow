@@ -30,19 +30,20 @@ void main() {
         'user_d': 10,
       };
 
-      final saturated = DiscoveryEngine.applySaturation(tweets, threshold: 1, windowSize: 2);
+      final saturated =
+          DiscoveryEngine.applySaturation(tweets, threshold: 1, windowSize: 2);
       final boosted = DiscoveryEngine.applyUnseenSubscriptionBoost(
-        saturated, 
-        playedCounts,
-        lookahead: 5
-      );
+          saturated, playedCounts,
+          lookahead: 5);
 
       bool hasConsecutive = false;
-      for(int i=0; i<boosted.length-1; i++) {
-        if(boosted[i].userHandle == boosted[i+1].userHandle) hasConsecutive = true;
+      for (int i = 0; i < boosted.length - 1; i++) {
+        if (boosted[i].userHandle == boosted[i + 1].userHandle)
+          hasConsecutive = true;
       }
-      
-      expect(hasConsecutive, isFalse, reason: 'Boost re-introduced consecutive handles');
+
+      expect(hasConsecutive, isFalse,
+          reason: 'Boost re-introduced consecutive handles');
     });
 
     test('Weakness: applySaturation fallback ignores window threshold', () {
@@ -60,18 +61,21 @@ void main() {
         createTweet('9', 'user_g'),
       ];
 
-      final result = DiscoveryEngine.applySaturation(tweets, threshold: 1, windowSize: 2);
-      
+      final result =
+          DiscoveryEngine.applySaturation(tweets, threshold: 1, windowSize: 2);
+
       print('Result handles: ${result.map((t) => t.userHandle).toList()}');
-      
+
       bool hasConsecutive = false;
-      for(int i=0; i<result.length-1; i++) {
-        if(result[i].userHandle == result[i+1].userHandle) hasConsecutive = true;
+      for (int i = 0; i < result.length - 1; i++) {
+        if (result[i].userHandle == result[i + 1].userHandle)
+          hasConsecutive = true;
       }
-      expect(hasConsecutive, isFalse, reason: 'Saturation left consecutive handles');
-      
+      expect(hasConsecutive, isFalse,
+          reason: 'Saturation left consecutive handles');
+
       // Check if threshold is met for 'user_a'
-      for (int i=0; i<result.length; i++) {
+      for (int i = 0; i < result.length; i++) {
         if (result[i].userHandle == 'user_a') {
           final start = (i - 2).clamp(0, result.length);
           final window = result.sublist(start, i);

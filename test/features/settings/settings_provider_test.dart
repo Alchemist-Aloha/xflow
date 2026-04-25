@@ -17,15 +17,15 @@ void main() {
 
     test('initializes with values from SharedPreferences', () async {
       final container = ProviderContainer();
-      
+
       // Riverpod Notifiers initialize lazily. Read it once to trigger build.
       container.read(settingsProvider);
-      
+
       // Give it a moment to complete _init()
       await Future.delayed(const Duration(milliseconds: 100));
 
       final state = container.read(settingsProvider);
-      
+
       expect(state.loadBatchSize, 30);
       expect(state.syncInterval, 10);
       expect(state.cooldownDuration, 5);
@@ -36,10 +36,10 @@ void main() {
       final container = ProviderContainer();
       container.read(settingsProvider);
       await Future.delayed(const Duration(milliseconds: 100));
-      
+
       final notifier = container.read(settingsProvider.notifier);
       notifier.updateLoadBatchSize(50);
-      
+
       final state = container.read(settingsProvider);
       expect(state.loadBatchSize, 50);
 

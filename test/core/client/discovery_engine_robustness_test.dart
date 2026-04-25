@@ -26,8 +26,9 @@ void main() {
       // With threshold 1, window 5:
       // Index 1 (vid_1) should be swapped away.
       // Index 2 (user_a) should be swapped away.
-      final result = DiscoveryEngine.applySaturation(tweets, threshold: 1, windowSize: 5);
-      
+      final result =
+          DiscoveryEngine.applySaturation(tweets, threshold: 1, windowSize: 5);
+
       print('Handles: ${result.map((t) => t.userHandle).toList()}');
       print('Media: ${result.map((t) => t.mediaUrls.first).toList()}');
 
@@ -35,7 +36,7 @@ void main() {
       final window = result.sublist(0, 3);
       final handles = window.map((t) => t.userHandle).toSet();
       final media = window.map((t) => t.mediaUrls.first).toSet();
-      
+
       expect(handles.length, equals(3), reason: 'Handle duplicate in window');
       expect(media.length, equals(3), reason: 'Media duplicate in window');
     });
@@ -51,7 +52,8 @@ void main() {
         createTweet('5', 'user_c'),
       ];
 
-      final result = DiscoveryEngine.applySaturation(tweets, threshold: 1, windowSize: 10);
+      final result =
+          DiscoveryEngine.applySaturation(tweets, threshold: 1, windowSize: 10);
       print('Final handles: ${result.map((t) => t.userHandle).toList()}');
 
       // Index 1 and 2 should no longer be user_a

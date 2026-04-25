@@ -26,6 +26,12 @@ class TwitterClient {
       '/graphql/oUZZZ8Oddwxs8Cd3iW3UEA/UserByScreenName';
   static const String graphqlUserTweetsUriPath =
       '/graphql/rIIwMe1ObkGh_ByBtTCtRQ/UserTweets';
+  static const String graphqlFavoriteTweetUriPath =
+      '/graphql/lI07N6Otwv1PhnEgXILM7A/FavoriteTweet';
+  static const String graphqlUnfavoriteTweetUriPath =
+      '/graphql/ZYKSe-w7KEslx3JhSIk5LA/UnfavoriteTweet';
+  static const String graphqlTweetDetailUriPath =
+      '/graphql/tCivIG3o9ls-9cLxTsdxZQ/TweetDetail';
 
   // Rate limiting prevention
   static bool _isRequestInProgress = false;
@@ -156,40 +162,120 @@ class TwitterClient {
 
   static const Map<String, dynamic> followingFeatures = defaultFeatures;
 
+  static const String graphqlUserByScreenNameNewUriPath =
+      '/graphql/IGgvgiOx4QZndDHuD3x9TQ/UserByScreenName';
+
+  static const Map<String, dynamic> newProfileFeatures = {
+    'hidden_profile_subscriptions_enabled': true,
+    'profile_label_improvements_pcf_label_in_post_enabled': true,
+    'responsive_web_profile_redirect_enabled': false,
+    'rweb_tipjar_consumption_enabled': false,
+    'verified_phone_label_enabled': false,
+    'subscriptions_verification_info_is_identity_verified_enabled': true,
+    'subscriptions_verification_info_verified_since_enabled': true,
+    'highlights_tweets_tab_ui_enabled': true,
+    'responsive_web_twitter_article_notes_tab_enabled': true,
+    'subscriptions_feature_can_gift_premium': true,
+    'creator_subscriptions_tweet_preview_api_enabled': true,
+    'responsive_web_graphql_skip_user_profile_image_extensions_enabled': false,
+    'responsive_web_graphql_timeline_navigation_enabled': true,
+  };
+
+  static const Map<String, dynamic> newProfileFieldToggles = {
+    'withPayments': true,
+    'withAuxiliaryUserLabels': true,
+  };
+
   Future<Subscription?> fetchProfile(String screenName) async {
     if (screenName.startsWith('@')) screenName = screenName.substring(1);
 
-    final uri = Uri.https(
-        'x.com', '/i/api/graphql/oUZZZ8Oddwxs8Cd3iW3UEA/UserByScreenName', {
-      'variables': jsonEncode({
-        'screen_name': screenName,
-        'withHighlightedLabel': true,
-        'withSafetyModeUserFields': true,
-        'withSuperFollowsUserFields': true
-      }),
-      'features': jsonEncode(defaultFeatures)
-    });
-
+    // 1. Attempt using the NEW query ID (IGgvgiOx4QZndDHuD3x9TQ)
     try {
-      final response = await TwitterAccount.fetch(uri);
-      if (response.statusCode != 200) return null;
+      AppLogger.log(
+          'Attempting to fetch profile using new query ID (IGgvgiOx4QZndDHuD3x9TQ) for @$screenName');
+      final newUri =
+          Uri.https('x.com', '/i/api$graphqlUserByScreenNameNewUriPath', {
+        'variables': jsonEncode({
+          'screen_name': screenName,
+          'withHighlightedLabel': true,
+          'withSafetyModeUserFields': true,
+          'withSuperFollowsUserFields': true
+        }),
+        'features': jsonEncode({...defaultFeatures, ...newProfileFeatures}),
+        'fieldToggles': jsonEncode(newProfileFieldToggles),
+      });
+
+      final response = await TwitterAccount.fetch(newUri);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final userRes = data['data']?['user']?['result'];
+        if (userRes != null) {
+          final legacy = userRes['legacy'];
+          AppLogger.log(
+              'Successfully fetched profile using NEW query for @$screenName');
+          return Subscription(
+            id: userRes['rest_id'],
+            screenName: legacy?['screen_name'] ?? screenName,
+            name: legacy?['name'] ?? screenName,
+            profileImageUrl: userRes['avatar']?['image_url'] ??
+                legacy?['profile_image_url_https'],
+            description: legacy?['description'],
+            followersCount: legacy?['followers_count'],
+            followingCount: legacy?['friends_count'],
+          );
+        }
+      }
+      AppLogger.log(
+          'New query returned status ${response.statusCode} or empty data. Attempting fallback...');
+    } catch (e) {
+      AppLogger.log(
+          'New query failed for @$screenName: $e. Attempting fallback...');
+    }
+
+    // 2. Fallback to the OLD query ID (oUZZZ8Oddwxs8Cd3iW3UEA)
+    try {
+      AppLogger.log(
+          'Attempting fallback fetch using old query ID (oUZZZ8Oddwxs8Cd3iW3UEA) for @$screenName');
+      final oldUri = Uri.https(
+          'x.com', '/i/api/graphql/oUZZZ8Oddwxs8Cd3iW3UEA/UserByScreenName', {
+        'variables': jsonEncode({
+          'screen_name': screenName,
+          'withHighlightedLabel': true,
+          'withSafetyModeUserFields': true,
+          'withSuperFollowsUserFields': true
+        }),
+        'features': jsonEncode(defaultFeatures)
+      });
+
+      final response = await TwitterAccount.fetch(oldUri);
+      if (response.statusCode != 200) {
+        AppLogger.log(
+            'Fallback query also failed with status ${response.statusCode}');
+        return null;
+      }
 
       final data = json.decode(response.body);
       final userRes = data['data']?['user']?['result'];
-      if (userRes == null) return null;
+      if (userRes == null) {
+        AppLogger.log('Fallback query returned status 200 but no user result');
+        return null;
+      }
 
       final legacy = userRes['legacy'];
+      AppLogger.log(
+          'Successfully fetched profile using FALLBACK query for @$screenName');
       return Subscription(
         id: userRes['rest_id'],
         screenName: legacy?['screen_name'] ?? screenName,
         name: legacy?['name'] ?? screenName,
-        profileImageUrl: legacy?['profile_image_url_https'],
+        profileImageUrl: userRes['avatar']?['image_url'] ??
+            legacy?['profile_image_url_https'],
         description: legacy?['description'],
         followersCount: legacy?['followers_count'],
         followingCount: legacy?['friends_count'],
       );
     } catch (e) {
-      AppLogger.log('Error fetching profile: $e');
+      AppLogger.log('Error in fallback profile fetch: $e');
       return null;
     }
   }
@@ -557,7 +643,12 @@ class TwitterClient {
   }
 
   Future<TweetResponse> fetchUserTimeline(String userId,
-      {String? cursor, int cooldownMinutes = 15, int count = 20, int timeoutSeconds = 15}) async {
+      {String? cursor,
+      int cooldownMinutes = 15,
+      int count = 20,
+      int timeoutSeconds = 15}) async {
+    AppLogger.log(
+        'Fetching user timeline for userId: $userId, cursor: $cursor');
     final variables = {
       "userId": userId,
       "count": count,
@@ -585,13 +676,21 @@ class TwitterClient {
         _handleRateLimit(cooldownMinutes);
         return TweetResponse(tweets: []);
       }
-      if (response.statusCode != 200) return TweetResponse(tweets: []);
+      if (response.statusCode != 200) {
+        AppLogger.log(
+            'Error fetching user timeline: Status ${response.statusCode}');
+        return TweetResponse(tweets: []);
+      }
 
       final data = json.decode(response.body);
       final timeline =
           data['data']?['user']?['result']?['timeline_v2']?['timeline'];
-      if (timeline == null) return TweetResponse(tweets: []);
+      if (timeline == null) {
+        AppLogger.log('User timeline result is null for userId: $userId');
+        return TweetResponse(tweets: []);
+      }
 
+      AppLogger.log('Successfully fetched user timeline for userId: $userId');
       return _parseTweets(timeline);
     } catch (e) {
       AppLogger.log('Error fetching user timeline: $e');
@@ -609,6 +708,85 @@ class TwitterClient {
     );
   }
 
+  Future<bool> favoriteTweet(String tweetId) async {
+    final uri = Uri.https('x.com', '/i/api$graphqlFavoriteTweetUriPath');
+    final variables = {"tweet_id": tweetId};
+
+    try {
+      AppLogger.log('Favoriting tweet: $tweetId');
+      await _waitForTurn();
+      final response = await TwitterAccount.fetch(uri,
+          method: 'POST',
+          body: jsonEncode(
+              {"variables": variables, "queryId": "lI07N6Otwv1PhnEgXILM7A"}));
+
+      return response.statusCode == 200;
+    } catch (e) {
+      AppLogger.log('Error favoriting tweet: $e');
+      return false;
+    } finally {
+      _releaseTurn();
+    }
+  }
+
+  Future<bool> unfavoriteTweet(String tweetId) async {
+    final uri = Uri.https('x.com', '/i/api$graphqlUnfavoriteTweetUriPath');
+    final variables = {"tweet_id": tweetId};
+
+    try {
+      AppLogger.log('Unfavoriting tweet: $tweetId');
+      await _waitForTurn();
+      final response = await TwitterAccount.fetch(uri,
+          method: 'POST',
+          body: jsonEncode(
+              {"variables": variables, "queryId": "ZYKSe-w7KEslx3JhSIk5LA"}));
+
+      return response.statusCode == 200;
+    } catch (e) {
+      AppLogger.log('Error unfavoriting tweet: $e');
+      return false;
+    } finally {
+      _releaseTurn();
+    }
+  }
+
+  Future<TweetResponse> fetchTweetDetail(String focalTweetId,
+      {String? cursor}) async {
+    final variables = {
+      "focalTweetId": focalTweetId,
+      "with_rux_injections": false,
+      "includePromotedContent": true,
+      "withCommunity": true,
+      "withQuickPromoteEligibilityTweetFields": true,
+      "withBirdwatchNotes": true,
+      "withVoice": true,
+      "withV2Timeline": true
+    };
+    if (cursor != null) variables["cursor"] = cursor;
+
+    final uri = Uri.https('x.com', '/i/api$graphqlTweetDetailUriPath', {
+      'variables': jsonEncode(variables),
+      'features': jsonEncode(defaultFeatures),
+    });
+
+    try {
+      AppLogger.log('Fetching tweet detail for: $focalTweetId');
+      await _waitForTurn();
+      final response = await TwitterAccount.fetch(uri);
+
+      if (response.statusCode != 200) return TweetResponse(tweets: []);
+      final result = json.decode(response.body);
+
+      // Agnostic parser can handle the nested instructions in TweetDetail
+      return _parseAgnosticTimeline(result);
+    } catch (e) {
+      AppLogger.log('Error fetching tweet detail: $e');
+      return TweetResponse(tweets: []);
+    } finally {
+      _releaseTurn();
+    }
+  }
+
   Future<TweetResponse> fetchVideoMixer({
     String? cursor,
     int count = 20,
@@ -622,7 +800,8 @@ class TwitterClient {
     };
     if (cursor != null) variables['cursor'] = cursor;
 
-    final uri = Uri.https('x.com', '/i/api/graphql/rAqW5uh6Unfi46lidxFwzA/MediaTabVideoMixer', {
+    final uri = Uri.https(
+        'x.com', '/i/api/graphql/rAqW5uh6Unfi46lidxFwzA/MediaTabVideoMixer', {
       'variables': jsonEncode(variables),
       'features': jsonEncode(followingFeatures),
     });
@@ -636,11 +815,11 @@ class TwitterClient {
       if (response.statusCode != 200) return TweetResponse(tweets: []);
       final result = json.decode(response.body);
       final tweetResponse = _parseAgnosticTimeline(result);
-      
+
       if (filters != null && filters.isNotEmpty) {
         tweetResponse.tweets = _applyFilters(tweetResponse.tweets, filters);
       }
-      
+
       return tweetResponse;
     } catch (e) {
       AppLogger.log('Error fetching VideoMixer: $e');
@@ -661,7 +840,8 @@ class TwitterClient {
     };
     if (cursor != null) variables['cursor'] = cursor;
 
-    final uri = Uri.https('x.com', '/i/api/graphql/Yf4WJo0fW46TnqrHUw_1Ow/HomeTimeline', {
+    final uri = Uri.https(
+        'x.com', '/i/api/graphql/Yf4WJo0fW46TnqrHUw_1Ow/HomeTimeline', {
       'variables': jsonEncode(variables),
       'features': jsonEncode(followingFeatures),
     });
@@ -675,11 +855,11 @@ class TwitterClient {
       if (response.statusCode != 200) return TweetResponse(tweets: []);
       final result = json.decode(response.body);
       final tweetResponse = _parseAgnosticTimeline(result);
-      
+
       if (filters != null && filters.isNotEmpty) {
         tweetResponse.tweets = _applyFilters(tweetResponse.tweets, filters);
       }
-      
+
       return tweetResponse;
     } catch (e) {
       AppLogger.log('Error fetching algorithmic timeline: $e');
@@ -700,7 +880,8 @@ class TwitterClient {
     };
     if (cursor != null) variables['cursor'] = cursor;
 
-    final uri = Uri.https('x.com', '/i/api/graphql/hlno2aLQsxiQlOrK-a2V-w/HomeLatestTimeline', {
+    final uri = Uri.https(
+        'x.com', '/i/api/graphql/hlno2aLQsxiQlOrK-a2V-w/HomeLatestTimeline', {
       'variables': jsonEncode(variables),
       'features': jsonEncode(followingFeatures),
     });
@@ -714,11 +895,11 @@ class TwitterClient {
       if (response.statusCode != 200) return TweetResponse(tweets: []);
       final result = json.decode(response.body);
       final tweetResponse = _parseAgnosticTimeline(result);
-      
+
       if (filters != null && filters.isNotEmpty) {
         tweetResponse.tweets = _applyFilters(tweetResponse.tweets, filters);
       }
-      
+
       return tweetResponse;
     } catch (e) {
       AppLogger.log('Error fetching chronological timeline: $e');
@@ -761,7 +942,8 @@ class TwitterClient {
 
     final timeline = findTimeline(response['data'] ?? {});
     if (timeline == null) {
-      AppLogger.log('Agnostic Parser: Could not find instructions in response keys: ${response.keys}');
+      AppLogger.log(
+          'Agnostic Parser: Could not find instructions in response keys: ${response.keys}');
       return TweetResponse(tweets: []);
     }
     return _parseTweets(timeline);
@@ -774,15 +956,17 @@ class TwitterClient {
         []);
 
     // Find entries from any instruction that contains them (AddEntries or ReplaceEntry)
-    final entriesInstruction = instructions.firstWhereOrNull((e) =>
-        e['entries'] != null || e['entry'] != null);
-        
+    final entriesInstruction = instructions
+        .firstWhereOrNull((e) => e['entries'] != null || e['entry'] != null);
+
     if (entriesInstruction == null) {
-      AppLogger.log('No entries found in instructions. Available types: ${instructions.map((e) => e['type'] ?? e['__typename'])}');
+      AppLogger.log(
+          'No entries found in instructions. Available types: ${instructions.map((e) => e['type'] ?? e['__typename'])}');
       return TweetResponse(tweets: []);
     }
 
-    final entries = List.from(entriesInstruction['entries'] ?? [entriesInstruction['entry']].where((e) => e != null));
+    final entries = List.from(entriesInstruction['entries'] ??
+        [entriesInstruction['entry']].where((e) => e != null));
 
     String? cursorTop;
     String? cursorBottom;
@@ -884,13 +1068,14 @@ class TwitterClient {
 
       final core = tweetResult['core'] ?? tweetResult['tweet']?['core'];
       final userResults = core?['user_results']?['result'];
-      
-      final screenName = userResults?['legacy']?['screen_name'] ?? 
-                         userResults?['core']?['screen_name'] ?? 
-                         'Unknown';
-                         
-      final userAvatarUrl = userResults?['legacy']?['profile_image_url_https'] ??
-                            userResults?['avatar']?['image_url'];
+
+      final screenName = userResults?['legacy']?['screen_name'] ??
+          userResults?['core']?['screen_name'] ??
+          'Unknown';
+
+      final userAvatarUrl = userResults?['legacy']
+              ?['profile_image_url_https'] ??
+          userResults?['avatar']?['image_url'];
 
       final media = List.from(legacy['entities']?['media'] ?? []);
       final extendedMedia =
@@ -974,6 +1159,9 @@ class TwitterClient {
         thumbnailUrl: thumbnailUrl,
         isVideo: isVideo,
         createdAt: createdAt,
+        isLiked: legacy['favorited'] ?? false,
+        favoriteCount: legacy['favorite_count'] ?? 0,
+        replyCount: legacy['reply_count'] ?? 0,
       ));
     } catch (e) {
       AppLogger.log('Error in parseTweetResult for $entryId: $e');

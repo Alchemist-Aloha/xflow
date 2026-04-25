@@ -184,8 +184,9 @@ class Repository {
 
     // Use a subquery to exclude any tweets whose media_key has been played elsewhere
     String whereClause = 'played_count = 0';
-    whereClause += ' AND (media_key IS NULL OR media_key NOT IN (SELECT media_key FROM $tableCachedMedia WHERE played_count > 0 AND media_key IS NOT NULL))';
-    
+    whereClause +=
+        ' AND (media_key IS NULL OR media_key NOT IN (SELECT media_key FROM $tableCachedMedia WHERE played_count > 0 AND media_key IS NOT NULL))';
+
     List<dynamic> whereArgs = [];
 
     if (filters != null && filters.isNotEmpty) {
@@ -218,7 +219,8 @@ class Repository {
 
     if (maps.isEmpty) return [];
 
-    AppLogger.log('Discovery: Media-Key deduplication filtered potential candidates. Results: ${maps.length}');
+    AppLogger.log(
+        'Discovery: Media-Key deduplication filtered potential candidates. Results: ${maps.length}');
 
     return List.generate(maps.length, (i) {
       return Tweet(
@@ -420,9 +422,10 @@ class Repository {
 
   static Future<void> pruneCachedMedia({int threshold = 5000}) async {
     final db = await database;
-    
+
     // 1. Delete by age: Remove anything older than 7 days
-    final sevenDaysAgo = DateTime.now().subtract(const Duration(days: 7)).millisecondsSinceEpoch;
+    final sevenDaysAgo =
+        DateTime.now().subtract(const Duration(days: 7)).millisecondsSinceEpoch;
     await db.delete(
       tableCachedMedia,
       where: 'created_at < ?',
@@ -430,7 +433,8 @@ class Repository {
     );
 
     // 2. Delete by count: If still over threshold, delete oldest watched items
-    final countSq = await db.rawQuery('SELECT COUNT(*) as count FROM $tableCachedMedia');
+    final countSq =
+        await db.rawQuery('SELECT COUNT(*) as count FROM $tableCachedMedia');
     final count = countSq.first['count'] as int;
 
     if (count > threshold) {

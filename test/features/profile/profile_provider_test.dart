@@ -55,9 +55,9 @@ void main() {
         cursor: anyNamed('cursor'),
         cooldownMinutes: anyNamed('cooldownMinutes'),
       )).thenAnswer((_) async => TweetResponse(
-        tweets: [apiTweet],
-        cursorBottom: 'new_cursor',
-      ));
+            tweets: [apiTweet],
+            cursorBottom: 'new_cursor',
+          ));
 
       final container = ProviderContainer(
         overrides: [
@@ -67,8 +67,9 @@ void main() {
       );
 
       // Initial read - should be API data directly, bypassing local cache
-      final state = await container.read(userMediaNotifierProvider(testHandle).future);
-      
+      final state =
+          await container.read(userMediaNotifierProvider(testHandle).future);
+
       expect(state.tweets.length, 1);
       expect(state.tweets.first.id, 'api_1');
       expect(state.cursorBottom, 'new_cursor');
@@ -103,73 +104,75 @@ void main() {
         ],
       );
 
-      final state = await container.read(userMediaNotifierProvider(testHandle).future);
-      
+      final state =
+          await container.read(userMediaNotifierProvider(testHandle).future);
+
       // Should fallback to local cache
       expect(state.tweets.length, 1);
       expect(state.tweets.first.id, 'local_1');
     });
 
-   group('Infinite Scroll Tests', () {
-    test('fetchMore appends to state and saves to DB', () async {
-      final apiTweet1 = Tweet(
-        id: 'api_1',
-        text: 'API 1',
-        userHandle: '@$testHandle',
-        mediaUrls: ['u1'],
-        isVideo: true,
-      );
+    group('Infinite Scroll Tests', () {
+      test('fetchMore appends to state and saves to DB', () async {
+        final apiTweet1 = Tweet(
+          id: 'api_1',
+          text: 'API 1',
+          userHandle: '@$testHandle',
+          mediaUrls: ['u1'],
+          isVideo: true,
+        );
 
-      final apiTweet2 = Tweet(
-        id: 'api_2',
-        text: 'API 2',
-        userHandle: '@$testHandle',
-        mediaUrls: ['u2'],
-        isVideo: true,
-      );
+        final apiTweet2 = Tweet(
+          id: 'api_2',
+          text: 'API 2',
+          userHandle: '@$testHandle',
+          mediaUrls: ['u2'],
+          isVideo: true,
+        );
 
-      // Build calls this for first load
-      when(mockClient.fetchUserTimelineByScreenName(
-        testHandle,
-        cursor: null,
-        cooldownMinutes: anyNamed('cooldownMinutes'),
-      )).thenAnswer((_) async => TweetResponse(
-        tweets: [apiTweet1],
-        cursorBottom: 'cursor_1',
-      ));
+        // Build calls this for first load
+        when(mockClient.fetchUserTimelineByScreenName(
+          testHandle,
+          cursor: null,
+          cooldownMinutes: anyNamed('cooldownMinutes'),
+        )).thenAnswer((_) async => TweetResponse(
+              tweets: [apiTweet1],
+              cursorBottom: 'cursor_1',
+            ));
 
-      // fetchMore calls this
-      when(mockClient.fetchUserTimelineByScreenName(
-        testHandle,
-        cursor: 'cursor_1',
-        cooldownMinutes: anyNamed('cooldownMinutes'),
-      )).thenAnswer((_) async => TweetResponse(
-        tweets: [apiTweet2],
-        cursorBottom: 'cursor_2',
-      ));
+        // fetchMore calls this
+        when(mockClient.fetchUserTimelineByScreenName(
+          testHandle,
+          cursor: 'cursor_1',
+          cooldownMinutes: anyNamed('cooldownMinutes'),
+        )).thenAnswer((_) async => TweetResponse(
+              tweets: [apiTweet2],
+              cursorBottom: 'cursor_2',
+            ));
 
-      final container = ProviderContainer(
-        overrides: [
-          twitterClientProvider.overrideWithValue(mockClient),
-          settingsProvider.overrideWith(() => MockSettingsNotifier()),
-        ],
-      );
+        final container = ProviderContainer(
+          overrides: [
+            twitterClientProvider.overrideWithValue(mockClient),
+            settingsProvider.overrideWith(() => MockSettingsNotifier()),
+          ],
+        );
 
-      final notifier = container.read(userMediaNotifierProvider(testHandle).notifier);
-      
-      // Initial build
-      await container.read(userMediaNotifierProvider(testHandle).future);
-      
-      // Now fetch more
-      await notifier.fetchMore();
+        final notifier =
+            container.read(userMediaNotifierProvider(testHandle).notifier);
 
-      final state = container.read(userMediaNotifierProvider(testHandle));
-      expect(state.value?.tweets.length, 2);
-      expect(state.value?.tweets.first.id, 'api_1');
-      expect(state.value?.tweets.last.id, 'api_2');
-      expect(state.value?.cursorBottom, 'cursor_2');
+        // Initial build
+        await container.read(userMediaNotifierProvider(testHandle).future);
+
+        // Now fetch more
+        await notifier.fetchMore();
+
+        final state = container.read(userMediaNotifierProvider(testHandle));
+        expect(state.value?.tweets.length, 2);
+        expect(state.value?.tweets.first.id, 'api_1');
+        expect(state.value?.tweets.last.id, 'api_2');
+        expect(state.value?.cursorBottom, 'cursor_2');
+      });
     });
-  });
   });
 }
 

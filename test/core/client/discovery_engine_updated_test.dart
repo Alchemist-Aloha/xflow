@@ -21,13 +21,9 @@ void main() {
         createTweet('3', 'user_c', mediaUrl: 'vid_2'),
       ];
 
-      final result = DiscoveryEngine.applySaturation(
-        tweets, 
-        threshold: 2, 
-        mediaThreshold: 1, 
-        windowSize: 5
-      );
-      
+      final result = DiscoveryEngine.applySaturation(tweets,
+          threshold: 2, mediaThreshold: 1, windowSize: 5);
+
       print('Media URLs: ${result.map((t) => t.mediaUrls.first).toList()}');
       expect(result[0].mediaUrls.first, 'vid_1');
       expect(result[1].mediaUrls.first, 'vid_2');
@@ -47,13 +43,9 @@ void main() {
       // With threshold 1, window 10.
       // Pass 1: [a, b, a, a, c] -> swap 2 with 4
       // Pass 2: [a, b, c, a, a] -> swap 3 with 5
-      final result = DiscoveryEngine.applySaturation(
-        tweets, 
-        threshold: 1, 
-        windowSize: 10,
-        maxPasses: 5
-      );
-      
+      final result = DiscoveryEngine.applySaturation(tweets,
+          threshold: 1, windowSize: 10, maxPasses: 5);
+
       print('Handles: ${result.map((t) => t.userHandle).toList()}');
       expect(result[0].userHandle, 'user_a');
       expect(result[1].userHandle, 'user_b');

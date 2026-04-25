@@ -9,6 +9,9 @@ class Tweet {
   final bool isVideo;
   final DateTime? createdAt;
   final String? source; // "API" or "Cache" or other metadata
+  final bool isLiked;
+  final int favoriteCount;
+  final int replyCount;
 
   Tweet({
     required this.id,
@@ -21,6 +24,9 @@ class Tweet {
     this.isVideo = false,
     this.createdAt,
     this.source,
+    this.isLiked = false,
+    this.favoriteCount = 0,
+    this.replyCount = 0,
   });
 
   String? get userAvatarUrlHighRes {
@@ -39,6 +45,9 @@ class Tweet {
     bool? isVideo,
     DateTime? createdAt,
     String? source,
+    bool? isLiked,
+    int? favoriteCount,
+    int? replyCount,
   }) {
     return Tweet(
       id: id ?? this.id,
@@ -51,6 +60,9 @@ class Tweet {
       isVideo: isVideo ?? this.isVideo,
       createdAt: createdAt ?? this.createdAt,
       source: source ?? this.source,
+      isLiked: isLiked ?? this.isLiked,
+      favoriteCount: favoriteCount ?? this.favoriteCount,
+      replyCount: replyCount ?? this.replyCount,
     );
   }
 }

@@ -9,12 +9,12 @@ class AppLogger {
   static void log(String message) {
     final timestamp = DateTime.now().toString().split('.').first;
     final logEntry = '[$timestamp] $message';
-    
+
     _logs.add(logEntry);
     if (_logs.length > _maxLogs) {
       _logs.removeAt(0);
     }
-    
+
     debugPrint(logEntry);
   }
 

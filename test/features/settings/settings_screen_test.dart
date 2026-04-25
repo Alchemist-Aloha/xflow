@@ -24,10 +24,10 @@ void main() {
         );
 
         await tester.pumpAndSettle();
-        
+
         expect(find.text('Playback & Feed'), findsOneWidget);
         expect(find.text('Discovery & Diversity'), findsOneWidget);
-        
+
         // Scroll to find Data & Storage
         await tester.scrollUntilVisible(find.text('Data & Storage'), 100);
         expect(find.text('Background Fetch'), findsOneWidget);
@@ -48,7 +48,7 @@ void main() {
 
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(find.text('Storage & Cache'), 100);
-      
+
       await tester.tap(find.text('Storage & Cache'));
       await tester.pumpAndSettle();
 
@@ -72,10 +72,10 @@ class MockSettingsNotifier extends SettingsNotifier {
   void updateMediaCacheSize(int megabytes) {
     state = state.copyWith(mediaCacheSizeMB: megabytes);
   }
-  
+
   @override
   void toggleAutoplay(bool value) {}
-  
+
   @override
   void toggleFilter(MediaFilter filter) {}
 

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:media_kit/media_kit.dart';
 import 'features/feed/tiktok_feed_screen.dart';
+import 'features/feed/tweet_detail_screen.dart';
+import 'features/feed/hashtag_feed_screen.dart';
 import 'features/subscriptions/subscription_list_screen.dart';
 import 'features/profile/user_details_screen.dart';
 import 'features/profile/user_media_feed_screen.dart';
@@ -20,7 +22,7 @@ void main() async {
     TwitterAccount.init(),
     Repository.database,
   ]);
-  
+
   runApp(const ProviderScope(child: XFlowApp()));
 }
 
@@ -30,7 +32,7 @@ class XFlowApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.listen(settingsProvider, (prev, next) {
-      if (prev?.syncInterval != next.syncInterval || 
+      if (prev?.syncInterval != next.syncInterval ||
           prev?.syncBatchSize != next.syncBatchSize ||
           prev?.pruneThreshold != next.pruneThreshold) {
         BackgroundSync.restart(TwitterClient(), next);
@@ -87,7 +89,11 @@ class MainScaffold extends ConsumerWidget {
     );
 
     Widget? overlayScreen;
-    if (nav.selectedUser != null) {
+    if (nav.selectedHashtag != null) {
+      overlayScreen = HashtagFeedScreen(hashtag: nav.selectedHashtag!);
+    } else if (nav.selectedTweet != null) {
+      overlayScreen = TweetDetailScreen(tweet: nav.selectedTweet!);
+    } else if (nav.selectedUser != null) {
       if (nav.userMediaInitialIndex != null) {
         overlayScreen = UserMediaFeedScreen(
           screenName: nav.selectedUser!,
@@ -109,7 +115,9 @@ class MainScaffold extends ConsumerWidget {
     );
 
     return PopScope(
-      canPop: nav.selectedUser == null,
+      canPop: nav.selectedUser == null &&
+          nav.selectedTweet == null &&
+          nav.selectedHashtag == null,
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) {
           navNotifier.back();

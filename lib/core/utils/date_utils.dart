@@ -9,8 +9,18 @@ DateTime? parseTwitterDateTime(String? dateStr) {
     final parts = dateStr.split(' ');
     if (parts.length >= 6) {
       final months = {
-        'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
-        'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
+        'Jan': 1,
+        'Feb': 2,
+        'Mar': 3,
+        'Apr': 4,
+        'May': 5,
+        'Jun': 6,
+        'Jul': 7,
+        'Aug': 8,
+        'Sep': 9,
+        'Oct': 10,
+        'Nov': 11,
+        'Dec': 12
       };
 
       final month = months[parts[1]];
@@ -18,7 +28,10 @@ DateTime? parseTwitterDateTime(String? dateStr) {
       final timeParts = parts[3].split(':');
       final year = int.tryParse(parts[5]);
 
-      if (month != null && day != null && year != null && timeParts.length == 3) {
+      if (month != null &&
+          day != null &&
+          year != null &&
+          timeParts.length == 3) {
         final hour = int.tryParse(timeParts[0]) ?? 0;
         final minute = int.tryParse(timeParts[1]) ?? 0;
         final second = int.tryParse(timeParts[2]) ?? 0;

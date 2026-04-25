@@ -6,11 +6,13 @@ import 'package:xflow/core/database/entities.dart';
 
 void main() {
   group('SubscriptionListScreen Widget Tests', () {
-    testWidgets('renders empty state when no subscriptions', (WidgetTester tester) async {
+    testWidgets('renders empty state when no subscriptions',
+        (WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            subscriptionListProvider.overrideWith(() => MockSubscriptionListNotifier([])),
+            subscriptionListProvider
+                .overrideWith(() => MockSubscriptionListNotifier([])),
           ],
           child: const MaterialApp(
             home: SubscriptionListScreen(),
@@ -35,7 +37,8 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            subscriptionListProvider.overrideWith(() => MockSubscriptionListNotifier(mockSubs)),
+            subscriptionListProvider
+                .overrideWith(() => MockSubscriptionListNotifier(mockSubs)),
           ],
           child: const MaterialApp(
             home: SubscriptionListScreen(),

@@ -1,7 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-enum FeedSort { latest, popular, trending, algorithmic, chronological, videomixer }
+enum FeedSort {
+  latest,
+  popular,
+  trending,
+  algorithmic,
+  chronological,
+  videomixer
+}
 
 enum MediaFilter { video, image, text }
 
@@ -267,7 +274,8 @@ class SettingsNotifier extends Notifier<SettingsState> {
     final lazyLoadThreshold = _prefs.getInt('lazyLoadThreshold') ?? 10;
     final mediaDeduplicationWindow =
         _prefs.getInt('mediaDeduplicationWindow') ?? 50;
-    final videoEndActionIdx = _prefs.getInt('videoEndAction') ?? VideoEndAction.playNext.index;
+    final videoEndActionIdx =
+        _prefs.getInt('videoEndAction') ?? VideoEndAction.playNext.index;
 
     state = SettingsState(
       isInitialized: true,

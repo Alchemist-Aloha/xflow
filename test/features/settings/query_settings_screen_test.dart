@@ -7,7 +7,8 @@ import 'package:xflow/features/settings/settings_provider.dart';
 
 void main() {
   group('QuerySettingsScreen Widget Tests', () {
-    testWidgets('renders all query architecture sliders', (WidgetTester tester) async {
+    testWidgets('renders all query architecture sliders',
+        (WidgetTester tester) async {
       SharedPreferences.setMockInitialValues({});
       await tester.pumpWidget(
         const ProviderScope(
@@ -19,18 +20,22 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Mix & Delivery', skipOffstage: true), findsOneWidget);
-      
+      expect(find.textContaining('Mix & Delivery', skipOffstage: true),
+          findsOneWidget);
+
       // Scroll to find Variety header
-      await tester.scrollUntilVisible(find.textContaining('Variety Engine'), 100);
+      await tester.scrollUntilVisible(
+          find.textContaining('Variety Engine'), 100);
       expect(find.textContaining('Variety Engine'), findsOneWidget);
-      
+
       // Scroll to find Search Tuning
-      await tester.scrollUntilVisible(find.textContaining('Search Tuning'), 100);
+      await tester.scrollUntilVisible(
+          find.textContaining('Search Tuning'), 100);
       expect(find.textContaining('Search Tuning'), findsOneWidget);
     });
 
-    testWidgets('updating a slider updates the displayed value', (WidgetTester tester) async {
+    testWidgets('updating a slider updates the displayed value',
+        (WidgetTester tester) async {
       await tester.runAsync(() async {
         await tester.pumpWidget(
           ProviderScope(
@@ -47,7 +52,7 @@ void main() {
 
         final sliderFinder = find.byType(Slider);
         expect(sliderFinder, findsAtLeastNWidgets(1));
-        
+
         // Tapping first slider
         await tester.tap(sliderFinder.first);
         await tester.pump();

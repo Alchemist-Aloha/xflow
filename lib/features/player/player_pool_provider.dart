@@ -9,8 +9,8 @@ class PlayerInstance {
   PlayerInstance(this.player, this.controller);
 
   void dispose() {
-    // Media-kit documentation says VideoController might not need explicit dispose 
-    // if Player is disposed, but it's safer to check and follow best practices 
+    // Media-kit documentation says VideoController might not need explicit dispose
+    // if Player is disposed, but it's safer to check and follow best practices
     // especially for native resources.
     player.dispose();
   }
@@ -38,7 +38,7 @@ class PlayerPoolNotifier extends Notifier<Map<String, PlayerInstance>> {
       ),
     );
     player.open(Media(url), play: false); // Pre-load but don't play
-    
+
     state = {...state, id: PlayerInstance(player, controller)};
   }
 
@@ -55,6 +55,7 @@ class PlayerPoolNotifier extends Notifier<Map<String, PlayerInstance>> {
   }
 }
 
-final playerPoolProvider = NotifierProvider<PlayerPoolNotifier, Map<String, PlayerInstance>>(
+final playerPoolProvider =
+    NotifierProvider<PlayerPoolNotifier, Map<String, PlayerInstance>>(
   PlayerPoolNotifier.new,
 );

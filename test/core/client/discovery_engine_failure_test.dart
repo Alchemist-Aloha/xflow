@@ -20,12 +20,9 @@ void main() {
       final tweets = List.generate(10, (i) => createTweet('$i', 'user_a'));
 
       // Saturation will attempt to swap every single item but find nobody else.
-      final result = DiscoveryEngine.applySaturation(
-        tweets, 
-        threshold: 1, 
-        windowSize: 10
-      );
-      
+      final result =
+          DiscoveryEngine.applySaturation(tweets, threshold: 1, windowSize: 10);
+
       print('Handles: ${result.map((t) => t.userHandle).toList()}');
       // Should remain all user_a, but we should verify it didn't crash
       expect(result.length, 10);
@@ -44,12 +41,9 @@ void main() {
 
       // threshold 1. Index 4 (user_a) is consecutive with index 3.
       // It looks for swaps after index 4. There are none.
-      final result = DiscoveryEngine.applySaturation(
-        tweets, 
-        threshold: 1, 
-        windowSize: 5
-      );
-      
+      final result =
+          DiscoveryEngine.applySaturation(tweets, threshold: 1, windowSize: 5);
+
       print('Tail handles: ${result.map((t) => t.userHandle).toList()}');
       // WEAKNESS: It cannot fix the tail.
       expect(result[4].userHandle, 'user_a');
