@@ -29,7 +29,7 @@ void main() {
       expect(state.loadBatchSize, 30);
       expect(state.syncInterval, 10);
       expect(state.cooldownDuration, 5);
-      expect(state.syncBatchSize, 5); // Default
+      expect(state.syncBatchSize, 10); // Default
     });
 
     test('updates and persists values', () async {

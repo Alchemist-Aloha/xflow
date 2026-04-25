@@ -64,18 +64,17 @@ class DiscoveryEngineSimulator:
     def apply_saturation(tweets: List[Tweet], 
                         acc_thresh: int, 
                         med_thresh: int, 
-                        window_size: int) -> tuple:
-        """
-        In the real app, saturation is applied to the WHOLE combined list.
-        """
+                        window_size: int,
+                        history: List[Tweet]) -> tuple:
         if not tweets: return [], 0
         res = list(tweets)
         total_swaps = 0
         for _ in range(3):
             swaps = 0
             for i in range(len(res)):
-                start = max(0, i - window_size)
-                win = res[start:i]
+                full_context = list(history) + res[:i]
+                start = max(0, len(full_context) - window_size)
+                win = full_context[start:]
                 u_id, m_key = res[i].user_id, res[i].media_key
                 u_count = sum(1 for t in win if t.user_id == u_id)
                 m_count = sum(1 for t in win if t.media_key == m_key)
@@ -84,7 +83,7 @@ class DiscoveryEngineSimulator:
 
                 if u_count >= acc_thresh or m_count >= med_thresh or consecutive:
                     swap_idx = -1
-                    for j in range(i + 1, len(res)):
+                    for j in range(i + 1, min(len(res), i + window_size + 15)):
                         cand = res[j]
                         c_u_count = sum(1 for t in win if t.user_id == cand.user_id)
                         c_m_count = sum(1 for t in win if t.media_key == cand.media_key)
@@ -103,49 +102,52 @@ class Benchmark:
 
     def run(self, params: Dict):
         db = MockSQLite()
-        ui_feed = deque() # Items currently in the ScrollView
-        consumed, api_calls = 0, 0
+        ui_feed = deque()
+        consumed, api_calls, total_fetched, api_waste = 0, 0, 0, 0
         consumed_history = deque(maxlen=30)
         violations = 0
 
         while consumed < SIM_SCROLL_ITEMS:
-            # Mimic App: Fetch more when UI buffer < lazy_load_threshold
             if len(ui_feed) < params['lazy_load_threshold']:
                 api_calls += 1
                 
-                # 1. API Fetch (Using api_batch_size / timelineBatchSize)
-                fresh = random.sample(self.dataset, params['api_batch_size'])
+                # 1. API Fetch
+                raw_fresh = random.sample(self.dataset, params['batch_size'])
+                total_fetched += params['batch_size']
+                
+                # 2. GLOBAL DEDUPLICATION (Consider "Repeated Feed")
+                # Filter out any items we've already watched
+                fresh = [t for t in raw_fresh if t.media_key not in db.played_media_keys]
+                api_waste += (params['batch_size'] - len(fresh))
+                
+                # Insert the actually unique items into DB
                 db.insert(fresh)
                 
-                # 2. Local Pool Gathering (Mimics fetchMore loop)
-                # In app, we collect unique candidates until minNewTweetsThreshold
-                # For simulation, we'll fetch a batch from DB and interleave
-                cached = db.get_unplayed(params['api_batch_size'] * params['db_mult'])
+                # 3. Cache Fetch
+                cached = db.get_unplayed(params['batch_size'] * params['db_mult'])
+                
+                # 4. Interleave
                 combined = DiscoveryEngineSimulator.interleave(fresh, cached, params['mix'])
                 
-                # 3. Take UI Slot Size (loadBatchSize)
-                # App shuffles and takes loadBatchSize
+                # 5. UI Slicing (App logic: slice then saturate)
                 random.shuffle(combined)
                 new_slice = combined[:params['ui_slot_size']]
                 
-                # 4. Appends and runs saturation on WHOLE list
-                current_list = list(ui_feed) + new_slice
+                # 6. Saturate
                 processed, _ = DiscoveryEngineSimulator.apply_saturation(
-                    current_list, 1, 1, params['engine_window']
+                    list(ui_feed) + new_slice, 1, 1, params['engine_window'], list(consumed_history)
                 )
-                
-                # Update ui_feed with the newly sorted list
                 ui_feed = deque(processed)
 
-            if not ui_feed: break
+            if not ui_feed: 
+                # If we've watched everything or diversity is impossible
+                break
             
-            # User consumes the first item
             item = ui_feed.popleft()
             
             # --- EVALUATOR ---
             u_win_10 = [t.user_id for t in list(consumed_history)[-10:]]
             m_win_20 = [t.media_key for t in list(consumed_history)[-20:]]
-            
             if item.user_id in u_win_10 or item.media_key in m_win_20:
                 violations += 1
             
@@ -155,12 +157,14 @@ class Benchmark:
 
         return {
             "api": api_calls,
+            "waste_rate": round(api_waste / total_fetched, 3) if total_fetched > 0 else 0,
             "items_per_call": round(consumed / api_calls, 1),
             "violations": violations,
-            "score": (consumed * 10) - (api_calls * 100) - (violations * 50)
+            # Penalty for: API calls, Violations, and WASTED items
+            "score": (consumed * 10) - (api_calls * 100) - (violations * 50) - (api_waste * 2)
         }
 
-# Generate Data
+# --- DATA GENERATION ---
 data = []
 viral = [f"v_{i}" for i in range(50)]
 for u in range(NUM_ACCOUNTS):
@@ -171,47 +175,35 @@ for u in range(NUM_ACCOUNTS):
 bench = Benchmark(data)
 results = []
 
-# --- ULTIMATE PARAMETER SWEEP ---
-api_batch_sizes = [50, 100, 200]    # timelineBatchSize
-ui_slot_sizes = [10, 20, 50]        # loadBatchSize
-lazy_thresholds = [5, 10, 15]       # lazyLoadThreshold
-mix_ratios = [0.1, 0.3]
-db_mults = [2, 5]
+# Sweep configurations
+batch_sizes = [50, 100, 200]
+mix_ratios = [0.1, 0.3, 0.5]
+db_mults = [2, 5, 10]
 
-print(f"BEYOND ULTIMATE PARAMETER SWEEP (Slot Size & Lazy Load)")
+print(f"ULTIMATE PARAMETER SWEEP WITH WASTE DETECTION")
 print("-" * 110)
-print(f"{'API-B':<5} | {'UI-S':<5} | {'Lazy':<5} | {'Mix':<5} | {'DBX':<5} | {'API':<5} | {'Vio':<5} | {'Score'}")
+print(f"{'Batch':<5} | {'Mix':<5} | {'DBX':<5} | {'API':<5} | {'Waste%':<8} | {'Items/Req':<10} | {'Vio':<5} | {'Score'}")
 print("-" * 110)
 
-count = 0
-for b_api in api_batch_sizes:
-    for s_ui in ui_slot_sizes:
-        for lazy in lazy_thresholds:
-            for m in mix_ratios:
-                for dbx in db_mults:
-                    p = {
-                        "api_batch_size": b_api, 
-                        "ui_slot_size": s_ui, 
-                        "lazy_load_threshold": lazy,
-                        "mix": m, 
-                        "db_mult": dbx, 
-                        "engine_window": 30
-                    }
-                    res = bench.run(p)
-                    res.update(p)
-                    results.append(res)
-                    count += 1
-                    if count % 20 == 0:
-                        print(f"{b_api:<5} | {s_ui:<5} | {lazy:<5} | {m:<5} | {dbx:<5} | {res['api']:<5} | {res['violations']:<5} | {res['score']}")
+for b in batch_sizes:
+    for m in mix_ratios:
+        for dbx in db_mults:
+            p = {
+                "batch_size": b, 
+                "mix": m, 
+                "db_mult": dbx, 
+                "engine_window": 30, 
+                "lazy_load_threshold": 10,
+                "ui_slot_size": 20
+            }
+            res = bench.run(p)
+            res.update(p)
+            results.append(res)
+            print(f"{b:<5} | {m:<5} | {dbx:<5} | {res['api']:<5} | {res['waste_rate']*100:<8}% | {res['items_per_call']:<10} | {res['violations']:<5} | {res['score']}")
 
 best = max(results, key=lambda x: x['score'])
 print("\n" + "="*110)
-print(f"VERIFIED WINNER AFTER {len(results)} SCENARIOS")
-print(f"Timeline Batch (Server): {best['api_batch_size']}")
-print(f"UI Slot Size (Load):     {best['ui_slot_size']}")
-print(f"Lazy Load Threshold:     {best['lazy_load_threshold']}")
-print(f"Fresh Mix Ratio:         {best['mix']}")
-print(f"DB Multiplier:           {best['db_mult']}")
-print("-" * 110)
-print(f"Performance: {best['items_per_call']} items/req | {best['violations']} violations.")
+print(f"VERIFIED WINNER: Batch {best['batch_size']}, Mix {best['mix']}, DB Multiplier {best['db_mult']}")
+print(f"Waste Rate: {best['waste_rate']*100}% of API items were already seen.")
+print(f"Performance: {best['items_per_call']} unique items delivered per request.")
 print("="*110)

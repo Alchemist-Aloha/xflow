@@ -126,7 +126,7 @@ class _TiktokFeedScreenState extends ConsumerState<TiktokFeedScreen> {
               },
             ),
             const Text(
-              "Subscriptions",
+              "XFlow",
               style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
             ),
             IconButton(

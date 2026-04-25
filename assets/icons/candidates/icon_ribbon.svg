@@ -1,0 +1,11 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="ribbonGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2196F3;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0D47A1;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="#000000"/>
+  <path d="M160 160 C 256 256, 256 256, 352 352 M352 160 C 300 256, 212 256, 160 352" stroke="url(#ribbonGrad)" stroke-width="80" stroke-linecap="round" fill="none"/>
+  <path d="M160 160 C 256 256, 256 256, 352 352" stroke="#FFFFFF" stroke-width="20" stroke-linecap="round" fill="none" opacity="0.3"/>
+</svg>

@@ -17,6 +17,7 @@ class _DebugTimelineScreenState extends State<DebugTimelineScreen> {
   final _consumerSecretController = TextEditingController();
   final _tokenController = TextEditingController();
   final _secretController = TextEditingController();
+  final _gqlBatchController = TextEditingController(text: '20');
   
   List<String> _results = [];
   String _rawJson = '';
@@ -91,8 +92,9 @@ class _DebugTimelineScreenState extends State<DebugTimelineScreen> {
 
     try {
       String path = '';
+      final int batchSize = int.tryParse(_gqlBatchController.text) ?? 20;
       Map<String, dynamic> variables = {
-        "count": 20,
+        "count": batchSize,
         "includePromotedContent": true,
         "latestControlAvailable": true,
         "requestContext": "launch",
@@ -185,6 +187,22 @@ class _DebugTimelineScreenState extends State<DebugTimelineScreen> {
             ),
             const Divider(),
             const Text('Internal GraphQL (Current Session)', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Text('Batch Size: ', style: TextStyle(fontSize: 12)),
+                SizedBox(
+                  width: 50,
+                  child: TextField(
+                    controller: _gqlBatchController,
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 12),
+                    decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.all(4)),
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,

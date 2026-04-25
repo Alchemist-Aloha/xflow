@@ -11,25 +11,27 @@ void main() {
 
   group('SettingsScreen Widget Tests', () {
     testWidgets('renders all settings options', (WidgetTester tester) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            settingsProvider.overrideWith(() => MockSettingsNotifier()),
-          ],
-          child: const MaterialApp(
-            home: SettingsScreen(),
+      await tester.runAsync(() async {
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              settingsProvider.overrideWith(() => MockSettingsNotifier()),
+            ],
+            child: const MaterialApp(
+              home: SettingsScreen(),
+            ),
           ),
-        ),
-      );
+        );
 
-      await tester.pumpAndSettle();
-      
-      expect(find.text('Sort Order'), findsOneWidget);
-      expect(find.text('Autoplay'), findsOneWidget);
-      
-      // Scroll to find Storage
-      await tester.scrollUntilVisible(find.text('Storage'), 100);
-      expect(find.text('Storage'), findsOneWidget);
+        await tester.pumpAndSettle();
+        
+        expect(find.text('Query Architecture'), findsOneWidget);
+        expect(find.text('Autoplay'), findsOneWidget);
+        
+        // Scroll to find Storage
+        await tester.scrollUntilVisible(find.text('Storage'), 100);
+        expect(find.text('Storage'), findsOneWidget);
+      });
     });
 
     testWidgets('updates media cache size via slider', (WidgetTester tester) async {
@@ -85,6 +87,7 @@ class MockSettingsNotifier extends SettingsNotifier {
     bool? unseenSubscriptionBoost,
     double? freshMixRatio,
     int? saturationThreshold,
+    int? mediaSaturationThreshold,
     FeedSort? fetchStrategy,
     int? initialSyncCount,
     bool? strictSubscriptionsOnly,
@@ -93,5 +96,20 @@ class MockSettingsNotifier extends SettingsNotifier {
     int? saturationWindow,
     int? unseenBoostLookahead,
     int? minFavesFilter,
+    int? dbCandidateMultiplier,
+    int? apiRetryLimit,
+    int? chunkRotationLimit,
+    int? pageRetryLimit,
+    int? minNewTweetsThreshold,
+    int? maxQueryLength,
+    int? apiTimeoutSeconds,
+    int? maxSaturationSwaps,
+    int? maxSaturationPasses,
+    int? playbackRetryLimit,
+    int? autoSkipDelaySeconds,
+    int? lazyLoadThreshold,
+    int? mediaDeduplicationWindow,
+    int? searchBatchSize,
+    VideoEndAction? videoEndAction,
   }) {}
 }

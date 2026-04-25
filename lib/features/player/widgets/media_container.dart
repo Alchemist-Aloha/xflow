@@ -35,11 +35,33 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
   int _imageIndex = 0;
   int _retryCount = 0;
   StreamSubscription? _errorSubscription;
+  StreamSubscription? _completedSubscription;
 
   @override
   void dispose() {
     _errorSubscription?.cancel();
+    _completedSubscription?.cancel();
     super.dispose();
+  }
+
+  void _handleCompleted() {
+    if (!mounted || !widget.isVisible) return;
+    
+    final settings = ref.read(settingsProvider);
+    switch (settings.videoEndAction) {
+      case VideoEndAction.pause:
+        // Already stopped at the end
+        break;
+      case VideoEndAction.replay:
+        final pool = ref.read(playerPoolProvider);
+        final instance = pool[widget.tweet.id];
+        instance?.player.seek(Duration.zero);
+        instance?.player.play();
+        break;
+      case VideoEndAction.playNext:
+        widget.onPlaybackError?.call(); // Re-use the same callback for auto-advance
+        break;
+    }
   }
 
   void _handleError(dynamic error) {
@@ -109,8 +131,11 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    // Subscribe to errors if not already doing so
+    // Subscribe to events if not already doing so
     _errorSubscription ??= instance.player.stream.error.listen(_handleError);
+    _completedSubscription ??= instance.player.stream.completed.listen((completed) {
+      if (completed) _handleCompleted();
+    });
 
     if (widget.isVisible) {
       instance.player.play();

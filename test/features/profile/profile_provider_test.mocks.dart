@@ -60,6 +60,8 @@ class MockTwitterClient extends _i1.Mock implements _i2.TwitterClient {
     String? cursor,
     _i5.FeedSort? sort,
     Set<_i5.MediaFilter>? filters,
+    int? count = 20,
+    int? timeoutSeconds = 15,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -69,6 +71,8 @@ class MockTwitterClient extends _i1.Mock implements _i2.TwitterClient {
             #cursor: cursor,
             #sort: sort,
             #filters: filters,
+            #count: count,
+            #timeoutSeconds: timeoutSeconds,
           },
         ),
         returnValue: _i3.Future<_i2.TweetResponse>.value(_FakeTweetResponse_0(
@@ -80,6 +84,8 @@ class MockTwitterClient extends _i1.Mock implements _i2.TwitterClient {
               #cursor: cursor,
               #sort: sort,
               #filters: filters,
+              #count: count,
+              #timeoutSeconds: timeoutSeconds,
             },
           ),
         )),
@@ -113,6 +119,7 @@ class MockTwitterClient extends _i1.Mock implements _i2.TwitterClient {
     int? count = 20,
     int? cooldownMinutes = 15,
     int? minFaves,
+    int? timeoutSeconds = 15,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -126,6 +133,7 @@ class MockTwitterClient extends _i1.Mock implements _i2.TwitterClient {
             #count: count,
             #cooldownMinutes: cooldownMinutes,
             #minFaves: minFaves,
+            #timeoutSeconds: timeoutSeconds,
           },
         ),
         returnValue: _i3.Future<_i2.TweetResponse>.value(_FakeTweetResponse_0(
@@ -141,6 +149,7 @@ class MockTwitterClient extends _i1.Mock implements _i2.TwitterClient {
               #count: count,
               #cooldownMinutes: cooldownMinutes,
               #minFaves: minFaves,
+              #timeoutSeconds: timeoutSeconds,
             },
           ),
         )),
@@ -158,6 +167,8 @@ class MockTwitterClient extends _i1.Mock implements _i2.TwitterClient {
     bool? includeNativeRetweets = false,
     bool? useChunkedSubscriptions = true,
     int? minFaves,
+    int? maxQueryLength = 480,
+    int? timeoutSeconds = 15,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -174,6 +185,8 @@ class MockTwitterClient extends _i1.Mock implements _i2.TwitterClient {
             #includeNativeRetweets: includeNativeRetweets,
             #useChunkedSubscriptions: useChunkedSubscriptions,
             #minFaves: minFaves,
+            #maxQueryLength: maxQueryLength,
+            #timeoutSeconds: timeoutSeconds,
           },
         ),
         returnValue: _i3.Future<_i2.TweetResponse>.value(_FakeTweetResponse_0(
@@ -192,6 +205,8 @@ class MockTwitterClient extends _i1.Mock implements _i2.TwitterClient {
               #includeNativeRetweets: includeNativeRetweets,
               #useChunkedSubscriptions: useChunkedSubscriptions,
               #minFaves: minFaves,
+              #maxQueryLength: maxQueryLength,
+              #timeoutSeconds: timeoutSeconds,
             },
           ),
         )),
@@ -202,6 +217,8 @@ class MockTwitterClient extends _i1.Mock implements _i2.TwitterClient {
     String? userId, {
     String? cursor,
     int? cooldownMinutes = 15,
+    int? count = 20,
+    int? timeoutSeconds = 15,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -210,6 +227,8 @@ class MockTwitterClient extends _i1.Mock implements _i2.TwitterClient {
           {
             #cursor: cursor,
             #cooldownMinutes: cooldownMinutes,
+            #count: count,
+            #timeoutSeconds: timeoutSeconds,
           },
         ),
         returnValue: _i3.Future<_i2.TweetResponse>.value(_FakeTweetResponse_0(
@@ -220,6 +239,8 @@ class MockTwitterClient extends _i1.Mock implements _i2.TwitterClient {
             {
               #cursor: cursor,
               #cooldownMinutes: cooldownMinutes,
+              #count: count,
+              #timeoutSeconds: timeoutSeconds,
             },
           ),
         )),
@@ -248,6 +269,96 @@ class MockTwitterClient extends _i1.Mock implements _i2.TwitterClient {
             {
               #cursor: cursor,
               #cooldownMinutes: cooldownMinutes,
+            },
+          ),
+        )),
+      ) as _i3.Future<_i2.TweetResponse>);
+
+  @override
+  _i3.Future<_i2.TweetResponse> fetchVideoMixer({
+    String? cursor,
+    int? count = 20,
+    Set<_i5.MediaFilter>? filters,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #fetchVideoMixer,
+          [],
+          {
+            #cursor: cursor,
+            #count: count,
+            #filters: filters,
+          },
+        ),
+        returnValue: _i3.Future<_i2.TweetResponse>.value(_FakeTweetResponse_0(
+          this,
+          Invocation.method(
+            #fetchVideoMixer,
+            [],
+            {
+              #cursor: cursor,
+              #count: count,
+              #filters: filters,
+            },
+          ),
+        )),
+      ) as _i3.Future<_i2.TweetResponse>);
+
+  @override
+  _i3.Future<_i2.TweetResponse> fetchAlgorithmicTimeline({
+    String? cursor,
+    int? count = 20,
+    Set<_i5.MediaFilter>? filters,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #fetchAlgorithmicTimeline,
+          [],
+          {
+            #cursor: cursor,
+            #count: count,
+            #filters: filters,
+          },
+        ),
+        returnValue: _i3.Future<_i2.TweetResponse>.value(_FakeTweetResponse_0(
+          this,
+          Invocation.method(
+            #fetchAlgorithmicTimeline,
+            [],
+            {
+              #cursor: cursor,
+              #count: count,
+              #filters: filters,
+            },
+          ),
+        )),
+      ) as _i3.Future<_i2.TweetResponse>);
+
+  @override
+  _i3.Future<_i2.TweetResponse> fetchChronologicalTimeline({
+    String? cursor,
+    int? count = 20,
+    Set<_i5.MediaFilter>? filters,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #fetchChronologicalTimeline,
+          [],
+          {
+            #cursor: cursor,
+            #count: count,
+            #filters: filters,
+          },
+        ),
+        returnValue: _i3.Future<_i2.TweetResponse>.value(_FakeTweetResponse_0(
+          this,
+          Invocation.method(
+            #fetchChronologicalTimeline,
+            [],
+            {
+              #cursor: cursor,
+              #count: count,
+              #filters: filters,
             },
           ),
         )),

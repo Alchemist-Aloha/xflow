@@ -10,7 +10,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            subscriptionListProvider.overrideWith((ref) => []),
+            subscriptionListProvider.overrideWith(() => MockSubscriptionListNotifier([])),
           ],
           child: const MaterialApp(
             home: SubscriptionListScreen(),
@@ -35,7 +35,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            subscriptionListProvider.overrideWith((ref) => mockSubs),
+            subscriptionListProvider.overrideWith(() => MockSubscriptionListNotifier(mockSubs)),
           ],
           child: const MaterialApp(
             home: SubscriptionListScreen(),
@@ -48,4 +48,20 @@ void main() {
       expect(find.text('@user1'), findsOneWidget);
     });
   });
+}
+
+class MockSubscriptionListNotifier extends SubscriptionListNotifier {
+  final List<Subscription> initialSubs;
+  MockSubscriptionListNotifier(this.initialSubs);
+
+  @override
+  SubscriptionListState build() {
+    return SubscriptionListState(
+      allSubscriptions: initialSubs,
+      isLoading: false,
+    );
+  }
+
+  @override
+  Future<void> refresh() async {}
 }

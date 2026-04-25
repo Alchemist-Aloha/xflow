@@ -83,10 +83,16 @@ class DiscoveryEngine {
       int bestScore =
           playedCountByUser[_normalizeHandle(result[i].userHandle)] ?? 0;
 
+      final prevHandle = i > 0 ? _normalizeHandle(result[i - 1].userHandle) : null;
+
       // Find the account in the lookahead window with the lowest view count
       for (int j = i + 1; j < end; j++) {
-        final candScore =
-            playedCountByUser[_normalizeHandle(result[j].userHandle)] ?? 0;
+        final candHandle = _normalizeHandle(result[j].userHandle);
+        
+        // Safety: Don't pull an item up if it would create a consecutive duplicate
+        if (candHandle == prevHandle) continue;
+
+        final candScore = playedCountByUser[candHandle] ?? 0;
         if (candScore < bestScore) {
           bestScore = candScore;
           bestIdx = j;
@@ -137,7 +143,7 @@ class DiscoveryEngine {
         final mediaUrl = result[i].mediaUrls.isNotEmpty ? result[i].mediaUrls.first : null;
         
         // Define the sliding window of items preceding the current index
-        final start = (i - windowSize + 1).clamp(0, result.length);
+        final start = (i - windowSize).clamp(0, result.length);
         final window = result.sublist(start, i);
         
         // Count occurrences of current item's identity in the preceding window
@@ -154,27 +160,20 @@ class DiscoveryEngine {
         // If any diversity rule is violated, search forward for a valid swap candidate
         if (handleCount >= threshold || isConsecutive || mediaCount >= mediaThreshold || isMediaConsecutive) {
           int swapIdx = -1;
-          final lookahead = windowSize + 10;
           
+          // First pass: lookahead search for a perfect candidate
+          final lookahead = windowSize + 10;
           for (int j = i + 1; j < result.length && j < i + lookahead; j++) {
-            final candHandle = _normalizeHandle(result[j].userHandle);
-            final candMedia = result[j].mediaUrls.isNotEmpty ? result[j].mediaUrls.first : null;
-            final prevHandle = i > 0 ? _normalizeHandle(result[i - 1].userHandle) : null;
-            final prevMedia = i > 0 && result[i - 1].mediaUrls.isNotEmpty ? result[i - 1].mediaUrls.first : null;
+            if (_isValidSwap(result, i, j, threshold, mediaThreshold, windowSize)) {
+              swapIdx = j;
+              break;
+            }
+          }
 
-            // CRITERIA: Candidate must not be the same as the clump it's breaking,
-            // must not be the same as the previous item, AND must not violate its own 
-            // saturation rules if moved to index [i].
-            if (candHandle != handle && candHandle != prevHandle && (candMedia == null || candMedia != prevMedia)) {
-              final candStart = (i - windowSize + 1).clamp(0, result.length);
-              final candWindow = result.sublist(candStart, i);
-              
-              final candHandleCount = candWindow.where((t) => _normalizeHandle(t.userHandle) == candHandle).length;
-              final candMediaCount = candMedia != null 
-                  ? candWindow.where((t) => t.mediaUrls.isNotEmpty && t.mediaUrls.first == candMedia).length 
-                  : 0;
-
-              if (candHandleCount < threshold && candMediaCount < mediaThreshold) {
+          // Second pass: if no perfect candidate in lookahead, search the entire remaining list
+          if (swapIdx == -1) {
+            for (int j = i + 1; j < result.length; j++) {
+              if (_isValidSwap(result, i, j, threshold, mediaThreshold, windowSize)) {
                 swapIdx = j;
                 break;
               }
@@ -198,5 +197,27 @@ class DiscoveryEngine {
       AppLogger.log('Discovery: Applied $totalSwaps saturation swaps (Threshold: $threshold, MediaThreshold: $mediaThreshold, StartIndex: $startIndex)');
     }
     return result;
+  }
+
+  static bool _isValidSwap(List<Tweet> result, int i, int j, int threshold, int mediaThreshold, int windowSize) {
+    final candHandle = _normalizeHandle(result[j].userHandle);
+    final candMedia = result[j].mediaUrls.isNotEmpty ? result[j].mediaUrls.first : null;
+    final prevHandle = i > 0 ? _normalizeHandle(result[i - 1].userHandle) : null;
+    final prevMedia = i > 0 && result[i - 1].mediaUrls.isNotEmpty ? result[i - 1].mediaUrls.first : null;
+
+    // Must not create a consecutive duplicate
+    if (candHandle == prevHandle) return false;
+    if (candMedia != null && candMedia == prevMedia) return false;
+
+    // Must not violate saturation rules in its new window at position i
+    final candStart = (i - windowSize).clamp(0, result.length);
+    final candWindow = result.sublist(candStart, i);
+    
+    final candHandleCount = candWindow.where((t) => _normalizeHandle(t.userHandle) == candHandle).length;
+    final candMediaCount = candMedia != null 
+        ? candWindow.where((t) => t.mediaUrls.isNotEmpty && t.mediaUrls.first == candMedia).length 
+        : 0;
+
+    return candHandleCount < threshold && candMediaCount < mediaThreshold;
   }
 }

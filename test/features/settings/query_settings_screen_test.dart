@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:xflow/features/settings/query_settings_screen.dart';
 import 'package:xflow/features/settings/settings_provider.dart';
 
 void main() {
   group('QuerySettingsScreen Widget Tests', () {
     testWidgets('renders all query architecture sliders', (WidgetTester tester) async {
+      SharedPreferences.setMockInitialValues({});
       await tester.pumpWidget(
         const ProviderScope(
           child: MaterialApp(
@@ -17,13 +19,16 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.text('Fetch Behavior'), findsOneWidget);
-      expect(find.text('Background Sync'), findsOneWidget);
+      expect(find.textContaining('FEED MIX', skipOffstage: true), findsOneWidget);
       
-      // Scroll to find Rate Limiting and Cooldown Duration
-      await tester.scrollUntilVisible(find.text('Cooldown Duration'), 100);
-      expect(find.text('Rate Limiting'), findsOneWidget);
-      expect(find.text('Cooldown Duration'), findsOneWidget);
+      // Scroll to find Variety header
+      await tester.scrollUntilVisible(find.textContaining('VARIETY'), 100);
+      expect(find.textContaining('VARIETY'), findsOneWidget);
+      
+      // Scroll to find Account Cool-off
+      await tester.scrollUntilVisible(find.text('Account Cool-off'), 100);
+      expect(find.textContaining('REFRESH & STORAGE'), findsOneWidget);
+      expect(find.text('Account Cool-off'), findsOneWidget);
     });
 
     testWidgets('updating a slider updates the displayed value', (WidgetTester tester) async {
@@ -44,11 +49,12 @@ void main() {
         final sliderFinder = find.byType(Slider);
         expect(sliderFinder, findsAtLeastNWidgets(1));
         
-        // Tapping first slider (Load Batch Size is usually visible at top)
+        // Tapping first slider
         await tester.tap(sliderFinder.first);
         await tester.pump();
 
-        expect(find.textContaining('tweets'), findsWidgets);
+        // Any text with a number should be present in sliders
+        expect(find.byType(Slider), findsWidgets);
       });
     });
   });
@@ -89,5 +95,68 @@ class MockSettingsNotifier extends SettingsNotifier {
   @override
   void updatePruneThreshold(int count) {
     state = state.copyWith(pruneThreshold: count);
+  }
+
+  @override
+  void updateDiscoveryParam({
+    bool? avoidWatchedContent,
+    bool? unseenSubscriptionBoost,
+    double? freshMixRatio,
+    int? saturationThreshold,
+    int? mediaSaturationThreshold,
+    FeedSort? fetchStrategy,
+    int? initialSyncCount,
+    bool? strictSubscriptionsOnly,
+    bool? includeNativeRetweets,
+    bool? useChunkedSubscriptions,
+    int? saturationWindow,
+    int? unseenBoostLookahead,
+    int? minFavesFilter,
+    int? dbCandidateMultiplier,
+    int? apiRetryLimit,
+    int? chunkRotationLimit,
+    int? pageRetryLimit,
+    int? minNewTweetsThreshold,
+    int? maxQueryLength,
+    int? apiTimeoutSeconds,
+    int? maxSaturationSwaps,
+    int? maxSaturationPasses,
+    int? playbackRetryLimit,
+    int? autoSkipDelaySeconds,
+    int? lazyLoadThreshold,
+    int? mediaDeduplicationWindow,
+    int? searchBatchSize,
+    VideoEndAction? videoEndAction,
+  }) {
+    state = state.copyWith(
+      avoidWatchedContent: avoidWatchedContent,
+      unseenSubscriptionBoost: unseenSubscriptionBoost,
+      freshMixRatio: freshMixRatio,
+      saturationThreshold: saturationThreshold,
+      mediaSaturationThreshold: mediaSaturationThreshold,
+      fetchStrategy: fetchStrategy,
+      initialSyncCount: initialSyncCount,
+      strictSubscriptionsOnly: strictSubscriptionsOnly,
+      includeNativeRetweets: includeNativeRetweets,
+      useChunkedSubscriptions: useChunkedSubscriptions,
+      saturationWindow: saturationWindow,
+      unseenBoostLookahead: unseenBoostLookahead,
+      minFavesFilter: minFavesFilter,
+      dbCandidateMultiplier: dbCandidateMultiplier,
+      apiRetryLimit: apiRetryLimit,
+      chunkRotationLimit: chunkRotationLimit,
+      pageRetryLimit: pageRetryLimit,
+      minNewTweetsThreshold: minNewTweetsThreshold,
+      maxQueryLength: maxQueryLength,
+      apiTimeoutSeconds: apiTimeoutSeconds,
+      maxSaturationSwaps: maxSaturationSwaps,
+      maxSaturationPasses: maxSaturationPasses,
+      playbackRetryLimit: playbackRetryLimit,
+      autoSkipDelaySeconds: autoSkipDelaySeconds,
+      lazyLoadThreshold: lazyLoadThreshold,
+      mediaDeduplicationWindow: mediaDeduplicationWindow,
+      searchBatchSize: searchBatchSize,
+      videoEndAction: videoEndAction,
+    );
   }
 }

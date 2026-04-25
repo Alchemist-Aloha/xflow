@@ -8,6 +8,7 @@ import '../../features/settings/settings_provider.dart';
 class BackgroundSync {
   static Timer? _syncTimer;
   static bool _isSyncing = false;
+  static bool enabled = true;
 
   static Future<int> _resolveSyncBatchSize(SettingsState settings) async {
     try {
@@ -20,6 +21,7 @@ class BackgroundSync {
   }
 
   static void start(TwitterClient client, SettingsState settings) {
+    if (!enabled) return;
     if (_syncTimer != null) return;
 
     // Initial sync

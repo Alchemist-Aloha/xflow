@@ -5,6 +5,8 @@ enum FeedSort { latest, popular, trending, algorithmic, chronological, videomixe
 
 enum MediaFilter { video, image, text }
 
+enum VideoEndAction { pause, replay, playNext }
+
 class SettingsState {
   final bool isInitialized;
   final Set<MediaFilter> filters;
@@ -17,6 +19,7 @@ class SettingsState {
   final int syncBatchSize;
   final int loadBatchSize;
   final int timelineBatchSize;
+  final int searchBatchSize;
   final int cooldownDuration;
   final int pruneThreshold;
 
@@ -54,6 +57,7 @@ class SettingsState {
   final int autoSkipDelaySeconds;
   final int lazyLoadThreshold;
   final int mediaDeduplicationWindow;
+  final VideoEndAction videoEndAction;
 
   SettingsState({
     this.isInitialized = false,
@@ -65,6 +69,7 @@ class SettingsState {
     this.syncBatchSize = 10,
     this.loadBatchSize = 20,
     this.timelineBatchSize = 20,
+    this.searchBatchSize = 10,
     this.cooldownDuration = 15,
     this.pruneThreshold = 50000,
     this.avoidWatchedContent = true,
@@ -94,6 +99,7 @@ class SettingsState {
     this.autoSkipDelaySeconds = 2,
     this.lazyLoadThreshold = 10,
     this.mediaDeduplicationWindow = 50,
+    this.videoEndAction = VideoEndAction.playNext,
   });
 
   SettingsState copyWith({
@@ -106,6 +112,7 @@ class SettingsState {
     int? syncBatchSize,
     int? loadBatchSize,
     int? timelineBatchSize,
+    int? searchBatchSize,
     int? cooldownDuration,
     int? pruneThreshold,
     bool? avoidWatchedContent,
@@ -135,6 +142,7 @@ class SettingsState {
     int? autoSkipDelaySeconds,
     int? lazyLoadThreshold,
     int? mediaDeduplicationWindow,
+    VideoEndAction? videoEndAction,
   }) {
     return SettingsState(
       isInitialized: isInitialized ?? this.isInitialized,
@@ -146,6 +154,7 @@ class SettingsState {
       syncBatchSize: syncBatchSize ?? this.syncBatchSize,
       loadBatchSize: loadBatchSize ?? this.loadBatchSize,
       timelineBatchSize: timelineBatchSize ?? this.timelineBatchSize,
+      searchBatchSize: searchBatchSize ?? this.searchBatchSize,
       cooldownDuration: cooldownDuration ?? this.cooldownDuration,
       pruneThreshold: pruneThreshold ?? this.pruneThreshold,
       avoidWatchedContent: avoidWatchedContent ?? this.avoidWatchedContent,
@@ -183,6 +192,7 @@ class SettingsState {
       lazyLoadThreshold: lazyLoadThreshold ?? this.lazyLoadThreshold,
       mediaDeduplicationWindow:
           mediaDeduplicationWindow ?? this.mediaDeduplicationWindow,
+      videoEndAction: videoEndAction ?? this.videoEndAction,
     );
   }
 }
@@ -218,6 +228,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
     final syncBatchSize = _prefs.getInt('syncBatchSize') ?? 10;
     final loadBatchSize = _prefs.getInt('loadBatchSize') ?? 20;
     final timelineBatchSize = _prefs.getInt('timelineBatchSize') ?? 20;
+    final searchBatchSize = _prefs.getInt('searchBatchSize') ?? 10;
     final cooldownDuration = _prefs.getInt('cooldownDuration') ?? 15;
     final pruneThreshold = _prefs.getInt('pruneThreshold') ?? 50000;
 
@@ -256,6 +267,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
     final lazyLoadThreshold = _prefs.getInt('lazyLoadThreshold') ?? 10;
     final mediaDeduplicationWindow =
         _prefs.getInt('mediaDeduplicationWindow') ?? 50;
+    final videoEndActionIdx = _prefs.getInt('videoEndAction') ?? VideoEndAction.playNext.index;
 
     state = SettingsState(
       isInitialized: true,
@@ -267,6 +279,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
       syncBatchSize: syncBatchSize,
       loadBatchSize: loadBatchSize,
       timelineBatchSize: timelineBatchSize,
+      searchBatchSize: searchBatchSize,
       cooldownDuration: cooldownDuration,
       pruneThreshold: pruneThreshold,
       avoidWatchedContent: avoidWatchedContent,
@@ -298,6 +311,9 @@ class SettingsNotifier extends Notifier<SettingsState> {
       autoSkipDelaySeconds: autoSkipDelaySeconds,
       lazyLoadThreshold: lazyLoadThreshold,
       mediaDeduplicationWindow: mediaDeduplicationWindow,
+      videoEndAction: videoEndActionIdx < VideoEndAction.values.length
+          ? VideoEndAction.values[videoEndActionIdx]
+          : VideoEndAction.playNext,
     );
   }
 
@@ -363,6 +379,8 @@ class SettingsNotifier extends Notifier<SettingsState> {
     int? autoSkipDelaySeconds,
     int? lazyLoadThreshold,
     int? mediaDeduplicationWindow,
+    int? searchBatchSize,
+    VideoEndAction? videoEndAction,
   }) {
     state = state.copyWith(
       avoidWatchedContent: avoidWatchedContent,
@@ -391,6 +409,8 @@ class SettingsNotifier extends Notifier<SettingsState> {
       autoSkipDelaySeconds: autoSkipDelaySeconds,
       lazyLoadThreshold: lazyLoadThreshold,
       mediaDeduplicationWindow: mediaDeduplicationWindow,
+      searchBatchSize: searchBatchSize,
+      videoEndAction: videoEndAction,
     );
     if (avoidWatchedContent != null)
       _prefs.setBool('avoidWatchedContent', avoidWatchedContent);
@@ -440,6 +460,10 @@ class SettingsNotifier extends Notifier<SettingsState> {
       _prefs.setInt('lazyLoadThreshold', lazyLoadThreshold);
     if (mediaDeduplicationWindow != null)
       _prefs.setInt('mediaDeduplicationWindow', mediaDeduplicationWindow);
+    if (searchBatchSize != null)
+      _prefs.setInt('searchBatchSize', searchBatchSize);
+    if (videoEndAction != null)
+      _prefs.setInt('videoEndAction', videoEndAction.index);
   }
 
   void toggleFilter(MediaFilter filter) {
