@@ -1,6 +1,6 @@
 # <img src="assets/app_icon.png" alt="App Icon" width="40"/> XFlow
 
-XFlow is a Flutter-based application that reimagines how you consume media from Twitter/X. It provides a seamless, TikTok-style infinite scrolling experience specifically tailored for browsing videos, images, and GIFs from the platform.
+XFlow is a Flutter-based application that reimagines how you consume media from Twitter/X. It provides a seamless, TikTok-style infinite scrolling experience specifically tailored for browsing videos and images from the platform.
 
 By leveraging the robust authentication and data layers originally built for the [Squawker](https://github.com/j-fb/squawker) project, XFlow allows you to securely log in, view media from your subscriptions, and explore trending content in a highly optimized, full-screen player environment.
 
