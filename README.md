@@ -51,7 +51,7 @@ By leveraging the robust authentication and data layers originally built for the
 * `lib/features/profile/` - User profile details and media grid views.
 * `lib/features/subscriptions/` - Subscription list management.
 * `lib/features/settings/` - App settings and preferences.
-* `squawker_source/` - Original source code from Squawker, used as a reference/dependency for the data layer.
+
 
 ## 🛠 Alternative Feed Fetching
 

@@ -31,7 +31,7 @@ class Repository {
     }
     return await openDatabase(
       path,
-      version: 8,
+      version: 9,
       onCreate: (db, version) async {
         await db.execute(
           'CREATE TABLE $tableAccounts (id TEXT PRIMARY KEY, screen_name TEXT, rest_id TEXT, auth_header TEXT)',
@@ -55,7 +55,8 @@ class Repository {
             created_at INTEGER,
             played_count INTEGER DEFAULT 0,
             last_played_at INTEGER,
-            duration_watched INTEGER DEFAULT 0
+            duration_watched INTEGER DEFAULT 0,
+            last_suggested_at INTEGER
           )
         ''');
         await db.execute(
@@ -63,6 +64,9 @@ class Repository {
         );
         await db.execute(
           'CREATE INDEX idx_media_key ON $tableCachedMedia (media_key)',
+        );
+        await db.execute(
+          'CREATE INDEX idx_suggested ON $tableCachedMedia (last_suggested_at)',
         );
       },
       onUpgrade: (db, oldVersion, newVersion) async {
@@ -115,6 +119,12 @@ class Repository {
           await db.execute(
             'CREATE TABLE IF NOT EXISTS $tableHashtags (tag TEXT PRIMARY KEY, added_at INTEGER)',
           );
+        }
+        if (oldVersion < 9) {
+          await db.execute(
+              'ALTER TABLE $tableCachedMedia ADD COLUMN last_suggested_at INTEGER');
+          await db.execute(
+              'CREATE INDEX IF NOT EXISTS idx_suggested ON $tableCachedMedia (last_suggested_at)');
         }
       },
     );
@@ -249,16 +259,13 @@ class Repository {
       tableCachedMedia,
       where: whereClause,
       whereArgs: whereArgs,
-      orderBy: 'RANDOM()',
-      limit: limit,
+      orderBy: 'last_suggested_at ASC',
+      limit: limit * 2,
     );
 
     if (maps.isEmpty) return [];
 
-    AppLogger.log(
-        'Discovery: Media-Key deduplication filtered potential candidates. Results: ${maps.length}');
-
-    return List.generate(maps.length, (i) {
+    final results = List.generate(maps.length, (i) {
       return Tweet(
         id: maps[i]['id'] as String,
         text: maps[i]['text'] as String,
@@ -274,6 +281,14 @@ class Repository {
             : null,
       );
     });
+
+    // Mark these as suggested
+    if (results.isNotEmpty) {
+      final ids = results.map((t) => t.id).toList();
+      await markAsSuggested(ids);
+    }
+
+    return (results..shuffle()).take(limit).toList();
   }
 
   static Future<List<Tweet>> getCachedMediaCandidates(
@@ -314,11 +329,11 @@ class Repository {
       tableCachedMedia,
       where: whereClause,
       whereArgs: whereArgs,
-      orderBy: 'RANDOM()',
-      limit: limit,
+      orderBy: 'last_suggested_at ASC',
+      limit: limit * 2, // Fetch more to allow for shuffling
     );
 
-    return List.generate(maps.length, (i) {
+    final results = List.generate(maps.length, (i) {
       return Tweet(
         id: maps[i]['id'] as String,
         text: maps[i]['text'] as String,
@@ -334,6 +349,29 @@ class Repository {
             : null,
       );
     });
+
+    // Mark these as suggested so they go to the back of the queue
+    if (results.isNotEmpty) {
+      final ids = results.map((t) => t.id).toList();
+      await markAsSuggested(ids);
+    }
+
+    return (results..shuffle()).take(limit).toList();
+  }
+
+  static Future<void> markAsSuggested(List<String> ids) async {
+    final db = await database;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final batch = db.batch();
+    for (final id in ids) {
+      batch.update(
+        tableCachedMedia,
+        {'last_suggested_at': now},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    }
+    await batch.commit(noResult: true);
   }
 
   static Future<Map<String, int>> getPlayedCountsByUser() async {
