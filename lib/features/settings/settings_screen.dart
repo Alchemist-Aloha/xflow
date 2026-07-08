@@ -590,9 +590,10 @@ class SubscriptionSettingsPage extends ConsumerWidget {
             onTap: () async {
               await Repository.clearSubscriptions();
               ref.invalidate(feedNotifierProvider);
-              if (context.mounted)
+              if (context.mounted) {
                 ScaffoldMessenger.of(context)
                     .showSnackBar(const SnackBar(content: Text('Cleared')));
+              }
             },
           ),
         ],

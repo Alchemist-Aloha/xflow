@@ -38,8 +38,9 @@ void main() {
 
       bool hasConsecutive = false;
       for (int i = 0; i < boosted.length - 1; i++) {
-        if (boosted[i].userHandle == boosted[i + 1].userHandle)
+        if (boosted[i].userHandle == boosted[i + 1].userHandle) {
           hasConsecutive = true;
+        }
       }
 
       expect(hasConsecutive, isFalse,
@@ -68,8 +69,9 @@ void main() {
 
       bool hasConsecutive = false;
       for (int i = 0; i < result.length - 1; i++) {
-        if (result[i].userHandle == result[i + 1].userHandle)
+        if (result[i].userHandle == result[i + 1].userHandle) {
           hasConsecutive = true;
+        }
       }
       expect(hasConsecutive, isFalse,
           reason: 'Saturation left consecutive handles');

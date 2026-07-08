@@ -209,7 +209,7 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
           }
 
           // Determine orientation based on current player state
-          final onFullscreen = () async {
+          Future<void> onFullscreen() async {
             final state = _videoKey.currentState;
             if (state != null) {
               try {
@@ -248,7 +248,7 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
                 AppLogger.log('XFLOW: Error toggling fullscreen: $e');
               }
             }
-          };
+          }
 
           // Handle auto-fullscreen if requested
           if (widget.isVisible && widget.autoFullscreen && !_isAutoFullscreenDone) {
@@ -288,7 +288,7 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
                         bottomButtonBar: [
                           Expanded(
                             child: Container(
-                              color: Colors.black.withOpacity(0.5),
+                              color: Colors.black.withValues(alpha: 0.5),
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 16.0, vertical: 8.0),
                               child: Column(

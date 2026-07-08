@@ -38,29 +38,45 @@ String _mediaSearchQuery(String hashtag) {
   return '$normalized (filter:images OR filter:videos)';
 }
 
+String _plainSearchQuery(String hashtag) {
+  return _normalizeHashtag(hashtag);
+}
+
 class HashtagMediaNotifier extends AsyncNotifier<FeedState> {
   HashtagMediaNotifier(this.arg);
   final String arg;
+  String? _activeQuery;
 
   @override
   FutureOr<FeedState> build() async {
     final hashtag = arg;
     final client = ref.watch(twitterClientProvider);
     final settings = ref.watch(settingsProvider);
-    final query = _mediaSearchQuery(hashtag);
+    final mediaQuery = _mediaSearchQuery(hashtag);
+    final plainQuery = _plainSearchQuery(hashtag);
 
     var response = await client.fetchTrendingMedia(
-      query: query,
+      query: mediaQuery,
       count: settings.timelineBatchSize,
       sort: FeedSort.trending,
     );
+    _activeQuery = mediaQuery;
 
     if (response.tweets.isEmpty) {
       response = await client.fetchTrendingMedia(
-        query: query,
+        query: mediaQuery,
         count: settings.timelineBatchSize,
         sort: FeedSort.latest,
       );
+    }
+
+    if (response.tweets.isEmpty) {
+      response = await client.fetchTrendingMedia(
+        query: plainQuery,
+        count: settings.timelineBatchSize,
+        sort: FeedSort.latest,
+      );
+      _activeQuery = plainQuery;
     }
 
     return FeedState(
@@ -87,7 +103,7 @@ class HashtagMediaNotifier extends AsyncNotifier<FeedState> {
 
     final client = ref.read(twitterClientProvider);
     final settings = ref.read(settingsProvider);
-    final query = _mediaSearchQuery(arg);
+    final query = _activeQuery ?? _mediaSearchQuery(arg);
 
     try {
       final response = await client.fetchTrendingMedia(

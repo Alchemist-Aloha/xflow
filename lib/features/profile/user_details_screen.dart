@@ -142,12 +142,12 @@ class UserDetailsScreen extends ConsumerWidget {
                         children: [
                           _buildStat(
                               context,
-                              '${_formatCount(profile.followingCount ?? 0)}',
+                              _formatCount(profile.followingCount ?? 0),
                               'Following'),
                           const SizedBox(width: 24),
                           _buildStat(
                               context,
-                              '${_formatCount(profile.followersCount ?? 0)}',
+                              _formatCount(profile.followersCount ?? 0),
                               'Followers'),
                         ],
                       ),

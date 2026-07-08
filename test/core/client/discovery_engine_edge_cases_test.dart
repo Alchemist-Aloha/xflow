@@ -50,8 +50,9 @@ void main() {
 
       bool hasDuplicateMedia = false;
       for (int i = 0; i < result.length - 1; i++) {
-        if (result[i].mediaUrls.first == result[i + 1].mediaUrls.first)
+        if (result[i].mediaUrls.first == result[i + 1].mediaUrls.first) {
           hasDuplicateMedia = true;
+        }
       }
       expect(hasDuplicateMedia, isFalse,
           reason: 'Duplicate media found consecutively');

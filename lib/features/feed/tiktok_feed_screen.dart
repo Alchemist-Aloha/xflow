@@ -323,7 +323,7 @@ class DiscoveryDebugOverlay extends StatelessWidget {
         builder: (context, snapshot) {
           final stats = snapshot.data ?? (0, 0);
           return Card(
-            color: Colors.black.withOpacity(0.6),
+            color: Colors.black.withValues(alpha: 0.6),
             child: Padding(
               padding: const EdgeInsets.all(8),
               child: Column(

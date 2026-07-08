@@ -187,7 +187,6 @@ class TwitterClient {
     'c9s_tweet_anatomy_moderator_badge_enabled': true,
     'responsive_web_grok_analyze_button_fetch_trends_enabled': false,
     'responsive_web_grok_analyze_post_followups_enabled': false,
-    'rweb_cashtags_composer_attachment_enabled': true,
     'responsive_web_jetfuel_frame': true,
     'responsive_web_grok_share_attachment_enabled': true,
     'responsive_web_grok_annotations_enabled': true,
@@ -215,12 +214,8 @@ class TwitterClient {
   };
 
   static const Map<String, dynamic> searchTimelineFieldToggles = {
-    'withPayments': true,
-    'withAuxiliaryUserLabels': true,
     'withArticleRichContentState': true,
     'withArticlePlainText': false,
-    'withArticleSummaryText': false,
-    'withArticleVoiceOver': false,
     'withGrokAnalyze': false,
     'withDisallowedReplyControls': false,
   };

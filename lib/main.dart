@@ -70,7 +70,7 @@ class XFlowApp extends ConsumerWidget {
         ),
         navigationBarTheme: NavigationBarThemeData(
           backgroundColor: Colors.black,
-          indicatorColor: Colors.blue.withOpacity(0.2),
+          indicatorColor: Colors.blue.withValues(alpha: 0.2),
           labelTextStyle: WidgetStateProperty.all(
             const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
           ),
