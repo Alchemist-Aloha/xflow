@@ -1,9 +1,6 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/client/twitter_client.dart';
 import '../../core/database/repository.dart';
-import '../../core/models/tweet.dart';
 import 'feed_provider.dart';
 import '../settings/settings_provider.dart';
 
@@ -30,20 +27,37 @@ final hashtagListProvider =
   () => HashtagListNotifier(),
 );
 
+String _normalizeHashtag(String hashtag) {
+  final trimmed = hashtag.trim();
+  if (trimmed.isEmpty) return trimmed;
+  return trimmed.startsWith('#') ? trimmed : '#$trimmed';
+}
+
+String _mediaSearchQuery(String hashtag) {
+  final normalized = _normalizeHashtag(hashtag);
+  return '$normalized (filter:images OR filter:videos)';
+}
+
 class HashtagMediaNotifier extends FamilyAsyncNotifier<FeedState, String> {
   @override
   FutureOr<FeedState> build(String hashtag) async {
     final client = ref.watch(twitterClientProvider);
     final settings = ref.watch(settingsProvider);
+    final query = _mediaSearchQuery(hashtag);
 
-    // For now, hashtag feed is purely online as requested ("just pull api data and display")
-    // but we still want a FeedState structure.
-
-    final response = await client.fetchTrendingMedia(
-      query: hashtag,
+    var response = await client.fetchTrendingMedia(
+      query: query,
       count: settings.timelineBatchSize,
       sort: FeedSort.trending,
     );
+
+    if (response.tweets.isEmpty) {
+      response = await client.fetchTrendingMedia(
+        query: query,
+        count: settings.timelineBatchSize,
+        sort: FeedSort.latest,
+      );
+    }
 
     return FeedState(
       tweets: response.tweets,
@@ -61,19 +75,22 @@ class HashtagMediaNotifier extends FamilyAsyncNotifier<FeedState, String> {
     final currentState = state.value;
     if (currentState == null ||
         currentState.isLoadingMore ||
-        currentState.cursorBottom == null) return;
+        currentState.cursorBottom == null) {
+      return;
+    }
 
     state = AsyncData(currentState.copyWith(isLoadingMore: true));
 
     final client = ref.read(twitterClientProvider);
     final settings = ref.read(settingsProvider);
+    final query = _mediaSearchQuery(arg);
 
     try {
       final response = await client.fetchTrendingMedia(
-        query: arg,
+        query: query,
         cursor: currentState.cursorBottom,
         count: settings.loadBatchSize,
-        sort: FeedSort.trending,
+        sort: FeedSort.latest,
       );
 
       final seenIds = currentState.tweets.map((t) => t.id).toSet();
