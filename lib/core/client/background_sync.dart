@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'twitter_client.dart';
 import '../database/repository.dart';
 import '../../features/settings/settings_provider.dart';
@@ -9,16 +8,6 @@ class BackgroundSync {
   static Timer? _syncTimer;
   static bool _isSyncing = false;
   static bool enabled = true;
-
-  static Future<int> _resolveSyncBatchSize(SettingsState settings) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final persisted = prefs.getInt('syncBatchSize');
-      return persisted ?? settings.syncBatchSize;
-    } catch (_) {
-      return settings.syncBatchSize;
-    }
-  }
 
   static void start(TwitterClient client, SettingsState settings) {
     if (!enabled) return;
@@ -52,13 +41,12 @@ class BackgroundSync {
     _isSyncing = true;
 
     try {
-      final syncBatchSize = await _resolveSyncBatchSize(settings);
       final subs = await Repository.getSubscriptions();
       if (subs.isEmpty) return;
 
       // Pick a random subset from settings
       subs.shuffle();
-      final targets = subs.take(syncBatchSize);
+      final targets = subs.take(settings.syncBatchSize);
       final usersQuery =
           targets.map((s) => 'from:${s.screenName}').join(' OR ');
       final query = "include:nativeretweets ($usersQuery) -filter:replies";

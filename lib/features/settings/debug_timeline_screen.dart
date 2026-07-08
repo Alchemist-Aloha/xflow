@@ -4,6 +4,7 @@ import 'package:dart_twitter_api/twitter_api.dart' as official;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../../core/client/twitter_account.dart';
+import '../../core/client/twitter_client.dart';
 
 class DebugTimelineScreen extends StatefulWidget {
   const DebugTimelineScreen({super.key});
@@ -18,6 +19,8 @@ class _DebugTimelineScreenState extends State<DebugTimelineScreen> {
   final _tokenController = TextEditingController();
   final _secretController = TextEditingController();
   final _gqlBatchController = TextEditingController(text: '20');
+  final _searchQueryController =
+      TextEditingController(text: '#nature (filter:images OR filter:videos)');
 
   List<String> _results = [];
   String _rawJson = '';
@@ -170,6 +173,62 @@ class _DebugTimelineScreenState extends State<DebugTimelineScreen> {
     }
   }
 
+  Future<void> _fetchSearchTimeline(String product) async {
+    setState(() {
+      _isLoading = true;
+      _results = [];
+      _rawJson = '';
+    });
+
+    try {
+      final int batchSize = int.tryParse(_gqlBatchController.text) ?? 20;
+      final variables = {
+        "rawQuery": _searchQueryController.text.trim(),
+        "count": batchSize.toString(),
+        "product": product,
+        "querySource": "typed_query",
+        "withDownvotePerspective": false,
+        "withReactionsMetadata": false,
+        "withReactionsPerspective": false
+      };
+
+      final uri = Uri.https(
+        'x.com',
+        '/i/api${TwitterClient.graphqlSearchTimelineUriPath}',
+        {
+          'variables': jsonEncode(variables),
+          'features': jsonEncode(TwitterClient.searchTimelineFeatures),
+          'fieldToggles': jsonEncode(TwitterClient.searchTimelineFieldToggles),
+        },
+      );
+
+      final response = await TwitterAccount.fetch(uri);
+
+      setState(() {
+        _rawJson = response.body;
+        _results = [
+          'Status: ${response.statusCode}',
+          'Product: $product',
+          'Path: ${TwitterClient.graphqlSearchTimelineUriPath}',
+          'URL: $uri',
+        ];
+
+        final bodyStr = response.body;
+        if (bodyStr.contains('full_text')) {
+          _results.add('Found "full_text" in response. Search API works.');
+        } else if (bodyStr.contains('errors')) {
+          _results.add('API returned errors. Check raw JSON.');
+        } else {
+          _results.add('No tweet text found in simple scan. Check raw JSON.');
+        }
+      });
+    } catch (e) {
+      setState(() => _results = ['Exception: $e']);
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -249,6 +308,38 @@ class _DebugTimelineScreenState extends State<DebugTimelineScreen> {
                   style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blueGrey),
                   child: const Text('Home (Following)',
+                      style: TextStyle(fontSize: 11)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _searchQueryController,
+              style: const TextStyle(fontSize: 12),
+              decoration: const InputDecoration(
+                isDense: true,
+                labelText: 'SearchTimeline rawQuery',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [
+                ElevatedButton(
+                  onPressed:
+                      _isLoading ? null : () => _fetchSearchTimeline('Top'),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepPurple),
+                  child:
+                      const Text('Search Top', style: TextStyle(fontSize: 11)),
+                ),
+                ElevatedButton(
+                  onPressed:
+                      _isLoading ? null : () => _fetchSearchTimeline('Latest'),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepPurple),
+                  child: const Text('Search Latest',
                       style: TextStyle(fontSize: 11)),
                 ),
               ],

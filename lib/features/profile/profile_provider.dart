@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/client/twitter_client.dart';
 import '../../core/database/entities.dart';
 import '../../core/database/media_repository.dart';
-import '../../core/models/tweet.dart';
 import '../feed/feed_provider.dart'; // For FeedState
 import '../settings/settings_provider.dart';
 
@@ -174,9 +173,3 @@ class UserMediaNotifier extends FamilyAsyncNotifier<FeedState, String> {
 final userMediaNotifierProvider =
     AsyncNotifierProviderFamily<UserMediaNotifier, FeedState, String>(
         () => UserMediaNotifier());
-
-final userTweetsProvider =
-    Provider.family<AsyncValue<List<Tweet>>, String>((ref, screenName) {
-  final asyncState = ref.watch(userMediaNotifierProvider(screenName));
-  return asyncState.whenData((state) => state.tweets);
-});

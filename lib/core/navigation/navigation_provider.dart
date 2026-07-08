@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/tweet.dart';
 
 enum MainTab { media, subscriptions, trending }
 

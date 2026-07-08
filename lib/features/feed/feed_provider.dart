@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/client/twitter_client.dart';
 import '../../core/models/tweet.dart';
 import '../../core/database/repository.dart';
@@ -41,16 +40,6 @@ class FeedState {
 }
 
 class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
-  Future<int> _resolveSyncBatchSize(SettingsState settings) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final persisted = prefs.getInt('syncBatchSize');
-      return persisted ?? settings.syncBatchSize;
-    } catch (_) {
-      return settings.syncBatchSize;
-    }
-  }
-
   List<Tweet> _runDiscoveryPipeline(
     List<Tweet> freshPool,
     List<Tweet> localPool,
@@ -183,7 +172,6 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
 
     final client = ref.read(twitterClientProvider);
     final settings = ref.read(settingsProvider);
-    final syncBatchSize = await _resolveSyncBatchSize(settings);
 
     debugPrint('XFLOW: Background refresh started');
 
@@ -209,7 +197,7 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
         freshResponse = await client.fetchSubscribedMedia(
           sort: settings.fetchStrategy,
           filters: settings.filters,
-          subBatchSize: syncBatchSize,
+          subBatchSize: settings.syncBatchSize,
           loadBatchSize: settings.initialSyncCount,
           cooldownMinutes: settings.cooldownDuration,
           strictSubscriptionsOnly: settings.strictSubscriptionsOnly,
@@ -280,7 +268,6 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
     if (currentState == null || currentState.isLoadingMore) return;
 
     final settings = ref.read(settingsProvider);
-    final syncBatchSize = await _resolveSyncBatchSize(settings);
 
     state = AsyncData(currentState.copyWith(isLoadingMore: true));
 
@@ -355,7 +342,7 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
               cursor: currentCursor,
               sort: settings.fetchStrategy,
               filters: settings.filters,
-              subBatchSize: syncBatchSize,
+              subBatchSize: settings.syncBatchSize,
               loadBatchSize: settings.loadBatchSize,
               cooldownMinutes: settings.cooldownDuration,
               strictSubscriptionsOnly: settings.strictSubscriptionsOnly,
@@ -492,9 +479,3 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
 final feedNotifierProvider =
     AutoDisposeAsyncNotifierProvider<FeedNotifier, FeedState>(
         () => FeedNotifier());
-
-// Legacy support for parts of the code that still expect feedProvider
-final feedProvider = Provider.autoDispose<AsyncValue<List<Tweet>>>((ref) {
-  final asyncState = ref.watch(feedNotifierProvider);
-  return asyncState.whenData((state) => state.tweets);
-});

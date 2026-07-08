@@ -287,7 +287,7 @@ class SubscriptionListScreen extends ConsumerWidget {
                 onPressed: () =>
                     ref.read(subscriptionListProvider.notifier).refresh(),
               ),
-        title: Text(isStandalone ? 'Subscriptions' : 'Subscriptions'),
+        title: const Text('Subscriptions'),
         actions: [
           if (!isStandalone)
             IconButton(
