@@ -1,50 +1,144 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
+# ============
+# macOS
+# ============
 .DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# ============
+# Linux
+# ============
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ============
+# Windows
+# ============
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# ============
+# Editor / IDE
+# ============
+# IntelliJ / Android Studio / Fleet
+.idea/
+*.iml
+*.ipr
+*.iws
+.fleet/
+*.fleet.*
+
+# VS Code — uncomment if you don't want to commit your settings
+#.vscode/
+
+# Vim / Nano / Emacs
+*.swp
+*.swo
+*.swn
+*.bak
+*~
+
+# Atom
 .atom/
-.build/
-.buildlog/
+.remote-sync.json
+
+# ============
+# OS / System
+# ============
 .history
 .svn/
 .swiftpm/
 migrate_working_dir/
 
-# IntelliJ related
-*.iml
-*.ipr
-*.iws
-.idea/
-
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
-
-# Flutter/Dart/Pub related
+# ============
+# Flutter / Dart / Pub
+# ============
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
+.flutter-plugins
 .flutter-plugins-dependencies
+.packages
 .pub-cache/
 .pub/
 /build/
 /coverage/
+*.js_.map
+*.js.deps
 
-# Symbolication related
+# ============
+# Symbolication & Obfuscation
+# ============
 app.*.symbols
-
-# Obfuscation related
 app.*.map.json
 
-# Android Studio will place build artifacts here
+# ============
+# Android (host project artifacts)
+# ============
 /android/app/debug
 /android/app/profile
 /android/app/release
+/android/.gradle/
+/android/build/
+/android/local.properties
+*.hprof
 
+# ============
+# iOS / Xcode
+# ============
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/ServiceDefinitions.json
+*.xcworkspace
+xcuserdata/
 
+# ============
+# Web
+# ============
+/web/build/
+/web/**/*.map
+
+# ============
+# Python / Scripts
+# ============
+*.pyc
+__pycache__/
+*.pyo
+*.egg-info/
+.venv/
+venv/
+env/
+
+# ============
+# Logs / Temporary
+# ============
+*.log
+*.journal
+*.tmp
+*.temp
+
+# ============
+# Project-specific
+# ============
 /docs/tutorial.md
 /docs/tutorial/*
 /api_response
