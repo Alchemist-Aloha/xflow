@@ -2,8 +2,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/client/twitter_client.dart';
+import '../../core/database/repository.dart';
 import '../../core/database/entities.dart';
-import '../../core/database/media_repository.dart';
 import '../feed/feed_provider.dart'; // For FeedState
 import '../settings/settings_provider.dart';
 
@@ -21,15 +21,14 @@ class UserMediaNotifier extends AsyncNotifier<FeedState> {
   FutureOr<FeedState> build() async {
     final client = ref.watch(twitterClientProvider);
     final settings = ref.watch(settingsProvider);
-    final mediaRepo = ref.watch(mediaRepositoryProvider);
     final screenName = arg.startsWith('@') ? arg.substring(1) : arg;
 
     // 1. Try to load from cache immediately to show SOMETHING
     final cached =
-        await mediaRepo.getUserCachedMedia(screenName, settings.loadBatchSize);
+        await Repository.getUserCachedMedia(screenName, settings.loadBatchSize);
 
     // Trigger async fetch in the background
-    _fetchFreshData(screenName, client, settings, mediaRepo);
+    _fetchFreshData(screenName, client, settings);
 
     return FeedState(
       tweets: cached.map((t) => t.copyWith(source: 'Cache')).toList(),
@@ -45,12 +44,14 @@ class UserMediaNotifier extends AsyncNotifier<FeedState> {
     }
     final client = ref.read(twitterClientProvider);
     final settings = ref.read(settingsProvider);
-    final mediaRepo = ref.read(mediaRepositoryProvider);
-    await _fetchFreshData(screenName, client, settings, mediaRepo);
+    await _fetchFreshData(screenName, client, settings);
   }
 
-  Future<void> _fetchFreshData(String screenName, TwitterClient client,
-      SettingsState settings, MediaRepository mediaRepo) async {
+  Future<void> _fetchFreshData(
+    String screenName,
+    TwitterClient client,
+    SettingsState settings,
+  ) async {
     try {
       final response = await _fetchUserMedia(
         client,
@@ -58,13 +59,16 @@ class UserMediaNotifier extends AsyncNotifier<FeedState> {
         cooldownMinutes: settings.cooldownDuration,
       );
 
+      if (!ref.mounted) return;
+
       if (response.tweets.isNotEmpty) {
-        await mediaRepo.insertCachedMedia(response.tweets);
+        await Repository.insertCachedMedia(response.tweets);
 
         final freshTweets =
             response.tweets.map((t) => t.copyWith(source: 'API')).toList();
 
         // Update state by MERGING to avoid jumps
+        if (!ref.mounted) return;
         if (state.hasValue) {
           final currentTweets = state.value!.tweets;
           final existingIds = currentTweets.map((t) => t.id).toSet();
@@ -86,12 +90,14 @@ class UserMediaNotifier extends AsyncNotifier<FeedState> {
           }
         }
       } else {
+        if (!ref.mounted) return;
         if (state.hasValue) {
           state = AsyncData(state.value!.copyWith(isRefreshing: false));
         }
       }
     } catch (e) {
       debugPrint('XFLOW: Background user media fetch error: $e');
+      if (!ref.mounted) return;
       if (state.hasValue) {
         state = AsyncData(state.value!.copyWith(isRefreshing: false));
       }
@@ -108,7 +114,6 @@ class UserMediaNotifier extends AsyncNotifier<FeedState> {
 
     final client = ref.read(twitterClientProvider);
     final settings = ref.read(settingsProvider);
-    final mediaRepo = ref.read(mediaRepositoryProvider);
     state = AsyncData(currentState.copyWith(isLoadingMore: true));
 
     try {
@@ -121,7 +126,7 @@ class UserMediaNotifier extends AsyncNotifier<FeedState> {
 
       final newTweets = response.tweets;
       if (newTweets.isNotEmpty) {
-        await mediaRepo.insertCachedMedia(newTweets);
+        await Repository.insertCachedMedia(newTweets);
       }
 
       final seenIds = currentState.tweets.map((t) => t.id).toSet();

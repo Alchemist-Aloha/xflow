@@ -3,8 +3,10 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:ffcache/ffcache.dart';
+import 'x_api_constants.dart';
 import '../database/entities.dart';
 import '../database/repository.dart';
+import '../utils/app_logger.dart';
 
 class TwitterAccount {
   static Account? _currentAccount;
@@ -27,19 +29,39 @@ class TwitterAccount {
     return md5.convert(utf8.encode(uri.toString())).toString();
   }
 
+  static String compactForLog(Object? value, {int? maxLength}) {
+    if (value == null) return 'null';
+    final flattened = value.toString().replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (maxLength == null || flattened.length <= maxLength) {
+      return flattened;
+    }
+    return '${flattened.substring(0, maxLength).trimRight()}...';
+  }
+
+  static String _summarizeRequest(Uri uri, String method, Object? body) {
+    final query = uri.query.isEmpty ? '' : '?${compactForLog(uri.query)}';
+    final bodySummary = body == null ? '' : ' body=${compactForLog(body)}';
+    return '$method ${uri.path}$query$bodySummary';
+  }
+
   static Future<http.Response> fetch(Uri uri,
       {String method = 'GET',
       Object? body,
       Map<String, String>? headers,
       Duration? cacheDuration}) async {
+    final requestSummary = _summarizeRequest(uri, method, body);
     final cacheKey = _getCacheKey(uri);
     if (method == 'GET' && cacheDuration != null) {
       final cachedBody = await _cache.getString(cacheKey);
       if (cachedBody != null) {
+        AppLogger.log(
+            'HTTP cache hit: $requestSummary bytes=${cachedBody.length}');
         return http.Response(cachedBody, 200, headers: {
           'content-type': 'application/json; charset=utf-8',
         });
       }
+      AppLogger.log(
+          'HTTP cache miss: $requestSummary ttl=${cacheDuration.inMinutes}m');
     }
 
     if (_currentAccount == null) {
@@ -49,15 +71,13 @@ class TwitterAccount {
     final combinedHeaders = <String, String>{
       'accept': '*/*',
       'accept-language': 'en-US,en;q=0.9',
-      'authorization':
-          'Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA',
+      'authorization': xBearerToken,
       'cache-control': 'no-cache',
       'content-type': 'application/json',
       'pragma': 'no-cache',
       'referer': 'https://x.com',
       'origin': 'https://x.com',
-      'user-agent':
-          'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Mobile Safari/537.3',
+      'user-agent': xMobileUserAgent,
       'x-twitter-active-user': 'yes',
       'x-twitter-client-language': 'en',
       'x-twitter-auth-type': 'OAuth2Session',
@@ -71,6 +91,7 @@ class TwitterAccount {
     }
 
     // Try to get x-client-transaction-id
+    var transactionIdAttached = false;
     try {
       final transactionUri = Uri.http('x-client-transaction-id-generator.xyz',
           '/generate-x-client-transaction-id', {'path': uri.path});
@@ -81,12 +102,16 @@ class TwitterAccount {
             jsonDecode(transactionResponse.body)['x-client-transaction-id'];
         if (transactionId != null) {
           combinedHeaders['x-client-transaction-id'] = transactionId;
+          transactionIdAttached = true;
         }
       }
     } catch (e) {
       debugPrint('Error generating x-client-transaction-id: $e');
     }
 
+    AppLogger.log(
+        'HTTP request start: $requestSummary account=${_currentAccount?.screenName ?? 'none'} txId=${transactionIdAttached ? 'attached' : 'missing'}');
+    final stopwatch = Stopwatch()..start();
     final http.Response response;
     if (method == 'POST') {
       response = await http
@@ -97,6 +122,9 @@ class TwitterAccount {
           .get(uri, headers: combinedHeaders)
           .timeout(const Duration(seconds: 15));
     }
+    stopwatch.stop();
+    AppLogger.log(
+        'HTTP request end: $requestSummary status=${response.statusCode} elapsedMs=${stopwatch.elapsedMilliseconds} bytes=${response.bodyBytes.length}');
 
     if (response.statusCode == 200) {
       // Force UTF-8 decoding for the body string to avoid mangling and caching issues

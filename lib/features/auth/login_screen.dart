@@ -5,12 +5,10 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_cookie_manager_plus/webview_cookie_manager_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/client/account_provider.dart';
+import '../../core/client/x_api_constants.dart';
 import '../../core/database/entities.dart';
 import '../../core/database/repository.dart';
 import '../../core/client/twitter_client.dart';
-
-const String bearerToken =
-    "Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA";
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -29,8 +27,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.initState();
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setUserAgent(
-          'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Mobile Safari/537.3')
+      ..setUserAgent(xMobileUserAgent)
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageFinished: (url) async {
@@ -58,7 +55,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         .contains(c.name))
                     .map((c) => '${c.name}=${c.value}')
                     .join(";"),
-                "authorization": bearerToken,
+                "authorization": xBearerToken,
                 "x-csrf-token": ct0Cookie.value,
               };
 
@@ -76,8 +73,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
               final profileRes = await http.get(profileUri, headers: {
                 ...authHeader,
-                'User-Agent':
-                    'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Mobile Safari/537.3',
+                'User-Agent': xMobileUserAgent,
                 'Content-Type': 'application/json',
               });
 

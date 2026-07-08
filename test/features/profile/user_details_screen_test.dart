@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mockito/mockito.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:xflow/features/profile/user_details_screen.dart';
@@ -12,8 +11,6 @@ import 'package:xflow/core/client/twitter_client.dart';
 import 'package:xflow/core/database/repository.dart';
 import 'package:xflow/core/database/entities.dart';
 import 'package:xflow/core/models/tweet.dart';
-
-import 'profile_provider_test.mocks.dart';
 
 class SubscriptionListNotifierMock extends SubscriptionListNotifier {
   @override
@@ -29,12 +26,12 @@ void main() {
   sqfliteFfiInit();
   databaseFactory = databaseFactoryFfi;
 
-  late MockTwitterClient mockClient;
+  late TestTwitterClient mockClient;
   const testHandle = 'testuser';
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    mockClient = MockTwitterClient();
+    mockClient = TestTwitterClient();
     await Repository.close();
   });
 
@@ -61,17 +58,13 @@ void main() {
 
       await Repository.insertCachedMedia([cachedTweet]);
 
-      when(mockClient.fetchProfile(testHandle)).thenAnswer(
-        (_) async =>
-            Subscription(id: 'test_user_id', screenName: testHandle, name: ''),
+      mockClient.profileByScreenName[testHandle] = Subscription(
+        id: 'test_user_id',
+        screenName: testHandle,
+        name: '',
       );
-      when(mockClient.fetchUserTimeline('test_user_id',
-              cursor: anyNamed('cursor'),
-              cooldownMinutes: anyNamed('cooldownMinutes')))
-          .thenAnswer((_) async => TweetResponse(tweets: [freshTweet]));
-      when(mockClient.fetchUserTimelineByScreenName(any,
-              cooldownMinutes: anyNamed('cooldownMinutes')))
-          .thenAnswer((_) async => TweetResponse(tweets: [freshTweet]));
+      mockClient.timelineByUserId['test_user_id'] =
+          Future.value(TweetResponse(tweets: [freshTweet]));
 
       final container = ProviderContainer(overrides: [
         twitterClientProvider.overrideWithValue(mockClient),
@@ -96,15 +89,9 @@ void main() {
     testWidgets('shows loading state then profile name', (tester) async {
       final profile =
           Subscription(id: '1', screenName: testHandle, name: 'Display Name');
-      when(mockClient.fetchProfile(testHandle))
-          .thenAnswer((_) async => profile);
-      when(mockClient.fetchUserTimeline('1',
-              cursor: anyNamed('cursor'),
-              cooldownMinutes: anyNamed('cooldownMinutes')))
-          .thenAnswer((_) async => TweetResponse(tweets: []));
-      when(mockClient.fetchUserTimelineByScreenName(any,
-              cooldownMinutes: anyNamed('cooldownMinutes')))
-          .thenAnswer((_) async => TweetResponse(tweets: []));
+      mockClient.profileByScreenName[testHandle] = profile;
+      mockClient.timelineByUserId['1'] =
+          Future.value(TweetResponse(tweets: []));
 
       await tester.pumpWidget(ProviderScope(
         overrides: [
@@ -130,4 +117,36 @@ void main() {
       expect(find.text('Display Name'), findsWidgets);
     });
   });
+}
+
+class TestTwitterClient extends TwitterClient {
+  final profileByScreenName = <String, Subscription?>{};
+  final timelineByUserId = <String, Future<TweetResponse>>{};
+  final timelineByScreenName = <String, Future<TweetResponse>>{};
+
+  @override
+  Future<Subscription?> fetchProfile(String screenName) async {
+    return profileByScreenName[screenName];
+  }
+
+  @override
+  Future<TweetResponse> fetchUserTimeline(
+    String userId, {
+    String? cursor,
+    int cooldownMinutes = 15,
+    int count = 20,
+    int timeoutSeconds = 15,
+  }) async {
+    return timelineByUserId[userId] ?? Future.value(TweetResponse(tweets: []));
+  }
+
+  @override
+  Future<TweetResponse> fetchUserTimelineByScreenName(
+    String screenName, {
+    String? cursor,
+    int cooldownMinutes = 15,
+  }) async {
+    return timelineByScreenName[screenName] ??
+        Future.value(TweetResponse(tweets: []));
+  }
 }

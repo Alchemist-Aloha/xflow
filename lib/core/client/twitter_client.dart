@@ -220,6 +220,30 @@ class TwitterClient {
     'withDisallowedReplyControls': false,
   };
 
+  void _logTimelineRequest(
+    String label,
+    Uri uri, {
+    Object? context,
+  }) {
+    final contextText = context == null
+        ? ''
+        : ' context=${TwitterAccount.compactForLog(context)}';
+    AppLogger.log(
+        'Timeline request [$label]: ${uri.path}?${TwitterAccount.compactForLog(uri.query)}$contextText');
+  }
+
+  void _logTimelineResult(
+    String label,
+    TweetResponse response, {
+    Object? context,
+  }) {
+    final contextText = context == null
+        ? ''
+        : ' context=${TwitterAccount.compactForLog(context)}';
+    AppLogger.log(
+        'Timeline result [$label]: tweets=${response.tweets.length} cursorTop=${response.cursorTop ?? 'null'} cursorBottom=${response.cursorBottom ?? 'null'}$contextText');
+  }
+
   static const String graphqlUserByScreenNameNewUriPath =
       '/graphql/IGgvgiOx4QZndDHuD3x9TQ/UserByScreenName';
 
@@ -344,6 +368,8 @@ class TwitterClient {
       Set<MediaFilter>? filters,
       int count = 20,
       int timeoutSeconds = 15}) async {
+    AppLogger.log(
+        'Timeline request [fetchUserTweets]: screenName=$screenName cursor=${cursor ?? 'null'} sort=${sort?.name ?? 'latest'} count=$count filters=${filters?.map((f) => f.name).join(',') ?? 'none'}');
     return fetchTrendingMedia(
       query: "from:$screenName",
       cursor: cursor,
@@ -377,8 +403,15 @@ class TwitterClient {
           'features': jsonEncode(followingFeatures),
         });
 
-        AppLogger.log(
-            'Fetching following with cursor: $currentCursor (Found so far: ${allSubs.length})');
+        _logTimelineRequest(
+          'fetchFollowing',
+          uri,
+          context: {
+            'userId': userId,
+            'cursor': currentCursor,
+            'foundSoFar': allSubs.length,
+          },
+        );
 
         await _waitForTurn();
         final response = await TwitterAccount.fetch(uri,
@@ -449,8 +482,12 @@ class TwitterClient {
         if (newFound == 0 ||
             nextCursor == null ||
             nextCursor == currentCursor) {
+          AppLogger.log(
+              'Timeline result [fetchFollowing]: stopping newFound=$newFound nextCursor=${nextCursor ?? 'null'} currentCursor=${currentCursor ?? 'null'} total=${allSubs.length}');
           break;
         }
+        AppLogger.log(
+            'Timeline result [fetchFollowing]: batchAdded=$newFound nextCursor=$nextCursor total=${allSubs.length}');
         currentCursor = nextCursor;
       }
       return allSubs;
@@ -526,8 +563,18 @@ class TwitterClient {
     });
 
     try {
-      AppLogger.log(
-          'Fetching media with query: $finalQuery and cursor: $cursor, sort: $sort');
+      _logTimelineRequest(
+        'fetchTrendingMedia',
+        uri,
+        context: {
+          'query': finalQuery,
+          'cursor': cursor,
+          'sort': sort?.name ?? 'latest',
+          'count': count,
+          'filters': filters?.map((f) => f.name).toList(),
+          'minFaves': minFaves,
+        },
+      );
 
       await _waitForTurn();
       final response = await TwitterAccount.fetch(uri)
@@ -550,6 +597,15 @@ class TwitterClient {
       if (timeline == null) return TweetResponse(tweets: []);
 
       final tweetResponse = _parseTweets(timeline);
+      _logTimelineResult(
+        'fetchTrendingMedia',
+        tweetResponse,
+        context: {
+          'query': finalQuery,
+          'cursor': cursor,
+          'sort': sort?.name ?? 'latest',
+        },
+      );
 
       return tweetResponse;
     } catch (e) {
@@ -732,6 +788,15 @@ class TwitterClient {
     });
 
     try {
+      _logTimelineRequest(
+        'fetchUserTimeline',
+        uri,
+        context: {
+          'userId': userId,
+          'cursor': cursor,
+          'count': count,
+        },
+      );
       await _waitForTurn();
       final response = await TwitterAccount.fetch(uri)
           .timeout(Duration(seconds: timeoutSeconds));
@@ -756,7 +821,17 @@ class TwitterClient {
       }
 
       AppLogger.log('Successfully fetched user timeline for userId: $userId');
-      return _parseTweets(timeline);
+      final tweetResponse = _parseTweets(timeline);
+      _logTimelineResult(
+        'fetchUserTimeline',
+        tweetResponse,
+        context: {
+          'userId': userId,
+          'cursor': cursor,
+          'count': count,
+        },
+      );
+      return tweetResponse;
     } catch (e) {
       AppLogger.log('Error fetching user timeline: $e');
       return TweetResponse(tweets: []);
@@ -765,6 +840,8 @@ class TwitterClient {
 
   Future<TweetResponse> fetchUserTimelineByScreenName(String screenName,
       {String? cursor, int cooldownMinutes = 15}) async {
+    AppLogger.log(
+        'Timeline request [fetchUserTimelineByScreenName]: screenName=$screenName cursor=${cursor ?? 'null'} cooldownMinutes=$cooldownMinutes');
     return fetchTrendingMedia(
       query: "from:$screenName",
       cursor: cursor,
@@ -835,7 +912,14 @@ class TwitterClient {
     });
 
     try {
-      AppLogger.log('Fetching tweet detail for: $focalTweetId');
+      _logTimelineRequest(
+        'fetchTweetDetail',
+        uri,
+        context: {
+          'focalTweetId': focalTweetId,
+          'cursor': cursor,
+        },
+      );
       await _waitForTurn();
       final response = await TwitterAccount.fetch(uri);
 
@@ -843,7 +927,16 @@ class TwitterClient {
       final result = json.decode(response.body);
 
       // Agnostic parser can handle the nested instructions in TweetDetail
-      return _parseAgnosticTimeline(result);
+      final tweetResponse = _parseAgnosticTimeline(result);
+      _logTimelineResult(
+        'fetchTweetDetail',
+        tweetResponse,
+        context: {
+          'focalTweetId': focalTweetId,
+          'cursor': cursor,
+        },
+      );
+      return tweetResponse;
     } catch (e) {
       AppLogger.log('Error fetching tweet detail: $e');
       return TweetResponse(tweets: []);
@@ -872,7 +965,15 @@ class TwitterClient {
     });
 
     try {
-      AppLogger.log('Fetching MediaTabVideoMixer');
+      _logTimelineRequest(
+        'fetchVideoMixer',
+        uri,
+        context: {
+          'cursor': cursor,
+          'count': count,
+          'filters': filters?.map((f) => f.name).toList(),
+        },
+      );
       await _waitForTurn();
       final response = await TwitterAccount.fetch(uri);
       _releaseTurn();
@@ -885,6 +986,15 @@ class TwitterClient {
         tweetResponse.tweets = _applyFilters(tweetResponse.tweets, filters);
       }
 
+      _logTimelineResult(
+        'fetchVideoMixer',
+        tweetResponse,
+        context: {
+          'cursor': cursor,
+          'count': count,
+          'filters': filters?.map((f) => f.name).toList(),
+        },
+      );
       return tweetResponse;
     } catch (e) {
       AppLogger.log('Error fetching VideoMixer: $e');
@@ -912,7 +1022,15 @@ class TwitterClient {
     });
 
     try {
-      AppLogger.log('Fetching algorithmic timeline (For You)');
+      _logTimelineRequest(
+        'fetchAlgorithmicTimeline',
+        uri,
+        context: {
+          'cursor': cursor,
+          'count': count,
+          'filters': filters?.map((f) => f.name).toList(),
+        },
+      );
       await _waitForTurn();
       final response = await TwitterAccount.fetch(uri);
       _releaseTurn();
@@ -925,6 +1043,15 @@ class TwitterClient {
         tweetResponse.tweets = _applyFilters(tweetResponse.tweets, filters);
       }
 
+      _logTimelineResult(
+        'fetchAlgorithmicTimeline',
+        tweetResponse,
+        context: {
+          'cursor': cursor,
+          'count': count,
+          'filters': filters?.map((f) => f.name).toList(),
+        },
+      );
       return tweetResponse;
     } catch (e) {
       AppLogger.log('Error fetching algorithmic timeline: $e');
@@ -952,7 +1079,15 @@ class TwitterClient {
     });
 
     try {
-      AppLogger.log('Fetching chronological timeline (Following)');
+      _logTimelineRequest(
+        'fetchChronologicalTimeline',
+        uri,
+        context: {
+          'cursor': cursor,
+          'count': count,
+          'filters': filters?.map((f) => f.name).toList(),
+        },
+      );
       await _waitForTurn();
       final response = await TwitterAccount.fetch(uri);
       _releaseTurn();
@@ -965,6 +1100,15 @@ class TwitterClient {
         tweetResponse.tweets = _applyFilters(tweetResponse.tweets, filters);
       }
 
+      _logTimelineResult(
+        'fetchChronologicalTimeline',
+        tweetResponse,
+        context: {
+          'cursor': cursor,
+          'count': count,
+          'filters': filters?.map((f) => f.name).toList(),
+        },
+      );
       return tweetResponse;
     } catch (e) {
       AppLogger.log('Error fetching chronological timeline: $e');
