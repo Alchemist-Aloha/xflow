@@ -97,7 +97,6 @@ class MockSettingsNotifier extends SettingsNotifier {
     int? dbCandidateMultiplier,
     int? apiRetryLimit,
     int? chunkRotationLimit,
-    int? pageRetryLimit,
     int? minNewTweetsThreshold,
     int? maxQueryLength,
     int? apiTimeoutSeconds,
@@ -107,7 +106,6 @@ class MockSettingsNotifier extends SettingsNotifier {
     int? autoSkipDelaySeconds,
     int? lazyLoadThreshold,
     int? mediaDeduplicationWindow,
-    int? searchBatchSize,
     VideoEndAction? videoEndAction,
   }) {}
 }

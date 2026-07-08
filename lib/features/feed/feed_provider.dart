@@ -291,7 +291,8 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
       final seenCursors = <String>{};
       int apiRetries = 0;
       int chunkRotations = 0;
-      final maxRetries = settings.apiRetryLimit * 2; // Increase limit for robustness
+      final maxRetries =
+          settings.apiRetryLimit * 2; // Increase limit for robustness
 
       while (allNewTweets.length < settings.minNewTweetsThreshold &&
           apiRetries < maxRetries &&

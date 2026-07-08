@@ -695,15 +695,6 @@ class SearchSettingsPage extends ConsumerWidget {
                 notifier.updateDiscoveryParam(useChunkedSubscriptions: val),
           ),
           _SliderSetting(
-            title: 'Chunk Size',
-            subtitle: 'Accounts to query per search block',
-            value: settings.searchBatchSize.toDouble(),
-            min: 1,
-            max: 50,
-            onChanged: (v) =>
-                notifier.updateDiscoveryParam(searchBatchSize: v.toInt()),
-          ),
-          _SliderSetting(
             title: 'Minimum Favorites Filter',
             value: settings.minFavesFilter.toDouble(),
             min: 0,

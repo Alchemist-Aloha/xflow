@@ -26,7 +26,6 @@ class SettingsState {
   final int syncBatchSize;
   final int loadBatchSize;
   final int timelineBatchSize;
-  final int searchBatchSize;
   final int cooldownDuration;
   final int pruneThreshold;
 
@@ -52,7 +51,6 @@ class SettingsState {
   final int dbCandidateMultiplier;
   final int apiRetryLimit;
   final int chunkRotationLimit;
-  final int pageRetryLimit;
   final int minNewTweetsThreshold;
   final int maxQueryLength;
   final int apiTimeoutSeconds;
@@ -76,7 +74,6 @@ class SettingsState {
     this.syncBatchSize = 10,
     this.loadBatchSize = 20,
     this.timelineBatchSize = 20,
-    this.searchBatchSize = 10,
     this.cooldownDuration = 15,
     this.pruneThreshold = 50000,
     this.avoidWatchedContent = true,
@@ -96,7 +93,6 @@ class SettingsState {
     this.dbCandidateMultiplier = 5,
     this.apiRetryLimit = 5,
     this.chunkRotationLimit = 3,
-    this.pageRetryLimit = 3,
     this.minNewTweetsThreshold = 5,
     this.maxQueryLength = 480,
     this.apiTimeoutSeconds = 15,
@@ -119,7 +115,6 @@ class SettingsState {
     int? syncBatchSize,
     int? loadBatchSize,
     int? timelineBatchSize,
-    int? searchBatchSize,
     int? cooldownDuration,
     int? pruneThreshold,
     bool? avoidWatchedContent,
@@ -139,7 +134,6 @@ class SettingsState {
     int? dbCandidateMultiplier,
     int? apiRetryLimit,
     int? chunkRotationLimit,
-    int? pageRetryLimit,
     int? minNewTweetsThreshold,
     int? maxQueryLength,
     int? apiTimeoutSeconds,
@@ -161,7 +155,6 @@ class SettingsState {
       syncBatchSize: syncBatchSize ?? this.syncBatchSize,
       loadBatchSize: loadBatchSize ?? this.loadBatchSize,
       timelineBatchSize: timelineBatchSize ?? this.timelineBatchSize,
-      searchBatchSize: searchBatchSize ?? this.searchBatchSize,
       cooldownDuration: cooldownDuration ?? this.cooldownDuration,
       pruneThreshold: pruneThreshold ?? this.pruneThreshold,
       avoidWatchedContent: avoidWatchedContent ?? this.avoidWatchedContent,
@@ -187,7 +180,6 @@ class SettingsState {
           dbCandidateMultiplier ?? this.dbCandidateMultiplier,
       apiRetryLimit: apiRetryLimit ?? this.apiRetryLimit,
       chunkRotationLimit: chunkRotationLimit ?? this.chunkRotationLimit,
-      pageRetryLimit: pageRetryLimit ?? this.pageRetryLimit,
       minNewTweetsThreshold:
           minNewTweetsThreshold ?? this.minNewTweetsThreshold,
       maxQueryLength: maxQueryLength ?? this.maxQueryLength,
@@ -235,7 +227,6 @@ class SettingsNotifier extends Notifier<SettingsState> {
     final syncBatchSize = _prefs.getInt('syncBatchSize') ?? 10;
     final loadBatchSize = _prefs.getInt('loadBatchSize') ?? 20;
     final timelineBatchSize = _prefs.getInt('timelineBatchSize') ?? 20;
-    final searchBatchSize = _prefs.getInt('searchBatchSize') ?? 10;
     final cooldownDuration = _prefs.getInt('cooldownDuration') ?? 15;
     final pruneThreshold = _prefs.getInt('pruneThreshold') ?? 50000;
 
@@ -263,7 +254,6 @@ class SettingsNotifier extends Notifier<SettingsState> {
     final dbCandidateMultiplier = _prefs.getInt('dbCandidateMultiplier') ?? 5;
     final apiRetryLimit = _prefs.getInt('apiRetryLimit') ?? 5;
     final chunkRotationLimit = _prefs.getInt('chunkRotationLimit') ?? 3;
-    final pageRetryLimit = _prefs.getInt('pageRetryLimit') ?? 3;
     final minNewTweetsThreshold = _prefs.getInt('minNewTweetsThreshold') ?? 5;
     final maxQueryLength = _prefs.getInt('maxQueryLength') ?? 480;
     final apiTimeoutSeconds = _prefs.getInt('apiTimeoutSeconds') ?? 15;
@@ -287,7 +277,6 @@ class SettingsNotifier extends Notifier<SettingsState> {
       syncBatchSize: syncBatchSize,
       loadBatchSize: loadBatchSize,
       timelineBatchSize: timelineBatchSize,
-      searchBatchSize: searchBatchSize,
       cooldownDuration: cooldownDuration,
       pruneThreshold: pruneThreshold,
       avoidWatchedContent: avoidWatchedContent,
@@ -309,7 +298,6 @@ class SettingsNotifier extends Notifier<SettingsState> {
       dbCandidateMultiplier: dbCandidateMultiplier,
       apiRetryLimit: apiRetryLimit,
       chunkRotationLimit: chunkRotationLimit,
-      pageRetryLimit: pageRetryLimit,
       minNewTweetsThreshold: minNewTweetsThreshold,
       maxQueryLength: maxQueryLength,
       apiTimeoutSeconds: apiTimeoutSeconds,
@@ -377,7 +365,6 @@ class SettingsNotifier extends Notifier<SettingsState> {
     int? dbCandidateMultiplier,
     int? apiRetryLimit,
     int? chunkRotationLimit,
-    int? pageRetryLimit,
     int? minNewTweetsThreshold,
     int? maxQueryLength,
     int? apiTimeoutSeconds,
@@ -387,7 +374,6 @@ class SettingsNotifier extends Notifier<SettingsState> {
     int? autoSkipDelaySeconds,
     int? lazyLoadThreshold,
     int? mediaDeduplicationWindow,
-    int? searchBatchSize,
     VideoEndAction? videoEndAction,
   }) {
     state = state.copyWith(
@@ -407,7 +393,6 @@ class SettingsNotifier extends Notifier<SettingsState> {
       dbCandidateMultiplier: dbCandidateMultiplier,
       apiRetryLimit: apiRetryLimit,
       chunkRotationLimit: chunkRotationLimit,
-      pageRetryLimit: pageRetryLimit,
       minNewTweetsThreshold: minNewTweetsThreshold,
       maxQueryLength: maxQueryLength,
       apiTimeoutSeconds: apiTimeoutSeconds,
@@ -417,61 +402,87 @@ class SettingsNotifier extends Notifier<SettingsState> {
       autoSkipDelaySeconds: autoSkipDelaySeconds,
       lazyLoadThreshold: lazyLoadThreshold,
       mediaDeduplicationWindow: mediaDeduplicationWindow,
-      searchBatchSize: searchBatchSize,
       videoEndAction: videoEndAction,
     );
-    if (avoidWatchedContent != null)
+    if (avoidWatchedContent != null) {
       _prefs.setBool('avoidWatchedContent', avoidWatchedContent);
-    if (unseenSubscriptionBoost != null)
+    }
+    if (unseenSubscriptionBoost != null) {
       _prefs.setBool('unseenSubscriptionBoost', unseenSubscriptionBoost);
-    if (freshMixRatio != null) _prefs.setDouble('freshMixRatio', freshMixRatio);
-    if (saturationThreshold != null)
+    }
+    if (freshMixRatio != null) {
+      _prefs.setDouble('freshMixRatio', freshMixRatio);
+    }
+    if (saturationThreshold != null) {
       _prefs.setInt('saturationThreshold', saturationThreshold);
-    if (mediaSaturationThreshold != null)
+    }
+    if (mediaSaturationThreshold != null) {
       _prefs.setInt('mediaSaturationThreshold', mediaSaturationThreshold);
-    if (fetchStrategy != null)
+    }
+    if (fetchStrategy != null) {
       _prefs.setInt('fetchStrategy', fetchStrategy.index);
-    if (initialSyncCount != null)
+    }
+    if (initialSyncCount != null) {
       _prefs.setInt('initialSyncCount', initialSyncCount);
-    if (strictSubscriptionsOnly != null)
+    }
+    if (strictSubscriptionsOnly != null) {
       _prefs.setBool('strictSubscriptionsOnly', strictSubscriptionsOnly);
-    if (includeNativeRetweets != null)
+    }
+    if (includeNativeRetweets != null) {
       _prefs.setBool('includeNativeRetweets', includeNativeRetweets);
-    if (useChunkedSubscriptions != null)
+    }
+    if (useChunkedSubscriptions != null) {
       _prefs.setBool('useChunkedSubscriptions', useChunkedSubscriptions);
-    if (saturationWindow != null)
+    }
+    if (saturationWindow != null) {
       _prefs.setInt('saturationWindow', saturationWindow);
-    if (unseenBoostLookahead != null)
+    }
+    if (unseenBoostLookahead != null) {
       _prefs.setInt('unseenBoostLookahead', unseenBoostLookahead);
-    if (minFavesFilter != null) _prefs.setInt('minFavesFilter', minFavesFilter);
+    }
+    if (minFavesFilter != null) {
+      _prefs.setInt('minFavesFilter', minFavesFilter);
+    }
 
-    if (dbCandidateMultiplier != null)
+    if (dbCandidateMultiplier != null) {
       _prefs.setInt('dbCandidateMultiplier', dbCandidateMultiplier);
-    if (apiRetryLimit != null) _prefs.setInt('apiRetryLimit', apiRetryLimit);
-    if (chunkRotationLimit != null)
+    }
+    if (apiRetryLimit != null) {
+      _prefs.setInt('apiRetryLimit', apiRetryLimit);
+    }
+    if (chunkRotationLimit != null) {
       _prefs.setInt('chunkRotationLimit', chunkRotationLimit);
-    if (pageRetryLimit != null) _prefs.setInt('pageRetryLimit', pageRetryLimit);
-    if (minNewTweetsThreshold != null)
+    }
+    if (minNewTweetsThreshold != null) {
       _prefs.setInt('minNewTweetsThreshold', minNewTweetsThreshold);
-    if (maxQueryLength != null) _prefs.setInt('maxQueryLength', maxQueryLength);
-    if (apiTimeoutSeconds != null)
+    }
+    if (maxQueryLength != null) {
+      _prefs.setInt('maxQueryLength', maxQueryLength);
+    }
+    if (apiTimeoutSeconds != null) {
       _prefs.setInt('apiTimeoutSeconds', apiTimeoutSeconds);
-    if (maxSaturationSwaps != null)
+    }
+    if (maxSaturationSwaps != null) {
       _prefs.setInt('maxSaturationSwaps', maxSaturationSwaps);
-    if (maxSaturationPasses != null)
+    }
+    if (maxSaturationPasses != null) {
       _prefs.setInt('maxSaturationPasses', maxSaturationPasses);
-    if (playbackRetryLimit != null)
+    }
+    if (playbackRetryLimit != null) {
       _prefs.setInt('playbackRetryLimit', playbackRetryLimit);
-    if (autoSkipDelaySeconds != null)
+    }
+    if (autoSkipDelaySeconds != null) {
       _prefs.setInt('autoSkipDelaySeconds', autoSkipDelaySeconds);
-    if (lazyLoadThreshold != null)
+    }
+    if (lazyLoadThreshold != null) {
       _prefs.setInt('lazyLoadThreshold', lazyLoadThreshold);
-    if (mediaDeduplicationWindow != null)
+    }
+    if (mediaDeduplicationWindow != null) {
       _prefs.setInt('mediaDeduplicationWindow', mediaDeduplicationWindow);
-    if (searchBatchSize != null)
-      _prefs.setInt('searchBatchSize', searchBatchSize);
-    if (videoEndAction != null)
+    }
+    if (videoEndAction != null) {
       _prefs.setInt('videoEndAction', videoEndAction.index);
+    }
   }
 
   void toggleFilter(MediaFilter filter) {
