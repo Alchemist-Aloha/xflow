@@ -9,9 +9,14 @@ enum AppLifecycle {
   hidden,
 }
 
-class LifecycleNotifier extends StateNotifier<AppLifecycle> with WidgetsBindingObserver {
-  LifecycleNotifier() : super(AppLifecycle.resumed) {
+class LifecycleNotifier extends Notifier<AppLifecycle> with WidgetsBindingObserver {
+  @override
+  AppLifecycle build() {
     WidgetsBinding.instance.addObserver(this);
+    ref.onDispose(() {
+      WidgetsBinding.instance.removeObserver(this);
+    });
+    return AppLifecycle.resumed;
   }
 
   @override
@@ -35,13 +40,9 @@ class LifecycleNotifier extends StateNotifier<AppLifecycle> with WidgetsBindingO
     }
   }
 
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
+
 }
 
-final lifecycleProvider = StateNotifierProvider<LifecycleNotifier, AppLifecycle>((ref) {
-  return LifecycleNotifier();
-});
+final lifecycleProvider = NotifierProvider<LifecycleNotifier, AppLifecycle>(
+  LifecycleNotifier.new,
+);

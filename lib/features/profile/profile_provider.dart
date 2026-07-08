@@ -13,9 +13,12 @@ final userProfileProvider =
   return client.fetchProfile(screenName);
 });
 
-class UserMediaNotifier extends FamilyAsyncNotifier<FeedState, String> {
+class UserMediaNotifier extends AsyncNotifier<FeedState> {
+  UserMediaNotifier(this.arg);
+  final String arg;
+
   @override
-  FutureOr<FeedState> build(String arg) async {
+  FutureOr<FeedState> build() async {
     final client = ref.watch(twitterClientProvider);
     final settings = ref.watch(settingsProvider);
     final mediaRepo = ref.watch(mediaRepositoryProvider);
@@ -171,5 +174,5 @@ class UserMediaNotifier extends FamilyAsyncNotifier<FeedState, String> {
 }
 
 final userMediaNotifierProvider =
-    AsyncNotifierProviderFamily<UserMediaNotifier, FeedState, String>(
-        () => UserMediaNotifier());
+    AsyncNotifierProvider.family<UserMediaNotifier, FeedState, String>(
+        UserMediaNotifier.new);

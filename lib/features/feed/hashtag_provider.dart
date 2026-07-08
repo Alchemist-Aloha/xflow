@@ -38,9 +38,13 @@ String _mediaSearchQuery(String hashtag) {
   return '$normalized (filter:images OR filter:videos)';
 }
 
-class HashtagMediaNotifier extends FamilyAsyncNotifier<FeedState, String> {
+class HashtagMediaNotifier extends AsyncNotifier<FeedState> {
+  HashtagMediaNotifier(this.arg);
+  final String arg;
+
   @override
-  FutureOr<FeedState> build(String hashtag) async {
+  FutureOr<FeedState> build() async {
+    final hashtag = arg;
     final client = ref.watch(twitterClientProvider);
     final settings = ref.watch(settingsProvider);
     final query = _mediaSearchQuery(hashtag);
@@ -109,6 +113,6 @@ class HashtagMediaNotifier extends FamilyAsyncNotifier<FeedState, String> {
 }
 
 final hashtagMediaProvider =
-    AsyncNotifierProviderFamily<HashtagMediaNotifier, FeedState, String>(
-  () => HashtagMediaNotifier(),
+    AsyncNotifierProvider.family<HashtagMediaNotifier, FeedState, String>(
+  HashtagMediaNotifier.new,
 );

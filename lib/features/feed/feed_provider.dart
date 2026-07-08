@@ -39,7 +39,7 @@ class FeedState {
   }
 }
 
-class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
+class FeedNotifier extends AsyncNotifier<FeedState> {
   List<Tweet> _runDiscoveryPipeline(
     List<Tweet> freshPool,
     List<Tweet> localPool,
@@ -478,5 +478,5 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
 }
 
 final feedNotifierProvider =
-    AutoDisposeAsyncNotifierProvider<FeedNotifier, FeedState>(
-        () => FeedNotifier());
+    AsyncNotifierProvider.autoDispose<FeedNotifier, FeedState>(
+        FeedNotifier.new);
