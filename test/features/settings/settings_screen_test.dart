@@ -55,6 +55,26 @@ void main() {
       expect(find.text('Local Media Cache'), findsOneWidget);
       expect(find.byType(Slider), findsAtLeastNWidgets(1));
     });
+
+    testWidgets('diagnostics page only exposes app logs', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            settingsProvider.overrideWith(() => MockSettingsNotifier()),
+          ],
+          child: const MaterialApp(
+            home: DiagnosticSettingsPage(),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.text('View App Logs'), findsOneWidget);
+      expect(find.text('Debug Timeline'), findsNothing);
+    });
   });
 }
 

@@ -7,7 +7,6 @@ import '../../core/utils/media_cache_manager.dart';
 import '../feed/feed_provider.dart';
 import '../subscriptions/subscription_import_screen.dart';
 import 'log_viewer_screen.dart';
-import 'debug_timeline_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -147,9 +146,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 title: 'Logout',
                 titleColor: Colors.redAccent,
                 onTap: () async {
+                  final navigator = Navigator.of(context);
                   await ref.read(accountProvider.notifier).logout();
+                  if (!mounted) return;
                   ref.invalidate(feedNotifierProvider);
-                  if (mounted) Navigator.pop(context);
+                  navigator.pop();
                 },
               ),
             ],
@@ -771,12 +772,6 @@ class DiagnosticSettingsPage extends ConsumerWidget {
             title: const Text('View App Logs'),
             onTap: () => Navigator.push(context,
                 MaterialPageRoute(builder: (c) => const LogViewerScreen())),
-          ),
-          ListTile(
-            leading: const Icon(Icons.history),
-            title: const Text('Debug Timeline'),
-            onTap: () => Navigator.push(context,
-                MaterialPageRoute(builder: (c) => const DebugTimelineScreen())),
           ),
         ],
       ),

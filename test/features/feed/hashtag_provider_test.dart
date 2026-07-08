@@ -1,22 +1,19 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mockito/mockito.dart';
 import 'package:xflow/core/client/twitter_client.dart';
 import 'package:xflow/core/models/tweet.dart';
 import 'package:xflow/features/feed/feed_provider.dart';
 import 'package:xflow/features/feed/hashtag_provider.dart';
 import 'package:xflow/features/settings/settings_provider.dart';
 
-import 'tiktok_feed_screen_test.mocks.dart';
-
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('HashtagMediaNotifier', () {
-    late MockTwitterClient mockClient;
+    late _FakeTwitterClient mockClient;
 
     setUp(() {
-      mockClient = MockTwitterClient();
+      mockClient = _FakeTwitterClient();
     });
 
     test('falls back to latest media search when top search is empty',
@@ -29,29 +26,19 @@ void main() {
         createdAt: DateTime(2024, 1, 1),
       );
 
-      when(mockClient.fetchTrendingMedia(
-        cursor: anyNamed('cursor'),
+      mockClient.stub(
         query: '#nature (filter:images OR filter:videos)',
-        count: anyNamed('count'),
         sort: FeedSort.trending,
-        filters: anyNamed('filters'),
-        cooldownMinutes: anyNamed('cooldownMinutes'),
-        minFaves: anyNamed('minFaves'),
-        timeoutSeconds: anyNamed('timeoutSeconds'),
-      )).thenAnswer((_) async => TweetResponse(tweets: []));
-      when(mockClient.fetchTrendingMedia(
-        cursor: anyNamed('cursor'),
+        response: TweetResponse(tweets: []),
+      );
+      mockClient.stub(
         query: '#nature (filter:images OR filter:videos)',
-        count: anyNamed('count'),
         sort: FeedSort.latest,
-        filters: anyNamed('filters'),
-        cooldownMinutes: anyNamed('cooldownMinutes'),
-        minFaves: anyNamed('minFaves'),
-        timeoutSeconds: anyNamed('timeoutSeconds'),
-      )).thenAnswer((_) async => TweetResponse(
-            tweets: [latestTweet],
-            cursorBottom: 'latest_cursor',
-          ));
+        response: TweetResponse(
+          tweets: [latestTweet],
+          cursorBottom: 'latest_cursor',
+        ),
+      );
 
       final container = ProviderContainer(
         overrides: [
@@ -85,52 +72,33 @@ void main() {
         createdAt: DateTime(2024, 1, 2),
       );
 
-      when(mockClient.fetchTrendingMedia(
-        cursor: anyNamed('cursor'),
+      mockClient.stub(
         query: '#nature (filter:images OR filter:videos)',
-        count: anyNamed('count'),
         sort: FeedSort.trending,
-        filters: anyNamed('filters'),
-        cooldownMinutes: anyNamed('cooldownMinutes'),
-        minFaves: anyNamed('minFaves'),
-        timeoutSeconds: anyNamed('timeoutSeconds'),
-      )).thenAnswer((_) async => TweetResponse(tweets: []));
-      when(mockClient.fetchTrendingMedia(
-        cursor: anyNamed('cursor'),
+        response: TweetResponse(tweets: []),
+      );
+      mockClient.stub(
         query: '#nature (filter:images OR filter:videos)',
-        count: anyNamed('count'),
         sort: FeedSort.latest,
-        filters: anyNamed('filters'),
-        cooldownMinutes: anyNamed('cooldownMinutes'),
-        minFaves: anyNamed('minFaves'),
-        timeoutSeconds: anyNamed('timeoutSeconds'),
-      )).thenAnswer((_) async => TweetResponse(tweets: []));
-      when(mockClient.fetchTrendingMedia(
-        cursor: null,
+        response: TweetResponse(tweets: []),
+      );
+      mockClient.stub(
         query: '#nature',
-        count: anyNamed('count'),
         sort: FeedSort.latest,
-        filters: anyNamed('filters'),
-        cooldownMinutes: anyNamed('cooldownMinutes'),
-        minFaves: anyNamed('minFaves'),
-        timeoutSeconds: anyNamed('timeoutSeconds'),
-      )).thenAnswer((_) async => TweetResponse(
-            tweets: [fallbackTweet],
-            cursorBottom: 'plain_cursor',
-          ));
-      when(mockClient.fetchTrendingMedia(
+        response: TweetResponse(
+          tweets: [fallbackTweet],
+          cursorBottom: 'plain_cursor',
+        ),
+      );
+      mockClient.stub(
+        query: '#nature',
+        sort: FeedSort.latest,
         cursor: 'plain_cursor',
-        query: '#nature',
-        count: anyNamed('count'),
-        sort: FeedSort.latest,
-        filters: anyNamed('filters'),
-        cooldownMinutes: anyNamed('cooldownMinutes'),
-        minFaves: anyNamed('minFaves'),
-        timeoutSeconds: anyNamed('timeoutSeconds'),
-      )).thenAnswer((_) async => TweetResponse(
-            tweets: [nextTweet],
-            cursorBottom: 'plain_cursor_2',
-          ));
+        response: TweetResponse(
+          tweets: [nextTweet],
+          cursorBottom: 'plain_cursor_2',
+        ),
+      );
 
       final container = ProviderContainer(
         overrides: [
@@ -169,5 +137,36 @@ class _TestSettingsNotifier extends SettingsNotifier {
       loadBatchSize: 20,
       cooldownDuration: 15,
     );
+  }
+}
+
+class _FakeTwitterClient extends TwitterClient {
+  final Map<({String? query, FeedSort? sort, String? cursor}), TweetResponse>
+      _responses = {};
+
+  void stub({
+    required String? query,
+    required FeedSort? sort,
+    String? cursor,
+    required TweetResponse response,
+  }) {
+    _responses[(query: query, sort: sort, cursor: cursor)] = response;
+  }
+
+  @override
+  Future<TweetResponse> fetchTrendingMedia({
+    String? cursor,
+    String? query,
+    FeedSort? sort,
+    Set<MediaFilter>? filters,
+    int count = 20,
+    int cooldownMinutes = 15,
+    int? minFaves,
+    int timeoutSeconds = 15,
+  }) async {
+    return _responses[(query: query, sort: sort, cursor: cursor)] ??
+        (throw StateError(
+          'Missing stub for query=$query sort=$sort cursor=$cursor',
+        ));
   }
 }
