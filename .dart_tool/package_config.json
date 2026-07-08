@@ -3,13 +3,13 @@
   "packages": [
     {
       "name": "_fe_analyzer_shared",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/_fe_analyzer_shared-93.0.0",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/_fe_analyzer_shared-100.0.0",
       "packageUri": "lib/",
-      "languageVersion": "3.9"
+      "languageVersion": "3.11"
     },
     {
       "name": "analyzer",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/analyzer-10.0.1",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/analyzer-13.0.0",
       "packageUri": "lib/",
       "languageVersion": "3.9"
     },
@@ -39,27 +39,27 @@
     },
     {
       "name": "build",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/build-4.0.5",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/build-4.0.7",
       "packageUri": "lib/",
-      "languageVersion": "3.7"
+      "languageVersion": "3.8"
     },
     {
       "name": "build_config",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/build_config-1.3.0",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/build_config-1.3.1",
       "packageUri": "lib/",
-      "languageVersion": "3.7"
+      "languageVersion": "3.8"
     },
     {
       "name": "build_daemon",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/build_daemon-4.1.1",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/build_daemon-4.1.2",
       "packageUri": "lib/",
-      "languageVersion": "3.7"
+      "languageVersion": "3.8"
     },
     {
       "name": "build_runner",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/build_runner-2.14.0",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/build_runner-2.15.1",
       "packageUri": "lib/",
-      "languageVersion": "3.7"
+      "languageVersion": "3.8"
     },
     {
       "name": "built_collection",
@@ -69,7 +69,7 @@
     },
     {
       "name": "built_value",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/built_value-8.12.5",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/built_value-8.12.6",
       "packageUri": "lib/",
       "languageVersion": "3.0"
     },
@@ -117,9 +117,9 @@
     },
     {
       "name": "code_assets",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/code_assets-1.0.0",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/code_assets-1.2.1",
       "packageUri": "lib/",
-      "languageVersion": "3.9"
+      "languageVersion": "3.10"
     },
     {
       "name": "code_builder",
@@ -147,7 +147,7 @@
     },
     {
       "name": "dart_style",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/dart_style-3.1.7",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/dart_style-3.1.9",
       "packageUri": "lib/",
       "languageVersion": "3.10"
     },
@@ -159,7 +159,7 @@
     },
     {
       "name": "dbus",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/dbus-0.7.12",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/dbus-0.7.13",
       "packageUri": "lib/",
       "languageVersion": "2.17"
     },
@@ -171,9 +171,9 @@
     },
     {
       "name": "ffcache",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/ffcache-1.1.0",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/ffcache-1.1.1",
       "packageUri": "lib/",
-      "languageVersion": "2.12"
+      "languageVersion": "3.0"
     },
     {
       "name": "ffi",
@@ -203,7 +203,7 @@
       "name": "flutter",
       "rootUri": "file:///home/likun/develop/flutter/packages/flutter",
       "packageUri": "lib/",
-      "languageVersion": "3.9"
+      "languageVersion": "3.10"
     },
     {
       "name": "flutter_cache_manager",
@@ -231,7 +231,7 @@
     },
     {
       "name": "flutter_svg",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/flutter_svg-2.2.4",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/flutter_svg-2.3.0",
       "packageUri": "lib/",
       "languageVersion": "3.9"
     },
@@ -239,13 +239,13 @@
       "name": "flutter_test",
       "rootUri": "file:///home/likun/develop/flutter/packages/flutter_test",
       "packageUri": "lib/",
-      "languageVersion": "3.9"
+      "languageVersion": "3.10"
     },
     {
       "name": "flutter_web_plugins",
       "rootUri": "file:///home/likun/develop/flutter/packages/flutter_web_plugins",
       "packageUri": "lib/",
-      "languageVersion": "3.9"
+      "languageVersion": "3.10"
     },
     {
       "name": "glob",
@@ -261,7 +261,7 @@
     },
     {
       "name": "hooks",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/hooks-1.0.2",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/hooks-2.0.2",
       "packageUri": "lib/",
       "languageVersion": "3.10"
     },
@@ -285,21 +285,21 @@
     },
     {
       "name": "idb_shim",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/idb_shim-2.8.5+2",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/idb_shim-2.9.6+2",
       "packageUri": "lib/",
-      "languageVersion": "3.10"
+      "languageVersion": "3.12"
     },
     {
       "name": "image",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/image-4.8.0",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/image-4.9.1",
       "packageUri": "lib/",
       "languageVersion": "3.0"
     },
     {
       "name": "intl",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/intl-0.20.2",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/intl-0.20.3",
       "packageUri": "lib/",
-      "languageVersion": "3.3"
+      "languageVersion": "3.9"
     },
     {
       "name": "io",
@@ -321,13 +321,13 @@
     },
     {
       "name": "json_annotation",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/json_annotation-4.11.0",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/json_annotation-4.12.0",
       "packageUri": "lib/",
       "languageVersion": "3.9"
     },
     {
       "name": "json_serializable",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/json_serializable-6.13.1",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/json_serializable-6.14.0",
       "packageUri": "lib/",
       "languageVersion": "3.9"
     },
@@ -423,7 +423,7 @@
     },
     {
       "name": "meta",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/meta-1.17.0",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/meta-1.18.0",
       "packageUri": "lib/",
       "languageVersion": "3.5"
     },
@@ -435,13 +435,13 @@
     },
     {
       "name": "mockito",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/mockito-5.6.4",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/mockito-5.7.0",
       "packageUri": "lib/",
       "languageVersion": "3.7"
     },
     {
       "name": "native_toolchain_c",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/native_toolchain_c-0.17.6",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/native_toolchain_c-0.19.2",
       "packageUri": "lib/",
       "languageVersion": "3.10"
     },
@@ -453,7 +453,7 @@
     },
     {
       "name": "objective_c",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/objective_c-9.3.0",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/objective_c-9.4.1",
       "packageUri": "lib/",
       "languageVersion": "3.10"
     },
@@ -471,15 +471,15 @@
     },
     {
       "name": "package_info_plus",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/package_info_plus-10.0.0",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/package_info_plus-10.2.0",
       "packageUri": "lib/",
-      "languageVersion": "3.11"
+      "languageVersion": "3.10"
     },
     {
       "name": "package_info_plus_platform_interface",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/package_info_plus_platform_interface-4.0.0",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/package_info_plus_platform_interface-4.1.0",
       "packageUri": "lib/",
-      "languageVersion": "3.11"
+      "languageVersion": "3.10"
     },
     {
       "name": "path",
@@ -495,9 +495,9 @@
     },
     {
       "name": "path_provider",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/path_provider-2.1.5",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/path_provider-2.1.6",
       "packageUri": "lib/",
-      "languageVersion": "3.4"
+      "languageVersion": "3.10"
     },
     {
       "name": "path_provider_android",
@@ -513,15 +513,15 @@
     },
     {
       "name": "path_provider_linux",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/path_provider_linux-2.2.1",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/path_provider_linux-2.2.2",
       "packageUri": "lib/",
-      "languageVersion": "2.19"
+      "languageVersion": "3.10"
     },
     {
       "name": "path_provider_platform_interface",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/path_provider_platform_interface-2.1.2",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/path_provider_platform_interface-2.1.3",
       "packageUri": "lib/",
-      "languageVersion": "3.0"
+      "languageVersion": "3.10"
     },
     {
       "name": "path_provider_windows",
@@ -578,6 +578,12 @@
       "languageVersion": "2.17"
     },
     {
+      "name": "record_use",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/record_use-0.6.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
       "name": "riverpod",
       "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/riverpod-2.6.1",
       "packageUri": "lib/",
@@ -591,27 +597,27 @@
     },
     {
       "name": "safe_local_storage",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/safe_local_storage-2.0.3",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/safe_local_storage-2.0.4",
       "packageUri": "lib/",
       "languageVersion": "2.16"
     },
     {
       "name": "screen_brightness_android",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/screen_brightness_android-2.1.3",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/screen_brightness_android-2.1.6",
       "packageUri": "lib/",
       "languageVersion": "3.0"
     },
     {
       "name": "screen_brightness_platform_interface",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/screen_brightness_platform_interface-2.1.0",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/screen_brightness_platform_interface-2.1.2",
       "packageUri": "lib/",
       "languageVersion": "3.0"
     },
     {
       "name": "sembast",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/sembast-3.8.6",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/sembast-3.8.9+1",
       "packageUri": "lib/",
-      "languageVersion": "3.10"
+      "languageVersion": "3.12"
     },
     {
       "name": "shared_preferences",
@@ -621,9 +627,9 @@
     },
     {
       "name": "shared_preferences_android",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/shared_preferences_android-2.4.23",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/shared_preferences_android-2.4.26",
       "packageUri": "lib/",
-      "languageVersion": "3.9"
+      "languageVersion": "3.12"
     },
     {
       "name": "shared_preferences_foundation",
@@ -671,17 +677,17 @@
       "name": "sky_engine",
       "rootUri": "file:///home/likun/develop/flutter/bin/cache/pkg/sky_engine",
       "packageUri": "lib/",
-      "languageVersion": "3.9"
+      "languageVersion": "3.10"
     },
     {
       "name": "source_gen",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/source_gen-4.2.2",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/source_gen-4.2.3",
       "packageUri": "lib/",
       "languageVersion": "3.9"
     },
     {
       "name": "source_helper",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/source_helper-1.3.11",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/source_helper-1.3.12",
       "packageUri": "lib/",
       "languageVersion": "3.9"
     },
@@ -693,43 +699,43 @@
     },
     {
       "name": "sqflite",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/sqflite-2.4.2",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/sqflite-2.4.3",
       "packageUri": "lib/",
-      "languageVersion": "3.7"
+      "languageVersion": "3.12"
     },
     {
       "name": "sqflite_android",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/sqflite_android-2.4.2+3",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/sqflite_android-2.4.3",
       "packageUri": "lib/",
-      "languageVersion": "3.10"
+      "languageVersion": "3.12"
     },
     {
       "name": "sqflite_common",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/sqflite_common-2.5.6",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/sqflite_common-2.5.11",
       "packageUri": "lib/",
-      "languageVersion": "3.8"
+      "languageVersion": "3.12"
     },
     {
       "name": "sqflite_common_ffi",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/sqflite_common_ffi-2.4.0+3",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/sqflite_common_ffi-2.4.2",
       "packageUri": "lib/",
-      "languageVersion": "3.10"
+      "languageVersion": "3.12"
     },
     {
       "name": "sqflite_darwin",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/sqflite_darwin-2.4.2",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/sqflite_darwin-2.4.3+1",
       "packageUri": "lib/",
-      "languageVersion": "3.7"
+      "languageVersion": "3.12"
     },
     {
       "name": "sqflite_platform_interface",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/sqflite_platform_interface-2.4.0",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/sqflite_platform_interface-2.4.1",
       "packageUri": "lib/",
-      "languageVersion": "3.5"
+      "languageVersion": "3.12"
     },
     {
       "name": "sqlite3",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/sqlite3-3.3.1",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/sqlite3-3.3.4",
       "packageUri": "lib/",
       "languageVersion": "3.9"
     },
@@ -765,9 +771,9 @@
     },
     {
       "name": "synchronized",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/synchronized-3.4.0",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/synchronized-3.4.1",
       "packageUri": "lib/",
-      "languageVersion": "3.8"
+      "languageVersion": "3.12"
     },
     {
       "name": "term_glyph",
@@ -777,7 +783,7 @@
     },
     {
       "name": "test_api",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/test_api-0.7.10",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/test_api-0.7.11",
       "packageUri": "lib/",
       "languageVersion": "3.7"
     },
@@ -807,7 +813,7 @@
     },
     {
       "name": "vector_graphics",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/vector_graphics-1.1.21",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/vector_graphics-1.2.2",
       "packageUri": "lib/",
       "languageVersion": "3.9"
     },
@@ -819,9 +825,9 @@
     },
     {
       "name": "vector_graphics_compiler",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/vector_graphics_compiler-1.2.0",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/vector_graphics_compiler-1.2.6",
       "packageUri": "lib/",
-      "languageVersion": "3.9"
+      "languageVersion": "3.10"
     },
     {
       "name": "vector_math",
@@ -831,27 +837,27 @@
     },
     {
       "name": "vm_service",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/vm_service-15.1.0",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/vm_service-15.2.0",
       "packageUri": "lib/",
       "languageVersion": "3.5"
     },
     {
       "name": "volume_controller",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/volume_controller-3.4.4",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/volume_controller-3.6.0",
       "packageUri": "lib/",
-      "languageVersion": "3.0"
+      "languageVersion": "3.12"
     },
     {
       "name": "wakelock_plus",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/wakelock_plus-1.6.0",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/wakelock_plus-1.6.1",
       "packageUri": "lib/",
-      "languageVersion": "3.11"
+      "languageVersion": "3.10"
     },
     {
       "name": "wakelock_plus_platform_interface",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/wakelock_plus_platform_interface-1.5.0",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/wakelock_plus_platform_interface-1.5.1",
       "packageUri": "lib/",
-      "languageVersion": "3.11"
+      "languageVersion": "3.10"
     },
     {
       "name": "watcher",
@@ -885,15 +891,15 @@
     },
     {
       "name": "webview_flutter",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/webview_flutter-4.13.1",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/webview_flutter-4.14.1",
       "packageUri": "lib/",
-      "languageVersion": "3.8"
+      "languageVersion": "3.10"
     },
     {
       "name": "webview_flutter_android",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/webview_flutter_android-4.11.0",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/webview_flutter_android-4.13.0",
       "packageUri": "lib/",
-      "languageVersion": "3.9"
+      "languageVersion": "3.12"
     },
     {
       "name": "webview_flutter_platform_interface",
@@ -903,13 +909,13 @@
     },
     {
       "name": "webview_flutter_wkwebview",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/webview_flutter_wkwebview-3.24.5",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/webview_flutter_wkwebview-3.26.0",
       "packageUri": "lib/",
-      "languageVersion": "3.9"
+      "languageVersion": "3.12"
     },
     {
       "name": "win32",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/win32-6.0.1",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/win32-6.3.0",
       "packageUri": "lib/",
       "languageVersion": "3.10"
     },
@@ -921,9 +927,9 @@
     },
     {
       "name": "xml",
-      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/xml-6.6.1",
+      "rootUri": "file:///home/likun/.pub-cache/hosted/pub.dev/xml-7.0.1",
       "packageUri": "lib/",
-      "languageVersion": "3.8"
+      "languageVersion": "3.11"
     },
     {
       "name": "yaml",
@@ -939,8 +945,8 @@
     }
   ],
   "generator": "pub",
-  "generatorVersion": "3.11.5",
+  "generatorVersion": "3.12.2",
   "flutterRoot": "file:///home/likun/develop/flutter",
-  "flutterVersion": "3.41.7",
+  "flutterVersion": "3.44.4",
   "pubCache": "file:///home/likun/.pub-cache"
 }

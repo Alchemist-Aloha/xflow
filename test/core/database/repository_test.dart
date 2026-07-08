@@ -1,9 +1,7 @@
-import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:xflow/core/database/repository.dart';
 import 'package:xflow/core/models/tweet.dart';
-import 'package:path/path.dart';
 
 void main() {
   sqfliteFfiInit();
@@ -65,6 +63,22 @@ void main() {
           where: 'id = ?', whereArgs: ['play_test_unique']);
       expect(result.first['played_count'], 1);
       expect(result.first['last_played_at'], isNotNull);
+    });
+
+    test('getUserCachedMedia matches handles case-insensitively', () async {
+      final tweet = Tweet(
+        id: 'case_test_unique',
+        text: 'Mixed case handle',
+        userHandle: '@MixedCaseUser',
+        mediaUrls: ['https://test.com/case.jpg'],
+        createdAt: DateTime(2023, 1, 1),
+      );
+
+      await Repository.insertCachedMedia([tweet]);
+
+      final results = await Repository.getUserCachedMedia('mixedcaseuser', 10);
+
+      expect(results.map((t) => t.id), contains('case_test_unique'));
     });
 
     test('pruneCachedMedia removes oldest WATCHED items when limit exceeded',

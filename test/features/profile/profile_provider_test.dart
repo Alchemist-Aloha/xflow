@@ -6,8 +6,8 @@ import 'package:mockito/annotations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:xflow/features/profile/profile_provider.dart';
 import 'package:xflow/features/feed/feed_provider.dart';
-import 'package:xflow/features/settings/settings_provider.dart';
 import 'package:xflow/core/client/twitter_client.dart';
+import 'package:xflow/core/database/entities.dart';
 import 'package:xflow/core/database/media_repository.dart';
 import 'package:xflow/core/models/tweet.dart';
 
@@ -46,13 +46,20 @@ void main() {
         createdAt: DateTime(2023, 1, 2),
       );
 
+      when(mockClient.fetchProfile(testHandle)).thenAnswer(
+        (_) async => Subscription(
+          id: 'user_rest_id',
+          screenName: testHandle,
+          name: 'Test User',
+        ),
+      );
       when(mockRepo.getUserCachedMedia(any, any))
           .thenAnswer((_) async => [localTweet]);
       when(mockRepo.insertCachedMedia(any)).thenAnswer((_) async => {});
 
       final completer = Completer<TweetResponse>();
-      when(mockClient.fetchUserTimelineByScreenName(
-        testHandle,
+      when(mockClient.fetchUserTimeline(
+        'user_rest_id',
         cooldownMinutes: anyNamed('cooldownMinutes'),
       )).thenAnswer((_) => completer.future);
 
@@ -87,6 +94,57 @@ void main() {
       expect(finalState.tweets.length, 2);
       expect(finalState.tweets.any((t) => t.id == 'api_1'), isTrue);
       expect(finalState.isRefreshing, isFalse);
+    });
+
+    test('uses id-based user timeline when local-first cache is empty',
+        () async {
+      final apiTweet = Tweet(
+        id: 'api_from_timeline',
+        text: 'Timeline Tweet',
+        userHandle: '@RealCaseUser',
+        mediaUrls: ['url2'],
+        isVideo: true,
+        createdAt: DateTime(2023, 1, 2),
+      );
+
+      when(mockRepo.getUserCachedMedia(any, any)).thenAnswer((_) async => []);
+      when(mockRepo.insertCachedMedia(any)).thenAnswer((_) async => {});
+      when(mockClient.fetchProfile('realcaseuser')).thenAnswer(
+        (_) async => Subscription(
+          id: 'real_user_id',
+          screenName: 'RealCaseUser',
+          name: 'Real Case User',
+        ),
+      );
+      when(mockClient.fetchUserTimeline(
+        'real_user_id',
+        cooldownMinutes: anyNamed('cooldownMinutes'),
+      )).thenAnswer((_) async => TweetResponse(
+            tweets: [apiTweet],
+            cursorBottom: 'timeline_cursor',
+          ));
+
+      final container = ProviderContainer(
+        overrides: [
+          twitterClientProvider.overrideWithValue(mockClient),
+          mediaRepositoryProvider.overrideWithValue(mockRepo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final firstState = await container
+          .read(userMediaNotifierProvider('realcaseuser').future);
+      expect(firstState.tweets, isEmpty);
+      expect(firstState.isRefreshing, isTrue);
+
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      final finalState =
+          container.read(userMediaNotifierProvider('realcaseuser')).value!;
+      expect(finalState.tweets.map((t) => t.id), contains('api_from_timeline'));
+      expect(finalState.cursorBottom, 'timeline_cursor');
+      verifyNever(mockClient.fetchUserTimelineByScreenName(any,
+          cooldownMinutes: anyNamed('cooldownMinutes')));
     });
   });
 }

@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,7 +7,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:xflow/features/profile/user_details_screen.dart';
 import 'package:xflow/features/profile/profile_provider.dart';
 import 'package:xflow/features/feed/feed_provider.dart';
-import 'package:xflow/features/settings/settings_provider.dart';
 import 'package:xflow/features/subscriptions/subscription_list_screen.dart';
 import 'package:xflow/core/client/twitter_client.dart';
 import 'package:xflow/core/database/repository.dart';
@@ -63,6 +61,14 @@ void main() {
 
       await Repository.insertCachedMedia([cachedTweet]);
 
+      when(mockClient.fetchProfile(testHandle)).thenAnswer(
+        (_) async =>
+            Subscription(id: 'test_user_id', screenName: testHandle, name: ''),
+      );
+      when(mockClient.fetchUserTimeline('test_user_id',
+              cursor: anyNamed('cursor'),
+              cooldownMinutes: anyNamed('cooldownMinutes')))
+          .thenAnswer((_) async => TweetResponse(tweets: [freshTweet]));
       when(mockClient.fetchUserTimelineByScreenName(any,
               cooldownMinutes: anyNamed('cooldownMinutes')))
           .thenAnswer((_) async => TweetResponse(tweets: [freshTweet]));
@@ -92,6 +98,10 @@ void main() {
           Subscription(id: '1', screenName: testHandle, name: 'Display Name');
       when(mockClient.fetchProfile(testHandle))
           .thenAnswer((_) async => profile);
+      when(mockClient.fetchUserTimeline('1',
+              cursor: anyNamed('cursor'),
+              cooldownMinutes: anyNamed('cooldownMinutes')))
+          .thenAnswer((_) async => TweetResponse(tweets: []));
       when(mockClient.fetchUserTimelineByScreenName(any,
               cooldownMinutes: anyNamed('cooldownMinutes')))
           .thenAnswer((_) async => TweetResponse(tweets: []));
@@ -102,8 +112,8 @@ void main() {
           subscriptionListProvider
               .overrideWith(() => SubscriptionListNotifierMock()),
         ],
-        child: MaterialApp(
-          home: const UserDetailsScreen(screenName: testHandle),
+        child: const MaterialApp(
+          home: UserDetailsScreen(screenName: testHandle),
         ),
       ));
 

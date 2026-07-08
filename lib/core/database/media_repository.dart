@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/database/entities.dart';
 import '../../core/models/tweet.dart';
 import '../../core/database/repository.dart';
 

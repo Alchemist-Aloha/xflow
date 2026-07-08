@@ -50,7 +50,8 @@ class UserMediaNotifier extends FamilyAsyncNotifier<FeedState, String> {
   Future<void> _fetchFreshData(String screenName, TwitterClient client,
       SettingsState settings, MediaRepository mediaRepo) async {
     try {
-      final response = await client.fetchUserTimelineByScreenName(
+      final response = await _fetchUserMedia(
+        client,
         screenName,
         cooldownMinutes: settings.cooldownDuration,
       );
@@ -109,7 +110,8 @@ class UserMediaNotifier extends FamilyAsyncNotifier<FeedState, String> {
     state = AsyncData(currentState.copyWith(isLoadingMore: true));
 
     try {
-      final response = await client.fetchUserTimelineByScreenName(
+      final response = await _fetchUserMedia(
+        client,
         screenName,
         cursor: currentState.cursorBottom,
         cooldownMinutes: settings.cooldownDuration,
@@ -133,6 +135,39 @@ class UserMediaNotifier extends FamilyAsyncNotifier<FeedState, String> {
       debugPrint('Error fetching more user media: $e');
       state = AsyncData(currentState.copyWith(isLoadingMore: false));
     }
+  }
+
+  Future<TweetResponse> _fetchUserMedia(
+    TwitterClient client,
+    String screenName, {
+    String? cursor,
+    required int cooldownMinutes,
+  }) async {
+    Subscription? profile;
+    try {
+      profile = await client.fetchProfile(screenName);
+    } catch (e) {
+      debugPrint('XFLOW: Could not resolve @$screenName profile id: $e');
+    }
+
+    final userId = profile?.id;
+    if (userId != null && userId.isNotEmpty) {
+      try {
+        return await client.fetchUserTimeline(
+          userId,
+          cursor: cursor,
+          cooldownMinutes: cooldownMinutes,
+        );
+      } catch (e) {
+        debugPrint('XFLOW: User timeline fetch failed for $userId: $e');
+      }
+    }
+
+    return client.fetchUserTimelineByScreenName(
+      screenName,
+      cursor: cursor,
+      cooldownMinutes: cooldownMinutes,
+    );
   }
 }
 

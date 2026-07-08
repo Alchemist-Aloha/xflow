@@ -6,7 +6,6 @@ import 'package:sqflite/sqflite.dart';
 import 'entities.dart';
 import '../models/tweet.dart';
 import '../../features/settings/settings_provider.dart';
-import '../utils/app_logger.dart';
 
 const String tableAccounts = 'accounts';
 const String tableSubscriptions = 'subscriptions';
@@ -395,13 +394,12 @@ class Repository {
   static Future<List<Tweet>> getUserCachedMedia(String userHandle, int limit,
       {Set<MediaFilter>? filters}) async {
     final db = await database;
-    // Strip @ if present for normalization
     final rawHandle =
         userHandle.startsWith('@') ? userHandle.substring(1) : userHandle;
-    final handleWithAt = '@$rawHandle';
+    final normalizedHandle = rawHandle.toLowerCase();
 
-    String whereClause = '(user_handle = ? OR user_handle = ?)';
-    List<dynamic> whereArgs = [rawHandle, handleWithAt];
+    String whereClause = "LOWER(REPLACE(user_handle, '@', '')) = ?";
+    List<dynamic> whereArgs = [normalizedHandle];
 
     if (filters != null && filters.isNotEmpty) {
       final conditions = <String>[];
