@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:ffcache/ffcache.dart';
 import 'x_api_constants.dart';
+import 'transaction_id_service.dart';
 import '../database/entities.dart';
 import '../database/repository.dart';
 import '../utils/app_logger.dart';
@@ -38,10 +39,35 @@ class TwitterAccount {
     return '${flattened.substring(0, maxLength).trimRight()}...';
   }
 
+  static Object? _decodeLogValue(String value) {
+    final decoded = Uri.decodeQueryComponent(value);
+    try {
+      return jsonDecode(decoded);
+    } catch (_) {
+      return decoded;
+    }
+  }
+
+  static String formatUriForLog(Uri uri) {
+    if (uri.query.isEmpty) return uri.path;
+    final params = <String, Object?>{};
+    for (final entry in uri.queryParameters.entries) {
+      params[entry.key] = _decodeLogValue(entry.value);
+    }
+    return '${uri.path} params=${compactForLog(params)}';
+  }
+
+  static String formatTransactionIdForLog(String? transactionId) {
+    if (transactionId == null || transactionId.isEmpty) {
+      return 'missing';
+    }
+    return compactForLog(transactionId);
+  }
+
   static String _summarizeRequest(Uri uri, String method, Object? body) {
-    final query = uri.query.isEmpty ? '' : '?${compactForLog(uri.query)}';
+    final query = uri.query.isEmpty ? '' : ' ${formatUriForLog(uri)}';
     final bodySummary = body == null ? '' : ' body=${compactForLog(body)}';
-    return '$method ${uri.path}$query$bodySummary';
+    return '$method$query$bodySummary';
   }
 
   static Future<http.Response> fetch(Uri uri,
@@ -91,26 +117,42 @@ class TwitterAccount {
     }
 
     // Try to get x-client-transaction-id
-    var transactionIdAttached = false;
+    String? transactionId;
+    String txIdStatus = 'missing';
     try {
-      final transactionUri = Uri.http('x-client-transaction-id-generator.xyz',
-          '/generate-x-client-transaction-id', {'path': uri.path});
-      final transactionResponse =
-          await http.get(transactionUri).timeout(const Duration(seconds: 2));
-      if (transactionResponse.statusCode == 200) {
-        final transactionId =
-            jsonDecode(transactionResponse.body)['x-client-transaction-id'];
-        if (transactionId != null) {
-          combinedHeaders['x-client-transaction-id'] = transactionId;
-          transactionIdAttached = true;
+      transactionId = await TransactionIdService.instance.generateForRequest(
+        uri.path,
+        method: method,
+      );
+      if (transactionId != null) {
+        combinedHeaders['x-client-transaction-id'] = transactionId;
+        txIdStatus = 'local:${formatTransactionIdForLog(transactionId)}';
+      } else {
+        final transactionUri = Uri.http('x-client-transaction-id-generator.xyz',
+            '/generate-x-client-transaction-id', {'path': uri.path});
+        final transactionResponse =
+            await http.get(transactionUri).timeout(const Duration(seconds: 2));
+        if (transactionResponse.statusCode == 200) {
+          transactionId =
+              jsonDecode(transactionResponse.body)['x-client-transaction-id'];
+          if (transactionId != null) {
+            combinedHeaders['x-client-transaction-id'] = transactionId;
+            txIdStatus = 'fallback:${formatTransactionIdForLog(transactionId)}';
+          } else {
+            txIdStatus = 'missing:null-response-field';
+          }
+        } else {
+          txIdStatus =
+              'missing:generator-status-${transactionResponse.statusCode}';
         }
       }
     } catch (e) {
+      txIdStatus = 'missing:error:${e.runtimeType}';
       debugPrint('Error generating x-client-transaction-id: $e');
     }
 
     AppLogger.log(
-        'HTTP request start: $requestSummary account=${_currentAccount?.screenName ?? 'none'} txId=${transactionIdAttached ? 'attached' : 'missing'}');
+        'HTTP request start: $requestSummary account=${_currentAccount?.screenName ?? 'none'} txId=$txIdStatus');
     final stopwatch = Stopwatch()..start();
     final http.Response response;
     if (method == 'POST') {

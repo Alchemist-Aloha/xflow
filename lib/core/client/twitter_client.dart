@@ -18,6 +18,8 @@ class TweetResponse {
 
 class TwitterClient {
   static const String graphqlSearchTimelineUriPath =
+      '/graphql/R0u1RWRf748KzyGBXvOYRA/SearchTimeline';
+  static const String _legacyGraphqlSearchTimelineUriPath =
       '/graphql/Bcw3RzK-PatNAmbnw54hFw/SearchTimeline';
   static const String graphqlUserByScreenNameUriPath =
       '/graphql/oUZZZ8Oddwxs8Cd3iW3UEA/UserByScreenName';
@@ -229,7 +231,7 @@ class TwitterClient {
         ? ''
         : ' context=${TwitterAccount.compactForLog(context)}';
     AppLogger.log(
-        'Timeline request [$label]: ${uri.path}?${TwitterAccount.compactForLog(uri.query)}$contextText');
+        'Timeline request [$label]: ${TwitterAccount.formatUriForLog(uri)}$contextText');
   }
 
   void _logTimelineResult(
@@ -556,58 +558,77 @@ class TwitterClient {
 
     if (cursor != null) variables['cursor'] = cursor;
 
-    final uri = Uri.https('x.com', '/i/api$graphqlSearchTimelineUriPath', {
-      'variables': jsonEncode(variables),
-      'features': jsonEncode(searchTimelineFeatures),
-      'fieldToggles': jsonEncode(searchTimelineFieldToggles),
-    });
+    Uri buildSearchTimelineUri(String path) =>
+        Uri.https('x.com', '/i/api$path', {
+          'variables': jsonEncode(variables),
+          'features': jsonEncode(searchTimelineFeatures),
+          'fieldToggles': jsonEncode(searchTimelineFieldToggles),
+        });
 
     try {
-      _logTimelineRequest(
-        'fetchTrendingMedia',
-        uri,
-        context: {
+      final attemptPaths = <String>[
+        graphqlSearchTimelineUriPath,
+        _legacyGraphqlSearchTimelineUriPath,
+      ];
+
+      for (var i = 0; i < attemptPaths.length; i++) {
+        final path = attemptPaths[i];
+        final uri = buildSearchTimelineUri(path);
+        final context = {
           'query': finalQuery,
           'cursor': cursor,
           'sort': sort?.name ?? 'latest',
           'count': count,
           'filters': filters?.map((f) => f.name).toList(),
           'minFaves': minFaves,
-        },
-      );
+          'attempt': i + 1,
+          'operationPath': path,
+        };
 
-      await _waitForTurn();
-      final response = await TwitterAccount.fetch(uri)
-          .timeout(Duration(seconds: timeoutSeconds));
-      _releaseTurn();
+        _logTimelineRequest('fetchTrendingMedia', uri, context: context);
 
-      if (response.statusCode == 429) {
-        _handleRateLimit(cooldownMinutes);
-        return TweetResponse(tweets: []);
+        await _waitForTurn();
+        final response = await TwitterAccount.fetch(uri)
+            .timeout(Duration(seconds: timeoutSeconds));
+        _releaseTurn();
+
+        if (response.statusCode == 429) {
+          _handleRateLimit(cooldownMinutes);
+          return TweetResponse(tweets: []);
+        }
+        if (response.statusCode == 404 && i < attemptPaths.length - 1) {
+          AppLogger.log(
+              'SearchTimeline returned 404 for $path. Retrying with alternate operation id.');
+          continue;
+        }
+        if (response.statusCode != 200) {
+          AppLogger.log(
+              'Error status: ${response.statusCode} body: ${response.body}');
+          return TweetResponse(tweets: []);
+        }
+
+        final result = json.decode(response.body);
+        final timeline =
+            result?['data']?['search_by_raw_query']?['search_timeline'];
+        if (timeline == null) return TweetResponse(tweets: []);
+
+        final tweetResponse = _parseTweets(timeline);
+        _logTimelineResult(
+          'fetchTrendingMedia',
+          tweetResponse,
+          context: {
+            'query': finalQuery,
+            'cursor': cursor,
+            'sort': sort?.name ?? 'latest',
+            'attempt': i + 1,
+            'operationPath': path,
+          },
+        );
+
+        return tweetResponse;
       }
-      if (response.statusCode != 200) {
-        AppLogger.log(
-            'Error status: ${response.statusCode} body: ${response.body}');
-        return TweetResponse(tweets: []);
-      }
 
-      final result = json.decode(response.body);
-      final timeline =
-          result?['data']?['search_by_raw_query']?['search_timeline'];
-      if (timeline == null) return TweetResponse(tweets: []);
-
-      final tweetResponse = _parseTweets(timeline);
-      _logTimelineResult(
-        'fetchTrendingMedia',
-        tweetResponse,
-        context: {
-          'query': finalQuery,
-          'cursor': cursor,
-          'sort': sort?.name ?? 'latest',
-        },
-      );
-
-      return tweetResponse;
+      return TweetResponse(tweets: []);
     } catch (e) {
       AppLogger.log('Exception in fetchTrendingMedia: $e');
       return TweetResponse(tweets: []);

@@ -8,6 +8,7 @@ import 'features/profile/user_details_screen.dart';
 import 'features/profile/user_media_feed_screen.dart';
 import 'core/navigation/navigation_provider.dart';
 import 'core/client/background_sync.dart';
+import 'core/client/transaction_id_service.dart';
 import 'core/client/twitter_client.dart';
 import 'features/settings/settings_provider.dart';
 import 'core/client/twitter_account.dart';
@@ -119,6 +120,11 @@ class MainScaffold extends ConsumerWidget {
           visible: overlayScreen == null,
           maintainState: true,
           child: mainScreens,
+        ),
+        const Positioned(
+          left: 0,
+          top: 0,
+          child: TransactionIdWebViewHost(),
         ),
         if (overlayScreen != null)
           Container(

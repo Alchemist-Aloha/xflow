@@ -11,6 +11,8 @@ import '../../core/database/repository.dart';
 import '../../core/client/twitter_client.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
+  static const homeUrl = 'https://x.com/home';
+
   const LoginScreen({super.key});
 
   @override
@@ -31,7 +33,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageFinished: (url) async {
-            if (url == "https://x.com/home") {
+            if (url == LoginScreen.homeUrl) {
               if (_userFound) return;
 
               String screenName = (await _controller.runJavaScriptReturningResult(
@@ -45,7 +47,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               _userFound = true;
 
               final cookies =
-                  await _cookieManager.getCookies("https://x.com/home");
+                  await _cookieManager.getCookies(LoginScreen.homeUrl);
               final ct0Cookie = cookies.firstWhere((c) => c.name == 'ct0',
                   orElse: () => throw Exception('ct0 not found'));
 

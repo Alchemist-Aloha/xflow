@@ -3,10 +3,10 @@ import 'package:xflow/core/client/twitter_client.dart';
 
 void main() {
   group('TwitterClient API document parity', () {
-    test('uses current SearchTimeline operation id', () {
+    test('uses newer SearchTimeline operation id', () {
       expect(
         TwitterClient.graphqlSearchTimelineUriPath,
-        '/graphql/Bcw3RzK-PatNAmbnw54hFw/SearchTimeline',
+        '/graphql/R0u1RWRf748KzyGBXvOYRA/SearchTimeline',
       );
     });
   });
