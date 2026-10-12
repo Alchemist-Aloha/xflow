@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:intl/intl.dart';
 import '../../../core/models/tweet.dart';
 import '../../../core/utils/media_cache_manager.dart';
 import '../../../core/utils/app_logger.dart';
@@ -278,7 +279,11 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
                         displaySeekBar: false, // Custom layout below
                         automaticallyImplySkipNextButton: false,
                         automaticallyImplySkipPreviousButton: false,
-                        buttonBarHeight: 100.0,
+                        buttonBarHeight: widget.tweet.createdAt == null
+                            ? 100.0
+                            : 100.0 +
+                                MediaQuery.textScalerOf(context).scale(12) +
+                                8,
                         bottomButtonBarMargin: EdgeInsets.zero,
                         primaryButtonBar: [
                           const Spacer(),
@@ -295,6 +300,17 @@ class _TiktokMediaContainerState extends ConsumerState<TiktokMediaContainer> {
                                 mainAxisSize: MainAxisSize.min,
                                 mainAxisAlignment: MainAxisAlignment.end,
                                 children: [
+                                  if (widget.tweet.createdAt != null)
+                                    Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: Text(
+                                        'Posted ${DateFormat.yMMMd().add_Hm().format(widget.tweet.createdAt!.toLocal())}',
+                                        style: const TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
                                   const MaterialSeekBar(),
                                   Row(
                                     children: [
