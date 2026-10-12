@@ -17,8 +17,9 @@ By leveraging the robust authentication and data layers originally built for the
 
 ### Prerequisites
 
-* Flutter SDK (>=3.0.0 <4.0.0)
-* Dart SDK
+* Flutter SDK >=3.44.0 (CI uses 3.47.6)
+* Dart SDK >=3.12.0 <4.0.0
+* JDK 17 for Android builds
 * Android Studio / Xcode (for emulation/deployment)
 
 ### Installation
@@ -41,6 +42,26 @@ By leveraging the robust authentication and data layers originally built for the
    ```bash
    flutter run
    ```
+
+### Android release builds
+
+```bash
+flutter pub get --enforce-lockfile
+flutter build apk --release --split-per-abi
+```
+
+APKs are written to `build/app/outputs/flutter-apk/`. Keep `pubspec.lock` committed;
+upgrade dependencies deliberately and rerun tests and the release build.
+Increment the build number (`+1` in `pubspec.yaml`) for each distributed update.
+The current release build uses the debug signing key, not a production key;
+configure stable release signing before publishing, preserving the signing key
+for existing installations.
+
+Android backup and device transfer are disabled because app storage contains
+login credentials. Local data is unchanged, but reinstalling or moving devices
+requires logging in and recreating subscriptions/settings. Cleartext HTTP is
+allowed only for the existing transaction-ID fallback service; it remains
+unencrypted until that fallback is migrated to HTTPS or removed.
 
 ## 📁 Project Structure
 

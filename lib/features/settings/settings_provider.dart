@@ -7,7 +7,7 @@ enum FeedSort {
   trending,
   algorithmic,
   chronological,
-  videomixer
+  videomixer,
 }
 
 enum MediaFilter { video, image, text }
@@ -81,7 +81,7 @@ class SettingsState {
     this.freshMixRatio = 0.3,
     this.saturationThreshold = 2,
     this.mediaSaturationThreshold = 1,
-    this.fetchStrategy = FeedSort.chronological,
+    this.fetchStrategy = FeedSort.algorithmic,
     this.initialSyncCount = 10,
     this.strictSubscriptionsOnly = true,
     this.includeNativeRetweets = false,
@@ -237,7 +237,8 @@ class SettingsNotifier extends Notifier<SettingsState> {
     final saturationThreshold = _prefs.getInt('saturationThreshold') ?? 2;
     final mediaSaturationThreshold =
         _prefs.getInt('mediaSaturationThreshold') ?? 1;
-    final fetchStrategyIdx = _prefs.getInt('fetchStrategy') ?? 0;
+    final fetchStrategyIdx =
+        _prefs.getInt('fetchStrategy') ?? FeedSort.algorithmic.index;
     final initialSyncCount = _prefs.getInt('initialSyncCount') ?? 10;
     final strictSubscriptionsOnly =
         _prefs.getBool('strictSubscriptionsOnly') ?? true;
@@ -284,9 +285,10 @@ class SettingsNotifier extends Notifier<SettingsState> {
       freshMixRatio: freshMixRatio,
       saturationThreshold: saturationThreshold,
       mediaSaturationThreshold: mediaSaturationThreshold,
-      fetchStrategy: fetchStrategyIdx < FeedSort.values.length
+      fetchStrategy:
+          fetchStrategyIdx >= 0 && fetchStrategyIdx < FeedSort.values.length
           ? FeedSort.values[fetchStrategyIdx]
-          : FeedSort.latest,
+          : FeedSort.algorithmic,
       initialSyncCount: initialSyncCount,
       strictSubscriptionsOnly: strictSubscriptionsOnly,
       includeNativeRetweets: includeNativeRetweets,

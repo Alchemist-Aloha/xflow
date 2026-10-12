@@ -32,6 +32,50 @@ void main() {
       expect(state.syncBatchSize, 10); // Default
     });
 
+    test('defaults to For You before and after preferences load', () async {
+      expect(SettingsState().fetchStrategy, FeedSort.algorithmic);
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      expect(
+        container.read(settingsProvider).fetchStrategy,
+        FeedSort.algorithmic,
+      );
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      final state = container.read(settingsProvider);
+      expect(state.isInitialized, isTrue);
+      expect(state.fetchStrategy, FeedSort.algorithmic);
+    });
+
+    for (final strategy in FeedSort.values) {
+      test('preserves saved strategy ${strategy.name}', () async {
+        SharedPreferences.setMockInitialValues({
+          'fetchStrategy': strategy.index,
+        });
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        container.read(settingsProvider);
+        await Future.delayed(const Duration(milliseconds: 100));
+
+        expect(container.read(settingsProvider).fetchStrategy, strategy);
+      });
+    }
+
+    for (final index in [-1, FeedSort.values.length]) {
+      test('defaults to For You for invalid saved strategy $index', () async {
+        SharedPreferences.setMockInitialValues({'fetchStrategy': index});
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        container.read(settingsProvider);
+        await Future.delayed(const Duration(milliseconds: 100));
+
+        expect(
+          container.read(settingsProvider).fetchStrategy,
+          FeedSort.algorithmic,
+        );
+      });
+    }
+
     test('updates and persists values', () async {
       final container = ProviderContainer();
       container.read(settingsProvider);
